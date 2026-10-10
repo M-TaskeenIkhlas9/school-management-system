@@ -19,7 +19,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await login(emailValue, passwordValue);
-      navigate(location.state?.from || "/dashboard", { replace: true });
+      navigate(location.state?.from || "/", { replace: true }); // "/" goes to the first page this role may open
     } catch (err) {
       setError(err.message || "Login failed");
     } finally {
@@ -47,8 +47,8 @@ export default function LoginPage() {
           </div>
         </div>
         <form className="login-form" onSubmit={handleSubmit}>
-          <h2>Principal Login</h2>
-          <p className="login-subtitle">Sign in to manage your school</p>
+          <h2>Sign In</h2>
+          <p className="login-subtitle">Principal, admin, accountant or teacher account</p>
           {error && <div className="login-error">{error}</div>}
           <label>
             Email

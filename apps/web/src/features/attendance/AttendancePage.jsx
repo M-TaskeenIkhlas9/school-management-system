@@ -5,14 +5,16 @@ import { useLookups } from "../../lib/useLookups.js";
 import { badgeClass, formatDate, fullName } from "../../lib/format.js";
 import { useToast } from "../../components/Toast.jsx";
 import PageHeader from "../../components/PageHeader.jsx";
+import { useAuth } from "../../auth/AuthContext.jsx";
 import Pagination from "../../components/Pagination.jsx";
 
 const emptyForm = { student_id: "", day: "", status: "present" };
 
 export default function AttendancePage() {
+  const { can } = useAuth();
   const toast = useToast();
   const { data: summary } = useAttendanceSummary();
-  const { data: attention } = useAttention();
+  const { data: attention } = useAttention({ enabled: can("reports:read") });
   const { students, classrooms, classIdOf } = useLookups();
   const [form, setForm] = useState(emptyForm);
   const [filters, setFilters] = useState({ classroom_id: "", status: "", page: 1 });
@@ -44,33 +46,35 @@ export default function AttendancePage() {
   return (
     <section className="section active">
       <PageHeader title="Attendance" subtitle="Daily tracking and insights." />
-      <div className="card form-card">
-        <div className="card__title">
-          <h4>Mark Attendance</h4>
-          <span className="ai-pill">Daily</span>
-        </div>
-        <form className="form-row" onSubmit={submit}>
-          <select required {...field("student_id")}>
-            <option value="">Select student</option>
-            {students.map((s) => (
-              <option key={s.id} value={s.id}>
-                {fullName(s)}
-              </option>
-            ))}
-          </select>
-          <input type="date" {...field("day")} />
-          <select {...field("status")}>
-            <option value="present">Present</option>
-            <option value="late">Late</option>
-            <option value="absent">Absent</option>
-          </select>
-          <div className="form-actions">
-            <button type="submit" className="btn primary" disabled={create.isPending}>
-              {create.isPending ? "Saving…" : "Save Attendance"}
-            </button>
+      {can("attendance:write") && (
+        <div className="card form-card">
+          <div className="card__title">
+            <h4>Mark Attendance</h4>
+            <span className="ai-pill">Daily</span>
           </div>
-        </form>
-      </div>
+          <form className="form-row" onSubmit={submit}>
+            <select required {...field("student_id")}>
+              <option value="">Select student</option>
+              {students.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {fullName(s)}
+                </option>
+              ))}
+            </select>
+            <input type="date" {...field("day")} />
+            <select {...field("status")}>
+              <option value="present">Present</option>
+              <option value="late">Late</option>
+              <option value="absent">Absent</option>
+            </select>
+            <div className="form-actions">
+              <button type="submit" className="btn primary" disabled={create.isPending}>
+                {create.isPending ? "Saving…" : "Save Attendance"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
       <div className="grid-2">
         <div className="card">
           <h4>Today</h4>
@@ -79,7 +83,7 @@ export default function AttendancePage() {
             <strong>{summary?.today.rate === null || !summary ? "not marked yet" : `${summary.today.rate}%`}</strong>
           </p>
           <p>Records marked today: {summary?.today.marked ?? 0}</p>
-          <p>Students needing attention: {attention?.students?.length ?? 0}</p>
+          {can("reports:read") && <p>Students needing attention: {attention?.students?.length ?? 0}</p>}
         </div>
         <div className="card">
           <h4>By Class (all recorded days)</h4>

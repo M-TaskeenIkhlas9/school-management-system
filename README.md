@@ -22,7 +22,7 @@ npm run db:up
 # 3. Configure the API
 cp apps/api/.env.example apps/api/.env
 #    set DB_PORT=3307, DB_PASSWORD=schoolroot, a random JWT_SECRET,
-#    and optionally GROQ_API_KEY and SMTP_* (see below)
+#    and optionally GROQ_API_KEY (used by the exam generator)
 
 # 4. Create tables, add demo data (optional), run everything
 npm run migrate
@@ -43,31 +43,38 @@ Log in with `DEFAULT_PRINCIPAL_EMAIL` / `DEFAULT_PRINCIPAL_PASSWORD`
 | `npm run test:api` / `npm run test:web` | Just one test suite                                                           |
 | `npm run lint` / `npm run format`       | ESLint / Prettier (CI runs `lint` and `format:check`)                         |
 | `npm run migrate`                       | Apply new SQL migrations (`apps/api/src/db/migrations`)                       |
-| `npm run seed`                          | Demo data (empty database only)                                               |
+| `npm run seed`                          | Demo data (empty database only) + dev demo accounts                           |
 | `npm run build`                         | Production build of the web app                                               |
 | `npm run db:up`                         | Start the local MySQL container                                               |
 
-## AI School Assistant (AI Center)
+## Roles
 
-Chat in plain language, e.g.:
+| Role       | Can use                                                                     |
+| ---------- | --------------------------------------------------------------------------- |
+| Principal  | Everything, including user accounts and settings                            |
+| Admin      | Students, teachers, classes, attendance, results, exams, reports (not fees) |
+| Accountant | Fees and payments; student and class details needed to identify payers      |
+| Teacher    | Only their assigned classes: students, attendance, results, exams (no fees) |
 
-- "Email the parents whose fees are due"
-- "Email parents of students absent 3 days in a row"
-- "Who needs attention this week?"
-- "Add Bilal Ahmed to Class 6, father Ahmed Shah, ahmed.shah@example.com"
-- "Record a payment of 150 for Usman"
-- "Make a 10-question maths test for Class 5"
+The API enforces every permission; the web app only shows what a role may use. Accounts are
+managed through `/users` (a management screen comes in M4), and teachers are assigned to classes
+with `PUT /teachers/:id/classes`.
 
-Anything that sends or changes something appears as a card with the full preview (every
-recipient and the exact email text) and **Approve / Reject** buttons. Nothing happens until you
-approve, and what you approve is exactly what runs.
+`npm run seed` also creates **development-only** demo accounts (password `password123`, or
+`DEMO_USER_PASSWORD`): `accountant@school.test`, `office@school.test` (admin) and
+`teacher@school.test` (assigned to the first class).
 
-| Setting (`apps/api/.env`)                                    | Effect                                                                                                  |
-| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
-| `GROQ_API_KEY` (free) / `OPENAI_API_KEY` / `USE_OLLAMA=true` | Enables the AI model. Without one, built-in rules handle common requests (incl. fee/attendance emails). |
-| `AGENT_MODEL`                                                | Override the model (Groq default `openai/gpt-oss-120b`).                                                |
-| `SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD`, `EMAIL_FROM`      | Real email delivery. If unset, emails are **simulated** (recorded, not delivered).                      |
-| `EMAIL_REDIRECT_TO`                                          | Testing: send every email to this address instead of parents.                                           |
+## Parents and guardians
+
+Guardians are their own records, linked to one or more students, so siblings share one parent.
+Phone numbers are stored in international format (`03001234567` → `+923001234567`), each guardian
+has a preferred channel (WhatsApp, SMS or email) and per-channel consent, which messaging will
+respect.
+
+## AI School Assistant
+
+Being rebuilt (milestones M1–M6): role-aware tools, approval before anything is sent or changed,
+and WhatsApp, SMS and email delivery.
 
 ## Continuous integration
 

@@ -1,9 +1,34 @@
-import { useNavigate } from "react-router-dom";
 import { useStudent } from "../../api/queries.js";
 import { average } from "../../lib/format.js";
 
-export default function StudentProfileCard({ studentId, classLabel, risk, feeStatus }) {
-  const navigate = useNavigate();
+const CHANNELS = [
+  ["consent_whatsapp", "WhatsApp"],
+  ["consent_sms", "SMS"],
+  ["consent_email", "Email"],
+];
+
+function Guardians({ guardians }) {
+  if (!guardians?.length) return <p className="muted">No guardian on file.</p>;
+  return (
+    <ul className="guardian-list">
+      {guardians.map((g) => {
+        const consented = CHANNELS.filter(([field]) => g[field]).map(([, label]) => label);
+        return (
+          <li key={g.id}>
+            <strong>{g.full_name}</strong>
+            {g.relationship && <span className="muted"> ({g.relationship})</span>}
+            {g.is_primary ? <span className="badge info pill">Primary</span> : null}
+            <div className="muted">{[g.phone, g.email].filter(Boolean).join(" · ") || "No contact details"}</div>
+            <div className="muted">Agreed to: {consented.length ? consented.join(", ") : "no channels yet"}</div>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+/** Shows only what the API returned for this user's role (e.g. no fees for teachers). */
+export default function StudentProfileCard({ studentId, classLabel, risk, feeStatus, showFees }) {
   const { data: profile, isLoading } = useStudent(studentId);
 
   if (!studentId)
@@ -19,7 +44,8 @@ export default function StudentProfileCard({ studentId, classLabel, risk, feeSta
       </div>
     );
 
-  const avg = average(profile.results.map((r) => Number(r.percentage) || 0));
+  const results = profile.results;
+  const avg = results ? average(results.map((r) => Number(r.percentage) || 0)) : null;
   return (
     <div className="card profile-card">
       <div className="profile">
@@ -34,41 +60,41 @@ export default function StudentProfileCard({ studentId, classLabel, risk, feeSta
             </h4>
             <p>{classLabel}</p>
             <div className="profile-tags">
-              <span className="badge info pill">{risk === "High" ? "High Risk" : "Low Risk"}</span>
-              <span className="badge warning pill">{feeStatus || "No Fees"}</span>
+              {risk && <span className="badge info pill">{risk === "High" ? "High Risk" : "Low Risk"}</span>}
+              {showFees && <span className="badge warning pill">{feeStatus || "No Fees"}</span>}
             </div>
           </div>
         </div>
-        <button className="btn ghost" onClick={() => navigate("/ai-center")}>
-          Ask AI about this student
-        </button>
       </div>
       <div className="profile-grid">
+        {profile.attendance_rate !== undefined && (
+          <div className="profile-metric">
+            <h5>Attendance</h5>
+            <p>{profile.attendance_rate ?? "—"}% overall</p>
+          </div>
+        )}
         <div className="profile-metric">
-          <h5>Attendance</h5>
-          <p>{profile.attendance_rate ?? "—"}% overall</p>
+          <h5>Guardians</h5>
+          <Guardians guardians={profile.guardians} />
         </div>
-        <div className="profile-metric">
-          <h5>Guardian</h5>
-          <p>
-            {profile.guardian_name || "—"}
-            {profile.guardian_email ? ` · ${profile.guardian_email}` : " · no email on file"}
-          </p>
-        </div>
-        <div className="profile-metric">
-          <h5>Academic History</h5>
-          <p>
-            Avg {avg === null ? "—" : Math.round(avg)}% across {profile.results.length} result(s)
-          </p>
-        </div>
-        <div className="profile-metric">
-          <h5>AI Insight</h5>
-          <p>
-            {risk === "High"
-              ? "Recommend parent meeting and support plan."
-              : "Student performing within expected range."}
-          </p>
-        </div>
+        {results && (
+          <div className="profile-metric">
+            <h5>Academic History</h5>
+            <p>
+              Avg {avg === null ? "—" : Math.round(avg)}% across {results.length} result(s)
+            </p>
+          </div>
+        )}
+        {risk && (
+          <div className="profile-metric">
+            <h5>Insight</h5>
+            <p>
+              {risk === "High"
+                ? "Recommend parent meeting and support plan."
+                : "Student performing within expected range."}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

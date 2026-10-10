@@ -4,12 +4,17 @@ import { keys, useApiMutation, useAttention } from "../../api/queries.js";
 import { useLookups } from "../../lib/useLookups.js";
 import { badgeClass, formatDate, fullName } from "../../lib/format.js";
 import PageHeader from "../../components/PageHeader.jsx";
+import { useAuth } from "../../auth/AuthContext.jsx";
 import StudentForm from "./StudentForm.jsx";
 import StudentProfileCard from "./StudentProfileCard.jsx";
 
 export default function StudentsPage() {
+  const { can } = useAuth();
+  const canEdit = can("students:write");
+  const canSeeFees = can("fees:read");
+  const canSeeRisk = can("reports:read");
   const { students, classrooms, classIdOf, classLabelOf } = useLookups();
-  const { data: attention } = useAttention();
+  const { data: attention } = useAttention({ enabled: canSeeRisk });
 
   const [selectedId, setSelectedId] = useState(null);
   const [editing, setEditing] = useState(null); // student being edited
@@ -70,13 +75,15 @@ export default function StudentsPage() {
     <section className="section active">
       <PageHeader title="Students" subtitle="Search, filter, and review student profiles." />
 
-      <StudentForm
-        classrooms={classrooms}
-        initial={editInitial}
-        saving={save.isPending}
-        onSubmit={handleSubmit}
-        onCancel={() => setEditing(null)}
-      />
+      {canEdit && (
+        <StudentForm
+          classrooms={classrooms}
+          initial={editInitial}
+          saving={save.isPending}
+          onSubmit={handleSubmit}
+          onCancel={() => setEditing(null)}
+        />
+      )}
 
       <div className="card table-card">
         <div className="filters">
@@ -89,17 +96,21 @@ export default function StudentsPage() {
               </option>
             ))}
           </select>
-          <select value={feeFilter} onChange={(e) => setFeeFilter(e.target.value)}>
-            <option value="">Fee Status</option>
-            <option value="paid">Paid</option>
-            <option value="pending">Pending</option>
-            <option value="partial">Partial</option>
-          </select>
-          <select value={riskFilter} onChange={(e) => setRiskFilter(e.target.value)}>
-            <option value="">Performance Risk</option>
-            <option value="High">High</option>
-            <option value="Low">Low</option>
-          </select>
+          {canSeeFees && (
+            <select value={feeFilter} onChange={(e) => setFeeFilter(e.target.value)}>
+              <option value="">Fee Status</option>
+              <option value="paid">Paid</option>
+              <option value="pending">Pending</option>
+              <option value="partial">Partial</option>
+            </select>
+          )}
+          {canSeeRisk && (
+            <select value={riskFilter} onChange={(e) => setRiskFilter(e.target.value)}>
+              <option value="">Performance Risk</option>
+              <option value="High">High</option>
+              <option value="Low">Low</option>
+            </select>
+          )}
         </div>
         <table>
           <thead>
@@ -107,21 +118,25 @@ export default function StudentsPage() {
               <th>Student</th>
               <th>Class</th>
               <th>Guardian email</th>
-              <th>Fee Status</th>
-              <th>AI Risk</th>
-              <th>Actions</th>
+              {canSeeFees && <th>Fee Status</th>}
+              {canSeeRisk && <th>AI Risk</th>}
+              {canEdit && <th>Actions</th>}
             </tr>
           </thead>
           <tbody>
             {visible.length === 0 ? (
               <tr>
-                <td colSpan="6">
+                <td colSpan={3 + canSeeFees + canSeeRisk + canEdit}>
                   <div className="empty-state">
                     <div className="empty-icon">👩‍🎓</div>
                     <div>
                       <h5>{students.length ? "No students match these filters" : "No students yet"}</h5>
                       <p>
-                        {students.length ? "Try clearing a filter." : "Add your first student with the form above."}
+                        {students.length
+                          ? "Try clearing a filter."
+                          : canEdit
+                            ? "Add your first student with the form above."
+                            : "No students are assigned to you yet."}
                       </p>
                     </div>
                   </div>
@@ -148,29 +163,37 @@ export default function StudentsPage() {
                   </td>
                   <td>{classLabelOf(student.id)}</td>
                   <td>{student.guardian_email || <span className="muted">—</span>}</td>
-                  <td>
-                    {feeStatusOf(student.id) ? (
-                      <span className={`badge ${badgeClass(feeStatusOf(student.id))}`}>{feeStatusOf(student.id)}</span>
-                    ) : (
-                      <span className="muted">No fees</span>
-                    )}
-                  </td>
-                  <td>
-                    <span className={`badge ${badgeClass(riskOf(student.id))}`}>{riskOf(student.id)}</span>
-                  </td>
-                  <td>
-                    <button
-                      className="btn ghost small"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        setEditing(student);
-                        setSelectedId(student.id);
-                        window.scrollTo({ top: 0, behavior: "smooth" });
-                      }}
-                    >
-                      Edit
-                    </button>
-                  </td>
+                  {canSeeFees && (
+                    <td>
+                      {feeStatusOf(student.id) ? (
+                        <span className={`badge ${badgeClass(feeStatusOf(student.id))}`}>
+                          {feeStatusOf(student.id)}
+                        </span>
+                      ) : (
+                        <span className="muted">No fees</span>
+                      )}
+                    </td>
+                  )}
+                  {canSeeRisk && (
+                    <td>
+                      <span className={`badge ${badgeClass(riskOf(student.id))}`}>{riskOf(student.id)}</span>
+                    </td>
+                  )}
+                  {canEdit && (
+                    <td>
+                      <button
+                        className="btn ghost small"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setEditing(student);
+                          setSelectedId(student.id);
+                          window.scrollTo({ top: 0, behavior: "smooth" });
+                        }}
+                      >
+                        Edit
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))
             )}
@@ -181,8 +204,9 @@ export default function StudentsPage() {
       <StudentProfileCard
         studentId={selectedId}
         classLabel={selectedId ? classLabelOf(selectedId) : ""}
-        risk={selectedId ? riskOf(selectedId) : "Low"}
-        feeStatus={selectedId ? feeStatusOf(selectedId) : null}
+        risk={canSeeRisk && selectedId ? riskOf(selectedId) : null}
+        feeStatus={canSeeFees && selectedId ? feeStatusOf(selectedId) : null}
+        showFees={canSeeFees}
       />
     </section>
   );

@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 import pool from "./pool.js";
 import { schoolToday } from "../config/env.js";
 import { calcGrade } from "../modules/results/results.service.js";
+import { createUser } from "../modules/auth/auth.service.js";
 
 const daysAgo = (n) => {
   const d = new Date(`${schoolToday()}T00:00:00Z`);
@@ -157,8 +158,42 @@ export async function seed() {
   }
 }
 
+/**
+ * Development-only accounts for trying each role: accountant, admin and a teacher
+ * linked to the first teacher record and assigned to the first class.
+ * Created only if missing; never in production.
+ */
+export async function seedDemoUsers() {
+  if (process.env.NODE_ENV === "production") return;
+  const password = process.env.DEMO_USER_PASSWORD || "password123";
+  const [[teacher]] = await pool.query("SELECT id FROM teachers WHERE is_active = 1 ORDER BY id LIMIT 1");
+  const [[firstClass]] = await pool.query("SELECT id, name FROM classrooms WHERE is_active = 1 ORDER BY id LIMIT 1");
+
+  const accounts = [
+    { username: "Demo Accountant", email: "accountant@school.test", role: "accountant" },
+    { username: "Demo Admin", email: "office@school.test", role: "admin" },
+    ...(teacher
+      ? [{ username: "Demo Teacher", email: "teacher@school.test", role: "teacher", teacher_id: teacher.id }]
+      : []),
+  ];
+  for (const account of accounts) {
+    const [[existing]] = await pool.query("SELECT id FROM users WHERE email = ?", [account.email]);
+    if (existing) continue;
+    await createUser({ ...account, password });
+    console.log(`[seed] demo ${account.role}: ${account.email} / ${password}`);
+  }
+  if (teacher && firstClass) {
+    await pool.query("INSERT IGNORE INTO teacher_classes (teacher_id, classroom_id) VALUES (?, ?)", [
+      teacher.id,
+      firstClass.id,
+    ]);
+    console.log(`[seed] demo teacher assigned to ${firstClass.name}`);
+  }
+}
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   seed()
+    .then(seedDemoUsers)
     .catch((err) => {
       console.error("[seed] failed:", err.message);
       process.exitCode = 1;

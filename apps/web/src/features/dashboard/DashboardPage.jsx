@@ -3,14 +3,27 @@ import { useAttention, useCurriculum, useDashboard, useFeesPage, useTrends } fro
 import { useLookups } from "../../lib/useLookups.js";
 import { formatCurrency, fullName } from "../../lib/format.js";
 import TrendChart from "./TrendChart.jsx";
+import { useAuth } from "../../auth/AuthContext.jsx";
+
+// Shortcuts shown only to roles that can use them.
+const QUICK_ACTIONS = [
+  { label: "New Student", hint: "Registration", path: "/students", permission: "students:write" },
+  { label: "Mark Attendance", hint: "Today", path: "/attendance", permission: "attendance:write" },
+  { label: "Record Payment", hint: "Fees", path: "/fees", permission: "fees:write" },
+  { label: "Exam Prep", hint: "Exams", path: "/exams", permission: "exams:read" },
+  { label: "Report Card", hint: "Results", path: "/results", permission: "results:read" },
+];
 
 export default function DashboardPage() {
   const navigate = useNavigate();
+  const { can } = useAuth();
+  const canSeeFees = can("fees:read");
+  const canSeeReports = can("reports:read");
   const { data: stats, isLoading } = useDashboard();
-  const { data: attention } = useAttention();
+  const { data: attention } = useAttention({ enabled: canSeeReports });
   const { data: curriculum = [] } = useCurriculum();
   const { data: trends } = useTrends();
-  const { data: recentFees } = useFeesPage({ page: 1, pageSize: 2 });
+  const { data: recentFees } = useFeesPage({ page: 1, pageSize: 2 }, { enabled: canSeeFees });
   const { students, classLabelOf } = useLookups();
   const byTerm = trends?.results_by_term ?? [];
   const series = byTerm.length ? byTerm : (trends?.attendance_by_day ?? []);
@@ -24,11 +37,6 @@ export default function DashboardPage() {
           <div className="dashboard-breadcrumb">Home / Dashboard</div>
           <h3>Institution Command Center</h3>
           <p>University-grade insights for students, faculty, finance, and academic performance in one view.</p>
-        </div>
-        <div className="section__actions">
-          <button className="btn primary" onClick={() => navigate("/ai-center")}>
-            Ask AI
-          </button>
         </div>
       </div>
 
@@ -59,14 +67,16 @@ export default function DashboardPage() {
             <h4>{s.activeClasses ?? "—"}</h4>
           </div>
         </div>
-        <div className="card kpi-card">
-          <div className="kpi-icon">💵</div>
-          <div>
-            <p>Fees Collected</p>
-            <h4>{formatCurrency(s.feeCollected)}</h4>
-            <span className="trend up">{formatCurrency(s.feeDue)} billed</span>
+        {canSeeFees && (
+          <div className="card kpi-card">
+            <div className="kpi-icon">💵</div>
+            <div>
+              <p>Fees Collected</p>
+              <h4>{formatCurrency(s.feeCollected)}</h4>
+              <span className="trend up">{formatCurrency(s.feeDue)} billed</span>
+            </div>
           </div>
-        </div>
+        )}
         <div className="card kpi-card">
           <div className="kpi-icon">✅</div>
           <div>
@@ -90,24 +100,25 @@ export default function DashboardPage() {
 
         <div className="card ai-hub">
           <div className="card__title">
-            <h5>AI Intelligence Hub</h5>
+            <h5>Alerts</h5>
             <span>Priority alerts</span>
           </div>
-          <div className="ai-hub-item">
-            <span className="badge danger pill">Critical</span>
-            <p>{attention?.students?.length ?? 0} students require intervention.</p>
-          </div>
-          <div className="ai-hub-item">
-            <span className="badge warning pill">Medium</span>
-            <p>{s.unpaidFees ?? 0} fee records unpaid.</p>
-          </div>
+          {canSeeReports && (
+            <div className="ai-hub-item">
+              <span className="badge danger pill">Critical</span>
+              <p>{attention?.students?.length ?? 0} students require intervention.</p>
+            </div>
+          )}
+          {canSeeFees && (
+            <div className="ai-hub-item">
+              <span className="badge warning pill">Medium</span>
+              <p>{s.unpaidFees ?? 0} fee records unpaid.</p>
+            </div>
+          )}
           <div className="ai-hub-item">
             <span className="badge info pill">Info</span>
             <p>Curriculum mapping is {curriculum.length} items deep.</p>
           </div>
-          <button className="btn primary" onClick={() => navigate("/ai-center")}>
-            Ask the assistant
-          </button>
         </div>
       </div>
 
@@ -118,22 +129,12 @@ export default function DashboardPage() {
             <span>Daily workflow</span>
           </div>
           <div className="action-grid">
-            <button className="action-tile" onClick={() => navigate("/students")}>
-              <span>New Student</span>
-              <small>Registration</small>
-            </button>
-            <button className="action-tile" onClick={() => navigate("/exams")}>
-              <span>Exam Prep</span>
-              <small>Schedule</small>
-            </button>
-            <button className="action-tile" onClick={() => navigate("/ai-center")}>
-              <span>Broadcast</span>
-              <small>Message parents</small>
-            </button>
-            <button className="action-tile" onClick={() => navigate("/results")}>
-              <span>Report Card</span>
-              <small>Results</small>
-            </button>
+            {QUICK_ACTIONS.filter((a) => can(a.permission)).map((a) => (
+              <button key={a.path + a.label} className="action-tile" onClick={() => navigate(a.path)}>
+                <span>{a.label}</span>
+                <small>{a.hint}</small>
+              </button>
+            ))}
           </div>
         </div>
 

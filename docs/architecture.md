@@ -23,9 +23,8 @@ apps/
 │   │   │   ├── seed.js         demo data for an empty database
 │   │   │   └── migrations/
 │   │   ├── middleware/         auth (JWT, requireRole), validate (zod), errorHandler
-│   │   ├── lib/email.js        SMTP or simulated email
+│   │   ├── lib/                logger, audit, phone normalisation, pagination
 │   │   ├── modules/<feature>/  <feature>.routes.js (HTTP + zod schema) and <feature>.service.js (logic + SQL)
-│   │   └── agent/              AI assistant harness (see below)
 │   └── tests/                  Jest + supertest, always against school_management_test
 └── web/
     └── src/
@@ -35,7 +34,7 @@ apps/
         ├── auth/               AuthContext, LoginPage
         ├── components/         ErrorBoundary, Toast, PageHeader
         ├── lib/                format helpers, useLookups (id → name/class)
-        ├── features/<page>/    one folder per page (dashboard, students, fees, agent, …)
+        ├── features/<page>/    one folder per page (dashboard, students, fees, …)
         └── styles/global.css
 docs/                           this file
 docker-compose.yml              local MySQL
@@ -51,8 +50,7 @@ package.json                    root scripts: npm run dev / test / migrate / see
   unknown fields stripped). Route ids go through `idParam()`.
 - **Errors:** throw `createError(status, message, code)`. Express 5 forwards async errors to
   `errorHandler`, which always responds `{ error, code, details? }`. No try/catch in routes.
-- **Multi-row writes use transactions** (student + enrollment, batch results, exam + questions,
-  insights refresh, agent action execution).
+- **Multi-row writes use transactions** (student + enrollment, batch results, exam + questions, insights refresh, teacher class assignments).
 - **Dates:** "today" is `schoolToday()` (SCHOOL_TIMEZONE), never UTC `toISOString()` or MySQL `CURDATE()`.
 - **Schema changes:** add `src/db/migrations/NNN_description.sql`, run `npm run migrate`.
 
@@ -64,40 +62,27 @@ package.json                    root scripts: npm run dev / test / migrate / see
   Writes use `useApiMutation`, which refreshes affected queries and shows a success/error toast —
   no write fails silently.
 
-## AI assistant (agent harness)
+## Roles and access
 
-```
-POST /agent/conversations/:id/messages
-  └─ harness.runTurn
-       ├─ load last 20 messages + status of this conversation's actions
-       ├─ LangChain agent (model from env) with tools.js
-       │    ├─ read tools: stats, find_students, profiles, fee defaulters, attention report, …
-       │    └─ propose_* tools ──► actions.js propose*() ──► agent_actions (status: pending, preview)
-       ├─ fallback.js rule-based answers if no model is configured or the model call fails
-       └─ save user + assistant messages
-POST /agent/actions/:id/approve
-  └─ claimPendingAction (atomic pending → executing; 24h expiry)
-       └─ executor runs the stored payload exactly as previewed ──► executed / failed
-            └─ result message appended to the conversation
-```
+- `modules/auth/permissions.js` is the single role → permission map (principal, admin, accountant,
+  teacher). Permissions look like `fees:read` / `attendance:write`.
+- `middleware/auth.js` reloads the user on every request, so deactivation or a role change applies
+  immediately. Teachers carry the ids of their assigned classes (`teacher_classes`).
+- `app.js` guards each section where it is mounted: `byMethod("x:read", "x:write")`.
+  Inside modules, `classScope(req)`, `assertClassAccess` and `assertStudentAccess`
+  (`middleware/access.js`) limit teachers to their classes; responses drop fee data for roles
+  without `fees:read`.
+- The web app gets permissions from `/auth/me` (`useAuth().can(...)`): navigation, routes, forms
+  and data requests follow them, but the API remains the authority.
+- `lib/audit.js` records logins, account changes and class assignments in `audit_log`.
 
-Key properties:
+## Guardians
 
-- The model can never change data or send email directly; it can only create a pending action.
-- What the principal approves is what runs: recipients and email text are resolved and stored at
-  proposal time; approval does not consult the model again.
-- A double click cannot execute an action twice (conditional UPDATE claim).
-- Every email (sent, simulated or failed) is recorded in `email_outbox`.
-- Data returned by tools is treated as data, not instructions (stated in the system prompt).
+`guardians` (E.164 phone, preferred channel, per-channel consent with timestamp) and
+`student_guardians` (many-to-many, one primary per student). Saving a student with guardian
+details reuses a parent matched by email, then phone. `lib/phone.js` normalises numbers
+(`DEFAULT_COUNTRY_CODE`, default 92). Migrations can be `.sql` or `.js` (`export async function up(conn)`).
 
-Action types: `send_guardian_emails`, `add_student`, `record_fee_payment`, `create_exam`.
-To add one: write `propose<X>()` + `execute<X>()` in `actions.js`, register the executor in
-`EXECUTORS`, expose a `propose_<x>` tool in `tools.js`, and add a preview component in
-`apps/web/src/features/agent/ActionCard.jsx`.
+## AI assistant
 
-### Model configuration
-
-Provider is auto-detected: `USE_OLLAMA=true` → Ollama, else `GROQ_API_KEY` → Groq
-(default `openai/gpt-oss-120b`), else `OPENAI_API_KEY` → OpenAI (`gpt-4o-mini`).
-Override with `AGENT_PROVIDER` / `AGENT_MODEL`. Groq model availability varies by account — list
-yours at `https://api.groq.com/openai/v1/models`.
+Being rebuilt from scratch (milestones M1–M6). The first-generation agent was removed in M0.

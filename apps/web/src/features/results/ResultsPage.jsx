@@ -5,11 +5,13 @@ import { useLookups } from "../../lib/useLookups.js";
 import { fullName } from "../../lib/format.js";
 import { useToast } from "../../components/Toast.jsx";
 import PageHeader from "../../components/PageHeader.jsx";
+import { useAuth } from "../../auth/AuthContext.jsx";
 import Pagination from "../../components/Pagination.jsx";
 
 const emptyForm = { student_id: "", term: "", total_score: "", percentage: "", remarks: "" };
 
 export default function ResultsPage() {
+  const { can } = useAuth();
   const toast = useToast();
   const { students, classrooms, classIdOf } = useLookups();
   const [form, setForm] = useState(emptyForm);
@@ -40,31 +42,33 @@ export default function ResultsPage() {
   return (
     <section className="section active">
       <PageHeader title="Results & Report Cards" subtitle="Enter marks; grades are calculated automatically." />
-      <div className="card form-card">
-        <div className="card__title">
-          <h4>Add Result</h4>
-          <span className="ai-pill">Term</span>
-        </div>
-        <form className="form-row" onSubmit={submit}>
-          <select required {...field("student_id")}>
-            <option value="">Select student</option>
-            {students.map((s) => (
-              <option key={s.id} value={s.id}>
-                {fullName(s)}
-              </option>
-            ))}
-          </select>
-          <input type="text" placeholder="Term (e.g., Term 1)" required {...field("term")} />
-          <input type="number" min="0" placeholder="Total score" required {...field("total_score")} />
-          <input type="number" min="0" max="100" placeholder="Percentage" required {...field("percentage")} />
-          <input type="text" placeholder="Remarks" {...field("remarks")} />
-          <div className="form-actions">
-            <button type="submit" className="btn primary" disabled={create.isPending}>
-              {create.isPending ? "Saving…" : "Save Result"}
-            </button>
+      {can("results:write") && (
+        <div className="card form-card">
+          <div className="card__title">
+            <h4>Add Result</h4>
+            <span className="ai-pill">Term</span>
           </div>
-        </form>
-      </div>
+          <form className="form-row" onSubmit={submit}>
+            <select required {...field("student_id")}>
+              <option value="">Select student</option>
+              {students.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {fullName(s)}
+                </option>
+              ))}
+            </select>
+            <input type="text" placeholder="Term (e.g., Term 1)" required {...field("term")} />
+            <input type="number" min="0" placeholder="Total score" required {...field("total_score")} />
+            <input type="number" min="0" max="100" placeholder="Percentage" required {...field("percentage")} />
+            <input type="text" placeholder="Remarks" {...field("remarks")} />
+            <div className="form-actions">
+              <button type="submit" className="btn primary" disabled={create.isPending}>
+                {create.isPending ? "Saving…" : "Save Result"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
       <div className="card table-card">
         <div className="filters">
           <select value={filters.classroom_id} onChange={(e) => setFilters({ classroom_id: e.target.value, page: 1 })}>

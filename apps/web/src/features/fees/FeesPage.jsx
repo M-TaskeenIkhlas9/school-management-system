@@ -1,17 +1,16 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { api } from "../../api/client.js";
 import { keys, useApiMutation, useDashboard, useDefaulters, useFeesPage } from "../../api/queries.js";
 import { useLookups } from "../../lib/useLookups.js";
 import { badgeClass, formatCurrency, formatDate, fullName } from "../../lib/format.js";
 import PageHeader from "../../components/PageHeader.jsx";
+import { useAuth } from "../../auth/AuthContext.jsx";
 import Pagination from "../../components/Pagination.jsx";
 
 const emptyForm = { student_id: "", due_date: "", amount_due: "", amount_paid: "" };
-export const FEE_REMINDER_PROMPT = "Email the parents whose fees are due";
 
 export default function FeesPage() {
-  const navigate = useNavigate();
+  const { can } = useAuth();
   const { data: stats } = useDashboard();
   const { data: defaulters = [] } = useDefaulters();
   const { students } = useLookups();
@@ -34,38 +33,33 @@ export default function FeesPage() {
 
   return (
     <section className="section active">
-      <PageHeader title="Accounts & Fees" subtitle="Track paid, unpaid, and partial fees.">
-        <button
-          className="btn primary"
-          onClick={() => navigate(`/ai-center?ask=${encodeURIComponent(FEE_REMINDER_PROMPT)}`)}
-        >
-          Send Reminders
-        </button>
-      </PageHeader>
-      <div className="card form-card">
-        <div className="card__title">
-          <h4>Add Fee Record</h4>
-          <span className="ai-pill">Ledger</span>
-        </div>
-        <form className="form-row" onSubmit={submit}>
-          <select required {...field("student_id")}>
-            <option value="">Select student</option>
-            {students.map((s) => (
-              <option key={s.id} value={s.id}>
-                {fullName(s)}
-              </option>
-            ))}
-          </select>
-          <input type="date" required title="Due date" {...field("due_date")} />
-          <input type="number" min="0" step="0.01" placeholder="Amount due" required {...field("amount_due")} />
-          <input type="number" min="0" step="0.01" placeholder="Amount paid" {...field("amount_paid")} />
-          <div className="form-actions">
-            <button type="submit" className="btn primary" disabled={create.isPending}>
-              {create.isPending ? "Saving…" : "Save Fee"}
-            </button>
+      <PageHeader title="Accounts & Fees" subtitle="Track paid, unpaid, and partial fees." />
+      {can("fees:write") && (
+        <div className="card form-card">
+          <div className="card__title">
+            <h4>Add Fee Record</h4>
+            <span className="ai-pill">Ledger</span>
           </div>
-        </form>
-      </div>
+          <form className="form-row" onSubmit={submit}>
+            <select required {...field("student_id")}>
+              <option value="">Select student</option>
+              {students.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {fullName(s)}
+                </option>
+              ))}
+            </select>
+            <input type="date" required title="Due date" {...field("due_date")} />
+            <input type="number" min="0" step="0.01" placeholder="Amount due" required {...field("amount_due")} />
+            <input type="number" min="0" step="0.01" placeholder="Amount paid" {...field("amount_paid")} />
+            <div className="form-actions">
+              <button type="submit" className="btn primary" disabled={create.isPending}>
+                {create.isPending ? "Saving…" : "Save Fee"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
       <div className="grid-2">
         <div className="card fee-card">
           <div className="card__title">

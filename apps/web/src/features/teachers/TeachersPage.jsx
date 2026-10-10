@@ -3,11 +3,13 @@ import { api } from "../../api/client.js";
 import { keys, useApiMutation, useCurriculum, useTeachers } from "../../api/queries.js";
 import { fullName } from "../../lib/format.js";
 import PageHeader from "../../components/PageHeader.jsx";
+import { useAuth } from "../../auth/AuthContext.jsx";
 
 const teacherThemes = ["teacher-theme-blue", "teacher-theme-rose"];
 const emptyTeacher = { first_name: "", last_name: "", subject: "", phone: "", email: "" };
 
 export default function TeachersPage() {
+  const { can } = useAuth();
   const { data: teachers = [] } = useTeachers();
   const { data: curriculum = [] } = useCurriculum();
   const subjects = [...new Set(curriculum.map((c) => c.subject).filter(Boolean))];
@@ -28,29 +30,31 @@ export default function TeachersPage() {
   return (
     <section className="section active">
       <PageHeader title="Teachers" subtitle="Staff directory and subjects." />
-      <div className="card form-card">
-        <div className="card__title">
-          <h4>Quick Add Teacher</h4>
-          <span className="ai-pill">Basic Info</span>
-        </div>
-        <form className="form-row" onSubmit={submit}>
-          <input type="text" placeholder="First name" required {...field("first_name")} />
-          <input type="text" placeholder="Last name" required {...field("last_name")} />
-          <input type="text" placeholder="Subject" list="teacher-subjects" {...field("subject")} />
-          <datalist id="teacher-subjects">
-            {subjects.map((s) => (
-              <option key={s} value={s} />
-            ))}
-          </datalist>
-          <input type="text" placeholder="Phone" {...field("phone")} />
-          <input type="email" placeholder="Email" {...field("email")} />
-          <div className="form-actions">
-            <button type="submit" className="btn primary" disabled={create.isPending}>
-              {create.isPending ? "Saving…" : "Save Teacher"}
-            </button>
+      {can("teachers:write") && (
+        <div className="card form-card">
+          <div className="card__title">
+            <h4>Quick Add Teacher</h4>
+            <span className="ai-pill">Basic Info</span>
           </div>
-        </form>
-      </div>
+          <form className="form-row" onSubmit={submit}>
+            <input type="text" placeholder="First name" required {...field("first_name")} />
+            <input type="text" placeholder="Last name" required {...field("last_name")} />
+            <input type="text" placeholder="Subject" list="teacher-subjects" {...field("subject")} />
+            <datalist id="teacher-subjects">
+              {subjects.map((s) => (
+                <option key={s} value={s} />
+              ))}
+            </datalist>
+            <input type="text" placeholder="Phone" {...field("phone")} />
+            <input type="email" placeholder="Email" {...field("email")} />
+            <div className="form-actions">
+              <button type="submit" className="btn primary" disabled={create.isPending}>
+                {create.isPending ? "Saving…" : "Save Teacher"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
       <div className="grid-2">
         {teachers.length === 0 && <div className="card empty-card">Add teachers to see them here.</div>}
         {teachers.map((teacher, index) => (

@@ -2,10 +2,12 @@ import { useState } from "react";
 import { api } from "../../api/client.js";
 import { keys, useApiMutation, useClassrooms, useCurriculum, useStudents } from "../../api/queries.js";
 import PageHeader from "../../components/PageHeader.jsx";
+import { useAuth } from "../../auth/AuthContext.jsx";
 
 const emptyClass = { name: "", grade: "", section: "" };
 
 export default function ClassesPage() {
+  const { can } = useAuth();
   const { data: classrooms = [] } = useClassrooms();
   const { data: curriculum = [] } = useCurriculum();
   const { data: students = [] } = useStudents();
@@ -26,22 +28,24 @@ export default function ClassesPage() {
   return (
     <section className="section active">
       <PageHeader title="Classes & Curriculum" subtitle="Map subjects, books, and AI-ready curriculum tags." />
-      <div className="card form-card">
-        <div className="card__title">
-          <h4>Quick Add Class</h4>
-          <span className="ai-pill">Structure</span>
-        </div>
-        <form className="form-row" onSubmit={submit}>
-          <input type="text" placeholder="Class name (e.g., Grade 7B)" required {...field("name")} />
-          <input type="text" placeholder="Grade" required {...field("grade")} />
-          <input type="text" placeholder="Section" {...field("section")} />
-          <div className="form-actions">
-            <button type="submit" className="btn primary" disabled={create.isPending}>
-              {create.isPending ? "Saving…" : "Save Class"}
-            </button>
+      {can("classes:write") && (
+        <div className="card form-card">
+          <div className="card__title">
+            <h4>Quick Add Class</h4>
+            <span className="ai-pill">Structure</span>
           </div>
-        </form>
-      </div>
+          <form className="form-row" onSubmit={submit}>
+            <input type="text" placeholder="Class name (e.g., Grade 7B)" required {...field("name")} />
+            <input type="text" placeholder="Grade" required {...field("grade")} />
+            <input type="text" placeholder="Section" {...field("section")} />
+            <div className="form-actions">
+              <button type="submit" className="btn primary" disabled={create.isPending}>
+                {create.isPending ? "Saving…" : "Save Class"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
       <div className="class-grid">
         {classrooms.length === 0 && <div className="card empty-card">Add classes to see them here.</div>}
         {classrooms.map((room) => {

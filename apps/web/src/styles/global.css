@@ -1682,3 +1682,29 @@ a.ai-fab {
   display: flex;
   gap: 8px;
 }
+
+/* ---------- Roles & guardians ---------- */
+.user-role {
+  display: block;
+  font-weight: 500;
+  font-size: 0.72rem;
+  color: var(--muted);
+  text-transform: capitalize;
+}
+
+.page-loading {
+  padding: 48px;
+  text-align: center;
+}
+
+.guardian-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.guardian-list .badge {
+  margin-left: 6px;
+}

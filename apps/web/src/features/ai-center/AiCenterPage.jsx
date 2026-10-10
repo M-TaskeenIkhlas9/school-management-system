@@ -1,7 +1,9 @@
 import PageHeader from "../../components/PageHeader.jsx";
+import { useAuth } from "../../auth/AuthContext.jsx";
 import ExamGenerator from "./ExamGenerator.jsx";
 
 export default function AiCenterPage() {
+  const { can } = useAuth();
   return (
     <section className="section active">
       <PageHeader title="AI Center" subtitle="AI tools for the school office." />
@@ -16,7 +18,7 @@ export default function AiCenterPage() {
             delivery. It will return here.
           </p>
         </div>
-        <ExamGenerator />
+        {can("exams:write") && <ExamGenerator />}
       </div>
     </section>
   );

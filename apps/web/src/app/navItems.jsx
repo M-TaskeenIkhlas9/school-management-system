@@ -1,7 +1,8 @@
-// Sidebar navigation: one entry per page route.
+// Sidebar navigation: one entry per page route, with the permission needed to see it.
 export const navItems = [
   {
     path: "/dashboard",
+    permission: "dashboard:read",
     label: "Dashboard",
     colorClass: "nav-icon--blue",
     icon: (
@@ -12,6 +13,7 @@ export const navItems = [
   },
   {
     path: "/students",
+    permission: "students:read",
     label: "Students",
     colorClass: "nav-icon--violet",
     icon: (
@@ -22,6 +24,7 @@ export const navItems = [
   },
   {
     path: "/teachers",
+    permission: "teachers:read",
     label: "Teachers",
     colorClass: "nav-icon--indigo",
     icon: (
@@ -32,6 +35,7 @@ export const navItems = [
   },
   {
     path: "/classes",
+    permission: "classes:read",
     label: "Classes & Curriculum",
     colorClass: "nav-icon--teal",
     icon: (
@@ -42,6 +46,7 @@ export const navItems = [
   },
   {
     path: "/ai-center",
+    permission: "exams:read",
     label: "AI Center",
     colorClass: "nav-icon--orange",
     icon: (
@@ -52,6 +57,7 @@ export const navItems = [
   },
   {
     path: "/exams",
+    permission: "exams:read",
     label: "Exams & Tests",
     colorClass: "nav-icon--sky",
     icon: (
@@ -62,6 +68,7 @@ export const navItems = [
   },
   {
     path: "/attendance",
+    permission: "attendance:read",
     label: "Attendance",
     colorClass: "nav-icon--green",
     icon: (
@@ -72,6 +79,7 @@ export const navItems = [
   },
   {
     path: "/results",
+    permission: "results:read",
     label: "Results & Report Cards",
     colorClass: "nav-icon--amber",
     icon: (
@@ -82,6 +90,7 @@ export const navItems = [
   },
   {
     path: "/fees",
+    permission: "fees:read",
     label: "Accounts & Fees",
     colorClass: "nav-icon--emerald",
     icon: (
@@ -92,6 +101,7 @@ export const navItems = [
   },
   {
     path: "/predict",
+    permission: "reports:read",
     label: "Predict & XAI",
     colorClass: "nav-icon--rose",
     icon: (

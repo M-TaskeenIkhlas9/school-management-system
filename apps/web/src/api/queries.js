@@ -18,7 +18,10 @@ export const keys = {
   attention: ["attention"],
 };
 
-const listQuery = (key, path) => () => useQuery({ queryKey: key, queryFn: () => api.get(path) });
+const listQuery =
+  (key, path) =>
+  (options = {}) =>
+    useQuery({ queryKey: key, queryFn: () => api.get(path), ...options });
 
 export const useDashboard = listQuery(keys.dashboard, "/dashboard");
 export const useStudents = listQuery(keys.students, "/students");
@@ -35,18 +38,19 @@ export const useAttention = listQuery(keys.attention, "/ai/students/attention");
  * One page of a paginated list: { items, total, page, pageSize, totalPages }.
  * Empty params are dropped; the previous page stays visible while the next loads.
  */
-function usePaged(baseKey, path, params) {
+function usePaged(baseKey, path, params, options = {}) {
   const clean = Object.fromEntries(Object.entries(params).filter(([, v]) => v !== "" && v !== null && v !== undefined));
   return useQuery({
     queryKey: [...baseKey, "page", clean],
     queryFn: () => api.get(`${path}?${new URLSearchParams(clean)}`),
     placeholderData: keepPreviousData,
+    ...options,
   });
 }
 
-export const useAttendancePage = (params) => usePaged(keys.attendance, "/attendance", params);
-export const useFeesPage = (params) => usePaged(keys.fees, "/fees", params);
-export const useResultsPage = (params) => usePaged(keys.results, "/results", params);
+export const useAttendancePage = (params, options) => usePaged(keys.attendance, "/attendance", params, options);
+export const useFeesPage = (params, options) => usePaged(keys.fees, "/fees", params, options);
+export const useResultsPage = (params, options) => usePaged(keys.results, "/results", params, options);
 
 export function useStudent(id) {
   return useQuery({ queryKey: keys.student(id), queryFn: () => api.get(`/students/${id}`), enabled: Boolean(id) });
