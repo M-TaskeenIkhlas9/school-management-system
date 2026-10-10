@@ -10,6 +10,7 @@ import validate, {
   optionalNumber,
 } from "../../middleware/validate.js";
 import { createError } from "../../middleware/errorHandler.js";
+import { assertClassAccess, classScope } from "../../middleware/access.js";
 
 const curriculumSchema = z.object({
   classroom_id: requiredId(),
@@ -22,13 +23,14 @@ const curriculumSchema = z.object({
 
 const router = Router();
 
-router.get("/", async (_req, res) => {
-  res.json(await curriculumService.getAll());
+router.get("/", async (req, res) => {
+  res.json(await curriculumService.getAll({ classIds: classScope(req) }));
 });
 
 router.get("/:id", async (req, res) => {
   const item = await curriculumService.getById(idParam(req));
   if (!item) throw createError(404, "Curriculum item not found", "NOT_FOUND");
+  assertClassAccess(req, item.classroom_id);
   res.json(item);
 });
 

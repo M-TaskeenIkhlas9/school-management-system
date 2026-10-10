@@ -3,6 +3,7 @@ import { z } from "zod";
 import * as classroomService from "./classrooms.service.js";
 import validate, { idParam, requiredText, optionalText } from "../../middleware/validate.js";
 import { createError } from "../../middleware/errorHandler.js";
+import { assertClassAccess, classScope } from "../../middleware/access.js";
 
 const classroomSchema = z.object({
   name: requiredText(100),
@@ -13,12 +14,14 @@ const classroomSchema = z.object({
 
 const router = Router();
 
-router.get("/", async (_req, res) => {
-  res.json(await classroomService.getAll());
+router.get("/", async (req, res) => {
+  res.json(await classroomService.getAll({ classIds: classScope(req) }));
 });
 
 router.get("/:id", async (req, res) => {
-  const classroom = await classroomService.getById(idParam(req));
+  const id = idParam(req);
+  assertClassAccess(req, id);
+  const classroom = await classroomService.getById(id);
   if (!classroom) throw createError(404, "Classroom not found", "NOT_FOUND");
   res.json(classroom);
 });

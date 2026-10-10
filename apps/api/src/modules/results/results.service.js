@@ -12,11 +12,12 @@ export function calcGrade(percentage) {
 }
 
 /** One page of result cards (newest first) with student and class names. */
-export async function list({ student_id, classroom_id, term, ...page }) {
+export async function list({ student_id, classroom_id, term, classIds = null, ...page }) {
   const where = whereClause([
     ["r.student_id = ?", student_id],
     ["r.classroom_id = ?", classroom_id],
     ["r.term = ?", term],
+    ["r.classroom_id IN (?)", classIds],
   ]);
   const [[{ total }]] = await pool.query(`SELECT COUNT(*) AS total FROM result_cards r ${where.sql}`, where.params);
   const { limit, offset } = pageWindow(page);

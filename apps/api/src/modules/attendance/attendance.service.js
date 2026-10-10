@@ -7,13 +7,14 @@ import { pageResult, pageWindow, whereClause } from "../../lib/pagination.js";
 const attendedSql = "CASE WHEN a.status IN ('present','late') THEN 1 ELSE 0 END";
 
 /** One page of attendance records (newest day first) with student and class names. */
-export async function list({ student_id, classroom_id, status, from, to, ...page }) {
+export async function list({ student_id, classroom_id, status, from, to, classIds = null, ...page }) {
   const where = whereClause([
     ["a.student_id = ?", student_id],
     ["a.classroom_id = ?", classroom_id],
     ["a.status = ?", status],
     ["a.day >= ?", from],
     ["a.day <= ?", to],
+    ["a.classroom_id IN (?)", classIds],
   ]);
   const [[{ total }]] = await pool.query(`SELECT COUNT(*) AS total FROM attendance a ${where.sql}`, where.params);
   const { limit, offset } = pageWindow(page);
@@ -31,21 +32,30 @@ export async function list({ student_id, classroom_id, status, from, to, ...page
 }
 
 /** Aggregates for the attendance page: today's rate and the overall rate per class. */
-export async function summary() {
+export async function summary({ classIds = null } = {}) {
+  const scope = whereClause([["a.classroom_id IN (?)", classIds]]);
+  const andScope = scope.sql.replace(/^WHERE/, "AND");
   const [[todayRow]] = await pool.query(
-    `SELECT COUNT(*) AS marked, AVG(${attendedSql}) AS rate FROM attendance a WHERE a.day = ?`,
-    [today()]
+    `SELECT COUNT(*) AS marked, AVG(${attendedSql}) AS rate FROM attendance a WHERE a.day = ? ${andScope}`,
+    [today(), ...scope.params]
   );
   const [byClass] = await pool.query(
     `SELECT a.classroom_id, c.name AS class_name, COUNT(*) AS records, ROUND(AVG(${attendedSql}) * 100) AS rate
      FROM attendance a JOIN classrooms c ON c.id = a.classroom_id
+     ${scope.sql}
      GROUP BY a.classroom_id, c.name
-     ORDER BY rate DESC`
+     ORDER BY rate DESC`,
+    scope.params
   );
   return {
     today: { marked: Number(todayRow.marked), rate: todayRow.rate === null ? null : Math.round(todayRow.rate * 100) },
     by_class: byClass.map((r) => ({ ...r, rate: Number(r.rate), records: Number(r.records) })),
   };
+}
+
+export async function getById(id) {
+  const [rows] = await pool.execute("SELECT * FROM attendance WHERE id = ?", [id]);
+  return rows[0] || null;
 }
 
 export async function create({ student_id, classroom_id, day, status, marked_by }) {

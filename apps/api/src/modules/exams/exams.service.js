@@ -1,13 +1,16 @@
 import pool from "../../db/pool.js";
 import * as aiService from "../ai/ai.service.js";
 
-export async function getAll() {
-  const [rows] = await pool.execute(
+export async function getAll({ classIds = null } = {}) {
+  if (classIds && !classIds.length) return [];
+  const [rows] = await pool.query(
     `SELECT e.*, c.name as class_name,
             (SELECT COUNT(*) FROM exam_questions WHERE exam_id = e.id) as question_count
      FROM exams e
      JOIN classrooms c ON c.id = e.classroom_id
-     ORDER BY e.id DESC`
+     ${classIds ? "WHERE e.classroom_id IN (?)" : ""}
+     ORDER BY e.id DESC`,
+    classIds ? [classIds] : []
   );
   return rows;
 }

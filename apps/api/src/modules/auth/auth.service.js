@@ -3,42 +3,53 @@ import jwt from "jsonwebtoken";
 import pool from "../../db/pool.js";
 import logger from "../../lib/logger.js";
 import { createError } from "../../middleware/errorHandler.js";
+import { CLASS_SCOPED_ROLES, permissionsFor } from "./permissions.js";
 
 const SALT_ROUNDS = 10;
+export const hashPassword = (password) => bcrypt.hash(password, SALT_ROUNDS);
 
-export async function register(username, email, password) {
+const PUBLIC_USER_COLUMNS = "id, username, email, role, teacher_id, is_active, last_login_at, created_at";
+
+export async function getUser(id) {
+  const [rows] = await pool.execute(`SELECT ${PUBLIC_USER_COLUMNS} FROM users WHERE id = ?`, [id]);
+  return rows[0] || null;
+}
+
+export async function createUser({ username, email, password, role, teacher_id = null }) {
   const [existing] = await pool.execute("SELECT id FROM users WHERE email = ?", [email]);
-  if (existing.length > 0) {
-    throw createError(409, "Email already registered", "DUPLICATE_EMAIL");
-  }
-  const hash = await bcrypt.hash(password, SALT_ROUNDS);
+  if (existing.length > 0) throw createError(409, "Email already registered", "DUPLICATE_EMAIL");
   const [result] = await pool.execute(
-    "INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, 'principal')",
-    [username, email, hash]
+    "INSERT INTO users (username, email, password_hash, role, teacher_id) VALUES (?, ?, ?, ?, ?)",
+    [username, email, await hashPassword(password), role, teacher_id]
   );
-  const [rows] = await pool.execute("SELECT id, username, email, role, created_at FROM users WHERE id = ?", [
-    result.insertId,
-  ]);
-  return rows[0];
+  return getUser(result.insertId);
+}
+
+/** What the web app needs to know about the signed-in user. */
+export async function describeSession(userRow) {
+  let classIds = null;
+  if (CLASS_SCOPED_ROLES.has(userRow.role)) {
+    const [rows] = userRow.teacher_id
+      ? await pool.execute("SELECT classroom_id FROM teacher_classes WHERE teacher_id = ?", [userRow.teacher_id])
+      : [[]];
+    classIds = rows.map((r) => r.classroom_id);
+  }
+  return {
+    user: { id: userRow.id, username: userRow.username, email: userRow.email, role: userRow.role },
+    permissions: permissionsFor(userRow.role),
+    classIds,
+  };
 }
 
 export async function login(email, password) {
   const [rows] = await pool.execute("SELECT * FROM users WHERE email = ? AND is_active = 1", [email]);
-  if (rows.length === 0) {
-    throw createError(401, "Invalid email or password", "INVALID_CREDENTIALS");
-  }
   const user = rows[0];
-  const match = await bcrypt.compare(password, user.password_hash);
-  if (!match) {
+  if (!user || !(await bcrypt.compare(password, user.password_hash))) {
     throw createError(401, "Invalid email or password", "INVALID_CREDENTIALS");
   }
-  const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, process.env.JWT_SECRET, {
-    expiresIn: "24h",
-  });
-  return {
-    token,
-    user: { id: user.id, username: user.username, email: user.email, role: user.role },
-  };
+  await pool.execute("UPDATE users SET last_login_at = NOW() WHERE id = ?", [user.id]);
+  const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: "24h" });
+  return { token, ...(await describeSession(user)) };
 }
 
 export async function ensureDefaultPrincipal() {
@@ -54,6 +65,6 @@ export async function ensureDefaultPrincipal() {
     password = "admin123";
     logger.warn("DEFAULT_PRINCIPAL_PASSWORD not set — using dev password 'admin123'. Do not use in production.");
   }
-  await register("Principal", email, password);
+  await createUser({ username: "Principal", email, password, role: "principal" });
   logger.info(`Default principal created: ${email}`);
 }

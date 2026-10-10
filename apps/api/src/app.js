@@ -9,6 +9,7 @@ import logger from "./lib/logger.js";
 
 import errorHandler from "./middleware/errorHandler.js";
 import auth from "./middleware/auth.js";
+import { byMethod, requirePermission } from "./middleware/access.js";
 
 import authRoutes from "./modules/auth/auth.routes.js";
 import dashboardRoutes from "./modules/dashboard/dashboard.routes.js";
@@ -23,6 +24,7 @@ import resultRoutes from "./modules/results/results.routes.js";
 import examRoutes from "./modules/exams/exams.routes.js";
 import aiRoutes from "./modules/ai/ai.routes.js";
 import predictRoutes from "./modules/predict/predict.routes.js";
+import userRoutes from "./modules/users/users.routes.js";
 
 const app = express();
 
@@ -62,19 +64,22 @@ app.use("/auth", authRoutes);
 // ---------- Protected routes (require JWT) ----------
 app.use(auth);
 
-app.use("/dashboard", dashboardRoutes);
-app.use("/students", studentRoutes);
-app.use("/teachers", teacherRoutes);
-app.use("/classrooms", classroomRoutes);
-app.use("/enrollments", enrollmentRoutes);
-app.use("/curriculum", curriculumRoutes);
-app.use("/attendance", attendanceRoutes);
-app.use("/fees", feeRoutes);
-app.use("/results", resultRoutes);
-app.use("/exams", examRoutes);
-app.use("/ai/exams", examRoutes); // backward compatibility: /ai/exams/generate
-app.use("/ai", aiRoutes);
-app.use("/predict", predictRoutes);
+// Each section checks its permission: GET needs "x:read", anything else "x:write".
+// Teachers are further limited to their classes inside the modules.
+app.use("/dashboard", requirePermission("dashboard:read"), dashboardRoutes);
+app.use("/students", byMethod("students:read", "students:write"), studentRoutes);
+app.use("/enrollments", byMethod("students:read", "students:write"), enrollmentRoutes);
+app.use("/teachers", byMethod("teachers:read", "teachers:write"), teacherRoutes);
+app.use("/classrooms", byMethod("classes:read", "classes:write"), classroomRoutes);
+app.use("/curriculum", byMethod("classes:read", "classes:write"), curriculumRoutes);
+app.use("/attendance", byMethod("attendance:read", "attendance:write"), attendanceRoutes);
+app.use("/fees", byMethod("fees:read", "fees:write"), feeRoutes);
+app.use("/results", byMethod("results:read", "results:write"), resultRoutes);
+app.use("/exams", byMethod("exams:read", "exams:write"), examRoutes);
+app.use("/ai/exams", byMethod("exams:read", "exams:write"), examRoutes); // backward compatibility
+app.use("/ai", requirePermission("reports:read"), aiRoutes);
+app.use("/predict", requirePermission("reports:read"), predictRoutes);
+app.use("/users", requirePermission("users:manage"), userRoutes);
 
 // ---------- Error handler ----------
 app.use(errorHandler);

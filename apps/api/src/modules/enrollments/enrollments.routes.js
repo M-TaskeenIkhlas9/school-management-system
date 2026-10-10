@@ -3,6 +3,7 @@ import { z } from "zod";
 import * as enrollmentService from "./enrollments.service.js";
 import validate, { idParam, requiredId, optionalDate } from "../../middleware/validate.js";
 import { createError } from "../../middleware/errorHandler.js";
+import { classScope } from "../../middleware/access.js";
 
 const enrollmentSchema = z.object({
   student_id: requiredId(),
@@ -14,8 +15,8 @@ const enrollmentSchema = z.object({
 
 const router = Router();
 
-router.get("/", async (_req, res) => {
-  res.json(await enrollmentService.getAll());
+router.get("/", async (req, res) => {
+  res.json(await enrollmentService.getAll({ classIds: classScope(req) }));
 });
 
 router.post("/", validate(enrollmentSchema), async (req, res) => {

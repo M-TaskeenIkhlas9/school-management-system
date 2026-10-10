@@ -1,31 +1,52 @@
 import jwt from "jsonwebtoken";
+import pool from "../db/pool.js";
 import { createError } from "./errorHandler.js";
+import { CLASS_SCOPED_ROLES, permissionsFor } from "../modules/auth/permissions.js";
 
-export default function auth(req, _res, next) {
+/**
+ * Verify the JWT, then load the user from the database on every request so that a
+ * role change or deactivation takes effect immediately (not when the token expires).
+ *
+ * Sets req.user = { id, username, email, role, teacherId, permissions: Set, classIds }
+ * where classIds is null (all classes) or the array of classes a scoped role may access.
+ */
+export default async function auth(req, _res, next) {
   const header = req.headers.authorization;
   if (!header || !header.startsWith("Bearer ")) {
     return next(createError(401, "Authentication required", "AUTH_REQUIRED"));
   }
 
-  const token = header.slice(7);
+  let payload;
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = payload;
-    next();
+    payload = jwt.verify(header.slice(7), process.env.JWT_SECRET);
   } catch (err) {
-    if (err.name === "TokenExpiredError") {
-      return next(createError(401, "Token expired", "TOKEN_EXPIRED"));
-    }
+    if (err.name === "TokenExpiredError") return next(createError(401, "Token expired", "TOKEN_EXPIRED"));
     return next(createError(401, "Invalid token", "INVALID_TOKEN"));
   }
-}
 
-/** Restrict a route to users whose JWT role is in `roles`. Use after `auth`. */
-export function requireRole(...roles) {
-  return (req, _res, next) => {
-    if (!req.user || !roles.includes(req.user.role)) {
-      return next(createError(403, "You do not have permission to do this", "FORBIDDEN"));
-    }
-    next();
+  const [[user]] = await pool.execute(
+    "SELECT id, username, email, role, teacher_id, is_active FROM users WHERE id = ?",
+    [payload.id]
+  );
+  if (!user || !user.is_active)
+    return next(createError(401, "Account is disabled or no longer exists", "ACCOUNT_DISABLED"));
+
+  let classIds = null;
+  if (CLASS_SCOPED_ROLES.has(user.role)) {
+    const [rows] = user.teacher_id
+      ? await pool.execute("SELECT classroom_id FROM teacher_classes WHERE teacher_id = ?", [user.teacher_id])
+      : [[]];
+    classIds = rows.map((r) => r.classroom_id);
+  }
+
+  req.user = {
+    id: user.id,
+    username: user.username,
+    email: user.email,
+    role: user.role,
+    teacherId: user.teacher_id,
+    permissions: new Set(permissionsFor(user.role)),
+    classIds,
   };
+  next();
 }

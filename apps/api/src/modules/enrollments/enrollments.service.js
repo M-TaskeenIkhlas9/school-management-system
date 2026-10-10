@@ -2,13 +2,16 @@ import pool from "../../db/pool.js";
 import { schoolToday } from "../../config/env.js";
 import { createError } from "../../middleware/errorHandler.js";
 
-export async function getAll() {
-  const [rows] = await pool.execute(
+export async function getAll({ classIds = null } = {}) {
+  if (classIds && !classIds.length) return [];
+  const [rows] = await pool.query(
     `SELECT e.*, s.first_name, s.last_name, c.name as class_name
      FROM enrollments e
      JOIN students s ON s.id = e.student_id
      JOIN classrooms c ON c.id = e.classroom_id
-     ORDER BY e.id DESC`
+     ${classIds ? "WHERE e.classroom_id IN (?)" : ""}
+     ORDER BY e.id DESC`,
+    classIds ? [classIds] : []
   );
   return rows;
 }

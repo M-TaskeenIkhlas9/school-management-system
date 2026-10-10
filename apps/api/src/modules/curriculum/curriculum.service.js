@@ -1,7 +1,11 @@
 import pool from "../../db/pool.js";
 
-export async function getAll() {
-  const [rows] = await pool.execute("SELECT * FROM curriculum_items ORDER BY id DESC");
+export async function getAll({ classIds = null } = {}) {
+  if (classIds && !classIds.length) return [];
+  const [rows] = await pool.query(
+    `SELECT * FROM curriculum_items ${classIds ? "WHERE classroom_id IN (?)" : ""} ORDER BY id DESC`,
+    classIds ? [classIds] : []
+  );
   return rows;
 }
 

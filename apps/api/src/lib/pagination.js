@@ -16,11 +16,21 @@ export const pageResult = (items, total, { page, pageSize }) => ({
   totalPages: Math.max(1, Math.ceil(total / pageSize)),
 });
 
-/** Build "WHERE a = ? AND b >= ?" from [clause, value] pairs whose value is set. */
+/**
+ * Build "WHERE a = ? AND b IN (?)" from [clause, value] pairs whose value is set.
+ * An empty array (e.g. a teacher with no classes) matches nothing.
+ */
 export function whereClause(conditions) {
   const active = conditions.filter(([, value]) => value !== undefined && value !== null && value !== "");
-  return {
-    sql: active.length ? `WHERE ${active.map(([clause]) => clause).join(" AND ")}` : "",
-    params: active.map(([, value]) => value),
-  };
+  const clauses = [];
+  const params = [];
+  for (const [clause, value] of active) {
+    if (Array.isArray(value) && value.length === 0) {
+      clauses.push("1 = 0");
+    } else {
+      clauses.push(clause);
+      params.push(value);
+    }
+  }
+  return { sql: clauses.length ? `WHERE ${clauses.join(" AND ")}` : "", params };
 }
