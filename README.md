@@ -35,15 +35,17 @@ Log in with `DEFAULT_PRINCIPAL_EMAIL` / `DEFAULT_PRINCIPAL_PASSWORD`
 
 ## Scripts (run from the repo root)
 
-| Command                               | What it does                                                             |
-| ------------------------------------- | ------------------------------------------------------------------------ |
-| `npm run dev`                         | API (auto-restart) + web dev server together                             |
-| `npm run dev:api` / `npm run dev:web` | Just one of them                                                         |
-| `npm test`                            | API tests on `school_management_test` — never touches your real database |
-| `npm run migrate`                     | Apply new SQL migrations (`apps/api/src/db/migrations`)                  |
-| `npm run seed`                        | Demo data (empty database only)                                          |
-| `npm run build`                       | Production build of the web app                                          |
-| `npm run db:up`                       | Start the local MySQL container                                          |
+| Command                                 | What it does                                                                  |
+| --------------------------------------- | ----------------------------------------------------------------------------- |
+| `npm run dev`                           | API (auto-restart) + web dev server together                                  |
+| `npm run dev:api` / `npm run dev:web`   | Just one of them                                                              |
+| `npm test`                              | All tests: API (on `school_management_test` — never your real database) + web |
+| `npm run test:api` / `npm run test:web` | Just one test suite                                                           |
+| `npm run lint` / `npm run format`       | ESLint / Prettier (CI runs `lint` and `format:check`)                         |
+| `npm run migrate`                       | Apply new SQL migrations (`apps/api/src/db/migrations`)                       |
+| `npm run seed`                          | Demo data (empty database only)                                               |
+| `npm run build`                         | Production build of the web app                                               |
+| `npm run db:up`                         | Start the local MySQL container                                               |
 
 ## AI School Assistant (AI Center)
 
@@ -66,3 +68,8 @@ approve, and what you approve is exactly what runs.
 | `AGENT_MODEL`                                                | Override the model (Groq default `openai/gpt-oss-120b`).                                                |
 | `SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD`, `EMAIL_FROM`      | Real email delivery. If unset, emails are **simulated** (recorded, not delivered).                      |
 | `EMAIL_REDIRECT_TO`                                          | Testing: send every email to this address instead of parents.                                           |
+
+## Continuous integration
+
+`.github/workflows/ci.yml` runs on every push and pull request: lint + format check, API tests against
+a MySQL 8 service, and web tests + production build.
