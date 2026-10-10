@@ -4,6 +4,7 @@
  */
 import { createAgent, HumanMessage, AIMessage } from "langchain";
 import { schoolToday } from "../config/env.js";
+import logger from "../lib/logger.js";
 import * as store from "./store.js";
 import { buildTools } from "./tools.js";
 import { handleRuleBased, HELP_TEXT } from "./fallback.js";
@@ -129,7 +130,7 @@ export async function runTurn({ userId, conversationId, message }) {
           : "I couldn't produce an answer for that. Could you rephrase?";
       }
     } catch (err) {
-      console.error("[agent] LLM run failed:", err.message);
+      logger.warn({ err: err.message, model }, "Agent LLM run failed; using fallback");
       mode = "fallback";
       if (ctx.proposedActions.length) {
         content = "I prepared the action below for your approval, but hit an error while writing my reply.";

@@ -1,6 +1,7 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import pool from "../../db/pool.js";
+import logger from "../../lib/logger.js";
 import { createError } from "../../middleware/errorHandler.js";
 
 const SALT_ROUNDS = 10;
@@ -57,8 +58,8 @@ export async function ensureDefaultPrincipal() {
       throw new Error("DEFAULT_PRINCIPAL_PASSWORD must be set to create the first principal in production");
     }
     password = "admin123";
-    console.warn("WARNING: DEFAULT_PRINCIPAL_PASSWORD not set — using dev password 'admin123'. Do not use in production.");
+    logger.warn("DEFAULT_PRINCIPAL_PASSWORD not set — using dev password 'admin123'. Do not use in production.");
   }
   await register("Principal", email, password);
-  console.log(`Default principal created: ${email}`);
+  logger.info(`Default principal created: ${email}`);
 }

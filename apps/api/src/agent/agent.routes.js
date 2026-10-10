@@ -3,6 +3,7 @@ import { z } from "zod";
 import pool from "../db/pool.js";
 import validate, { idParam, requiredText } from "../middleware/validate.js";
 import { emailMode } from "../lib/email.js";
+import { agentLimiter } from "../middleware/rateLimit.js";
 import * as store from "./store.js";
 import * as actions from "./actions.js";
 import { runTurn, resolveModel } from "./harness.js";
@@ -43,7 +44,7 @@ router.delete("/conversations/:id", async (req, res) => {
   res.json({ success: true });
 });
 
-router.post("/conversations/:id/messages", validate(messageSchema), async (req, res) => {
+router.post("/conversations/:id/messages", agentLimiter, validate(messageSchema), async (req, res) => {
   res.json(await runTurn({ userId: req.user.id, conversationId: idParam(req), message: req.body.message }));
 });
 

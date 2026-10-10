@@ -3,6 +3,9 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
+import pinoHttp from "pino-http";
+import logger from "./lib/logger.js";
 
 import errorHandler from "./middleware/errorHandler.js";
 import auth, { requireRole } from "./middleware/auth.js";
@@ -24,8 +27,31 @@ import agentRoutes from "./agent/agent.routes.js";
 
 const app = express();
 
+// Allowed browser origins (comma-separated). In development the Vite proxy makes
+// requests same-origin, so CORS only matters for other clients.
+const corsOrigins = (process.env.CORS_ORIGINS || "http://localhost:5173,http://localhost:5174")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+
 // ---------- Global middleware ----------
-app.use(cors());
+app.disable("x-powered-by");
+app.use(helmet());
+app.use(cors({ origin: corsOrigins }));
+app.use(
+  pinoHttp({
+    logger,
+    autoLogging: { ignore: (req) => req.url === "/health" },
+    customLogLevel: (_req, res, err) => (err || res.statusCode >= 500 ? "error" : res.statusCode >= 400 ? "warn" : "info"),
+    customSuccessMessage: (req, res, ms) => `${req.method} ${req.originalUrl || req.url} → ${res.statusCode} (${Math.round(ms)}ms)`,
+    customErrorMessage: (req, res) => `${req.method} ${req.originalUrl || req.url} → ${res.statusCode}`,
+    // Keep only what is useful; never log headers (tokens) or bodies.
+    serializers: {
+      req: (req) => ({ id: req.id, method: req.method, url: req.url }),
+      res: (res) => ({ statusCode: res.statusCode }),
+    },
+  })
+);
 app.use(express.json({ limit: "1mb" }));
 
 // ---------- Public routes ----------

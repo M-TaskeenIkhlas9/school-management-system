@@ -1,6 +1,7 @@
 // Process entry point: validate config, ensure the first principal exists, listen,
 // and shut down cleanly (finish in-flight requests, close the DB pool) on SIGINT/SIGTERM.
 import app from "./app.js";
+import logger from "./lib/logger.js";
 import pool from "./db/pool.js";
 import { assertConfig } from "./config/env.js";
 import { ensureDefaultPrincipal } from "./modules/auth/auth.service.js";
@@ -12,11 +13,11 @@ async function start() {
   await ensureDefaultPrincipal();
 
   const server = app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    logger.info(`Server running on http://localhost:${PORT}`);
   });
 
   const shutdown = (signal) => {
-    console.log(`${signal} received, shutting down…`);
+    logger.info(`${signal} received, shutting down…`);
     server.close(async () => {
       await pool.end().catch(() => {});
       process.exit(0);
@@ -29,6 +30,6 @@ async function start() {
 }
 
 start().catch((err) => {
-  console.error("Failed to start server:", err.message);
+  logger.fatal(err.message, "Failed to start server");
   process.exit(1);
 });

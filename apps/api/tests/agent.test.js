@@ -205,3 +205,27 @@ describe("Agent harness", () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe("Security hardening", () => {
+  it("sends security headers and hides the framework", async () => {
+    const res = await request.get("/health");
+    expect(res.headers["x-content-type-options"]).toBe("nosniff");
+    expect(res.headers["x-powered-by"]).toBeUndefined();
+  });
+
+  it("answers malformed JSON with 400, not 500", async () => {
+    const res = await request.post("/auth/login").set("Content-Type", "application/json").send("{not json");
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("INVALID_JSON");
+  });
+
+  // Keep last in this file: it exhausts the login limit for this IP.
+  it("locks out repeated failed logins with 429", async () => {
+    let last;
+    for (let i = 0; i < 11; i++) {
+      last = await request.post("/auth/login").send({ email: "admin@school.com", password: "wrong-password" });
+    }
+    expect(last.status).toBe(429);
+    expect(last.body.code).toBe("RATE_LIMITED");
+  });
+});

@@ -3,6 +3,7 @@ import { z } from "zod";
 import * as authService from "./auth.service.js";
 import validate, { requiredText } from "../../middleware/validate.js";
 import auth, { requireRole } from "../../middleware/auth.js";
+import { loginLimiter } from "../../middleware/rateLimit.js";
 
 const loginSchema = z.object({
   email: requiredText(255),
@@ -17,7 +18,7 @@ const registerSchema = z.object({
 
 const router = Router();
 
-router.post("/login", validate(loginSchema), async (req, res) => {
+router.post("/login", loginLimiter, validate(loginSchema), async (req, res) => {
   res.json(await authService.login(req.body.email, req.body.password));
 });
 
