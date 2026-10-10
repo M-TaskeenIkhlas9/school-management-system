@@ -71,10 +71,19 @@ Phone numbers are stored in international format (`03001234567` → `+9230012345
 has a preferred channel (WhatsApp, SMS or email) and per-channel consent, which messaging will
 respect.
 
-## AI School Assistant
+## AI School Assistant (AI Center)
 
-Being rebuilt (milestones M1–M6): role-aware tools, approval before anything is sent or changed,
-and WhatsApp, SMS and email delivery.
+Ask questions in plain language — "Which parents have overdue fees?", "Who was absent today?",
+"Which students need attention?". The assistant looks the answer up with tools, shows its progress
+live, and every answer has a **Show steps** view of what it did (tools used, time, tokens).
+
+- It only gets the tools your role allows, and every lookup is re-checked on the server: a teacher's
+  assistant cannot see fees or other classes.
+- It is **read-only** for now: it reports, but cannot change records or send messages (that arrives
+  with approvals in M2).
+- Model: any OpenAI-compatible service, set in `apps/api/.env` (`AI_PROVIDER=groq|openai|ollama`,
+  optional `AI_MODEL`, `AI_FALLBACK_MODEL`). On Groq's free tier, expect roughly one question per
+  minute (8,000 tokens/minute); rate-limit waits are retried automatically.
 
 ## Continuous integration
 

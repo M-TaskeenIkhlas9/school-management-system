@@ -83,6 +83,26 @@ package.json                    root scripts: npm run dev / test / migrate / see
 details reuses a parent matched by email, then phone. `lib/phone.js` normalises numbers
 (`DEFAULT_COUNTRY_CODE`, default 92). Migrations can be `.sql` or `.js` (`export async function up(conn)`).
 
-## AI assistant
+## AI assistant (agent harness)
 
-Being rebuilt from scratch (milestones M1–M6). The first-generation agent was removed in M0.
+```
+POST /assistant/conversations/:id/messages        (Server-Sent Events back to the browser)
+  └─ engine/runAgent
+       ├─ prompt: school, today, user and role scope, currency; last 20 messages
+       ├─ loop (≤ AGENT_MAX_STEPS model calls, AGENT_TIMEOUT_MS, AGENT_MAX_TOKENS):
+       │    model.chat(messages, tools for this role)
+       │    └─ for each tool call: exists? permitted? valid input? → run → shrink → {"data"|"error"}
+       └─ save answer; run status completed | failed | cancelled | limit_reached
+GET /assistant/runs/:id                             (trace: every model/tool step)
+```
+
+- `llm/`: `openaiCompatible.js` (plain HTTP, retries honour Retry-After / "try again in Xs"),
+  `index.js` (presets, fallback model, `getModel`/`setModel`), `fakeModel.js` (scripted, for tests).
+- `tools/`: each tool = `{ name, description, permission, input (zod), label(input), run(input, ctx) }`.
+  Tools reuse the module services and the same access helpers as the HTTP routes, so a tool can never
+  return more than the user could see in the app. Add a tool by adding it to one of the files and the
+  registry picks it up.
+- Tables: `agent_conversations`, `agent_messages`, `agent_runs`, `agent_run_steps`.
+- Tool output is trimmed (`context/shrink.js`) and wrapped as `{"data": …}`; the prompt tells the
+  model to treat it as data, never instructions.
+- Read-only in M1. Next (M2): approval-gated actions, job queue, email/WhatsApp/SMS channels.

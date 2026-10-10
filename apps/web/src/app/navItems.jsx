@@ -46,7 +46,7 @@ export const navItems = [
   },
   {
     path: "/ai-center",
-    permission: "exams:read",
+    permission: "assistant:use",
     label: "AI Center",
     colorClass: "nav-icon--orange",
     icon: (

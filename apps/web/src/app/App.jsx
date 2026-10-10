@@ -21,7 +21,7 @@ const pages = [
   { path: "students", element: <StudentsPage />, permission: "students:read" },
   { path: "teachers", element: <TeachersPage />, permission: "teachers:read" },
   { path: "classes", element: <ClassesPage />, permission: "classes:read" },
-  { path: "ai-center", element: <AiCenterPage />, permission: "exams:read" },
+  { path: "ai-center", element: <AiCenterPage />, permission: "assistant:use" },
   { path: "exams", element: <ExamsPage />, permission: "exams:read" },
   { path: "attendance", element: <AttendancePage />, permission: "attendance:read" },
   { path: "results", element: <ResultsPage />, permission: "results:read" },

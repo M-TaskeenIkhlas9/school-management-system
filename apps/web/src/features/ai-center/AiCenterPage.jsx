@@ -1,22 +1,16 @@
 import PageHeader from "../../components/PageHeader.jsx";
 import { useAuth } from "../../auth/AuthContext.jsx";
 import ExamGenerator from "./ExamGenerator.jsx";
+import AssistantChat from "../assistant/AssistantChat.jsx";
 
 export default function AiCenterPage() {
   const { can } = useAuth();
   return (
     <section className="section active">
-      <PageHeader title="AI Center" subtitle="AI tools for the school office." />
+      <PageHeader title="AI Center" subtitle="Ask questions about your school; answers come from your data." />
       <div className="grid-2 ai-center-grid">
-        <div className="card span-2">
-          <div className="card__title">
-            <h4>School Assistant</h4>
-            <span className="ai-pill">Being rebuilt</span>
-          </div>
-          <p className="muted">
-            The chat assistant is being rebuilt with role-based access, live progress and WhatsApp, SMS and email
-            delivery. It will return here.
-          </p>
+        <div className="span-2">
+          <AssistantChat />
         </div>
         {can("exams:write") && <ExamGenerator />}
       </div>
