@@ -17,8 +17,8 @@ let pool;
 
 beforeAll(async () => {
   const supertest = (await import("supertest")).default;
-  const appModule = await import("../index.js");
-  const dbModule = await import("../db.js");
+  const appModule = await import("../src/app.js");
+  const dbModule = await import("../src/db/pool.js");
   app = appModule.default;
   pool = dbModule.default;
   request = supertest(app);
@@ -38,7 +38,7 @@ beforeAll(async () => {
   await pool.execute("DELETE FROM classrooms");
 
   // index.js no longer starts the server on import, so seed the login user here.
-  const { ensureDefaultPrincipal } = await import("../services/authService.js");
+  const { ensureDefaultPrincipal } = await import("../src/modules/auth/auth.service.js");
   await ensureDefaultPrincipal();
 });
 

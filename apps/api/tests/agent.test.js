@@ -23,8 +23,8 @@ const outboxCount = async () => (await pool.query("SELECT COUNT(*) AS n FROM ema
 
 beforeAll(async () => {
   const supertest = (await import("supertest")).default;
-  const app = (await import("../index.js")).default;
-  pool = (await import("../db.js")).default;
+  const app = (await import("../src/app.js")).default;
+  pool = (await import("../src/db/pool.js")).default;
   request = supertest(app);
 
   for (const table of [
@@ -35,7 +35,7 @@ beforeAll(async () => {
     await pool.execute(`DELETE FROM ${table}`);
   }
 
-  const { ensureDefaultPrincipal } = await import("../services/authService.js");
+  const { ensureDefaultPrincipal } = await import("../src/modules/auth/auth.service.js");
   await ensureDefaultPrincipal();
   const login = await request.post("/auth/login").send({ email: "admin@school.com", password: "admin123" });
   token = login.body.token;
