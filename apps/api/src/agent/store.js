@@ -7,7 +7,11 @@ export const ACTION_TTL_HOURS = 24;
 const parseJson = (value) => {
   if (value === null || value === undefined) return null;
   if (typeof value !== "string") return value; // mysql2 already parses JSON columns
-  try { return JSON.parse(value); } catch { return value; }
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
 };
 
 // ---------- Conversations ----------
@@ -21,10 +25,10 @@ export async function listConversations(userId) {
 }
 
 export async function createConversation(userId, title = "New conversation") {
-  const [result] = await pool.execute(
-    "INSERT INTO agent_conversations (user_id, title) VALUES (?, ?)",
-    [userId, title.slice(0, 200)]
-  );
+  const [result] = await pool.execute("INSERT INTO agent_conversations (user_id, title) VALUES (?, ?)", [
+    userId,
+    title.slice(0, 200),
+  ]);
   return getConversation(userId, result.insertId);
 }
 
@@ -38,10 +42,11 @@ export async function getConversation(userId, conversationId) {
 }
 
 export async function renameConversation(userId, conversationId, title) {
-  await pool.execute(
-    "UPDATE agent_conversations SET title = ? WHERE id = ? AND user_id = ?",
-    [title.slice(0, 200), conversationId, userId]
-  );
+  await pool.execute("UPDATE agent_conversations SET title = ? WHERE id = ? AND user_id = ?", [
+    title.slice(0, 200),
+    conversationId,
+    userId,
+  ]);
 }
 
 export async function touchConversation(conversationId) {
@@ -89,7 +94,14 @@ export async function createAction({ conversationId, userId, type, summary, payl
   const [result] = await pool.execute(
     `INSERT INTO agent_actions (conversation_id, user_id, type, summary, payload, preview)
      VALUES (?, ?, ?, ?, ?, ?)`,
-    [conversationId || null, userId, type, summary.slice(0, 500), JSON.stringify(payload), JSON.stringify(preview ?? null)]
+    [
+      conversationId || null,
+      userId,
+      type,
+      summary.slice(0, 500),
+      JSON.stringify(payload),
+      JSON.stringify(preview ?? null),
+    ]
   );
   return getAction(userId, result.insertId);
 }
@@ -125,14 +137,20 @@ export async function claimPendingAction(userId, actionId, nextStatus) {
   if (!action) throw createError(404, "Action not found", "NOT_FOUND");
   if (action.status === "pending") {
     await pool.execute("UPDATE agent_actions SET status = 'expired' WHERE id = ?", [actionId]);
-    throw createError(409, `This action expired (older than ${ACTION_TTL_HOURS}h). Ask the assistant again.`, "ACTION_EXPIRED");
+    throw createError(
+      409,
+      `This action expired (older than ${ACTION_TTL_HOURS}h). Ask the assistant again.`,
+      "ACTION_EXPIRED"
+    );
   }
   throw createError(409, `This action is already ${action.status}`, "ACTION_ALREADY_DECIDED");
 }
 
 export async function finishAction(actionId, { status, result = null, error = null }) {
-  await pool.execute(
-    "UPDATE agent_actions SET status = ?, result = ?, error = ?, executed_at = NOW() WHERE id = ?",
-    [status, result ? JSON.stringify(result) : null, error, actionId]
-  );
+  await pool.execute("UPDATE agent_actions SET status = ?, result = ?, error = ?, executed_at = NOW() WHERE id = ?", [
+    status,
+    result ? JSON.stringify(result) : null,
+    error,
+    actionId,
+  ]);
 }

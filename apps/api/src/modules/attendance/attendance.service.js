@@ -96,9 +96,7 @@ export async function getStudentRate(studentId) {
  * (a true consecutive streak over recorded school days, not a date window).
  */
 export async function getConsecutiveAbsent(days = 3) {
-  const [rows] = await pool.execute(
-    "SELECT student_id, day, status FROM attendance ORDER BY student_id, day DESC"
-  );
+  const [rows] = await pool.execute("SELECT student_id, day, status FROM attendance ORDER BY student_id, day DESC");
   const streaks = new Map();
   const broken = new Set();
   for (const row of rows) {

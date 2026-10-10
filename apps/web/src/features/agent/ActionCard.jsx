@@ -27,14 +27,18 @@ function EmailPreview({ preview, result }) {
         </p>
       )}
       {preview.redirect_to && (
-        <p className="action-note info">Test mode: every email will go to {preview.redirect_to} instead of the parents.</p>
+        <p className="action-note info">
+          Test mode: every email will go to {preview.redirect_to} instead of the parents.
+        </p>
       )}
       <p className="action-meta">{emails.length} recipient(s) · click one to read the exact email</p>
       <ul className="email-list">
         {emails.map((e, i) => (
           <li key={i} className={openIndex === i ? "open" : ""}>
             <button type="button" className="email-row" onClick={() => setOpenIndex(openIndex === i ? -1 : i)}>
-              <span className="email-to">{e.to_name} &lt;{e.to}&gt;</span>
+              <span className="email-to">
+                {e.to_name} &lt;{e.to}&gt;
+              </span>
               <span className="email-student">{e.student_name}</span>
             </button>
             {openIndex === i && (
@@ -66,12 +70,28 @@ function StudentPreview({ preview }) {
   return (
     <div className="action-body">
       <dl className="action-fields">
-        <dt>Name</dt><dd>{s.first_name} {s.last_name}</dd>
-        <dt>Class</dt><dd>{preview.class_name}</dd>
-        {s.roll_number && (<><dt>Roll no.</dt><dd>{s.roll_number}</dd></>)}
-        <dt>Guardian</dt><dd>{s.guardian_name || "—"}</dd>
-        <dt>Guardian email</dt><dd>{s.guardian_email || "—"}</dd>
-        {s.guardian_phone && (<><dt>Guardian phone</dt><dd>{s.guardian_phone}</dd></>)}
+        <dt>Name</dt>
+        <dd>
+          {s.first_name} {s.last_name}
+        </dd>
+        <dt>Class</dt>
+        <dd>{preview.class_name}</dd>
+        {s.roll_number && (
+          <>
+            <dt>Roll no.</dt>
+            <dd>{s.roll_number}</dd>
+          </>
+        )}
+        <dt>Guardian</dt>
+        <dd>{s.guardian_name || "—"}</dd>
+        <dt>Guardian email</dt>
+        <dd>{s.guardian_email || "—"}</dd>
+        {s.guardian_phone && (
+          <>
+            <dt>Guardian phone</dt>
+            <dd>{s.guardian_phone}</dd>
+          </>
+        )}
       </dl>
     </div>
   );
@@ -85,14 +105,22 @@ function PaymentPreview({ preview }) {
       </p>
       <table className="md-table">
         <thead>
-          <tr><th>Fee month</th><th>Due date</th><th>Paid before</th><th>Apply</th><th>Status after</th></tr>
+          <tr>
+            <th>Fee month</th>
+            <th>Due date</th>
+            <th>Paid before</th>
+            <th>Apply</th>
+            <th>Status after</th>
+          </tr>
         </thead>
         <tbody>
           {(preview.allocations || []).map((a) => (
             <tr key={a.fee_id}>
               <td>{a.month || "—"}</td>
               <td>{a.due_date}</td>
-              <td>{a.paid_before} / {a.amount_due}</td>
+              <td>
+                {a.paid_before} / {a.amount_due}
+              </td>
               <td>{a.apply}</td>
               <td>{a.status_after}</td>
             </tr>

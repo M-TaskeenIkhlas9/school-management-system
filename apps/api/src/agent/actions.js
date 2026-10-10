@@ -26,7 +26,9 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export const schoolName = () => process.env.SCHOOL_NAME || "Cambridge Public School";
 
 const formatMoney = (value) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: process.env.CURRENCY || "USD" }).format(Number(value) || 0);
+  new Intl.NumberFormat("en-US", { style: "currency", currency: process.env.CURRENCY || "USD" }).format(
+    Number(value) || 0
+  );
 
 const formatDate = (value) => {
   if (!value) return "";
@@ -66,7 +68,9 @@ export async function findStudents(query, limit = 20) {
 /** Resolve a class by name or grade; throws a helpful error when ambiguous/missing. */
 export async function findClassroom(className) {
   const [rooms] = await pool.execute("SELECT id, name, grade, section FROM classrooms WHERE is_active = 1");
-  const needle = String(className || "").trim().toLowerCase();
+  const needle = String(className || "")
+    .trim()
+    .toLowerCase();
   const exact = rooms.filter((r) => r.name.toLowerCase() === needle || String(r.grade).toLowerCase() === needle);
   const matches = exact.length ? exact : rooms.filter((r) => r.name.toLowerCase().includes(needle));
   const available = rooms.map((r) => r.name).join(", ") || "none";
@@ -74,7 +78,11 @@ export async function findClassroom(className) {
     throw createError(400, `Class "${className}" not found. Available classes: ${available}`, "CLASS_NOT_FOUND");
   }
   if (matches.length > 1) {
-    throw createError(400, `"${className}" matches several classes: ${matches.map((r) => r.name).join(", ")}. Be more specific.`, "CLASS_AMBIGUOUS");
+    throw createError(
+      400,
+      `"${className}" matches several classes: ${matches.map((r) => r.name).join(", ")}. Be more specific.`,
+      "CLASS_AMBIGUOUS"
+    );
   }
   return matches[0];
 }
@@ -83,7 +91,14 @@ export async function findClassroom(className) {
 // Guardian emails
 // =====================================================================
 
-export const EMAIL_AUDIENCES = ["fee_defaulters", "low_attendance", "absent_streak", "class", "students", "all_guardians"];
+export const EMAIL_AUDIENCES = [
+  "fee_defaulters",
+  "low_attendance",
+  "absent_streak",
+  "class",
+  "students",
+  "all_guardians",
+];
 
 const DEFAULT_TEMPLATES = {
   fee_defaulters: {
@@ -178,7 +193,9 @@ async function resolveAudience({ audience, class_name, student_ids, attendance_t
       const streaks = await getConsecutiveAbsent(Number(absent_days));
       if (!streaks.length) return [];
       const ids = streaks.map((s) => s.student_id);
-      const [rows] = await pool.query(`SELECT ${STUDENT_COLS} FROM students s WHERE s.is_active = 1 AND s.id IN (?)`, [ids]);
+      const [rows] = await pool.query(`SELECT ${STUDENT_COLS} FROM students s WHERE s.is_active = 1 AND s.id IN (?)`, [
+        ids,
+      ]);
       const streakById = new Map(streaks.map((s) => [s.student_id, s.absent_streak]));
       return rows.map((r) => toRecipient(r, { absent_days: streakById.get(r.id) }));
     }
@@ -195,7 +212,9 @@ async function resolveAudience({ audience, class_name, student_ids, attendance_t
     case "students": {
       const ids = (student_ids || []).map(Number).filter(Number.isInteger);
       if (!ids.length) throw createError(400, "student_ids is required for audience 'students'", "VALIDATION_ERROR");
-      const [rows] = await pool.query(`SELECT ${STUDENT_COLS} FROM students s WHERE s.is_active = 1 AND s.id IN (?)`, [ids]);
+      const [rows] = await pool.query(`SELECT ${STUDENT_COLS} FROM students s WHERE s.is_active = 1 AND s.id IN (?)`, [
+        ids,
+      ]);
       return rows.map((r) => toRecipient(r));
     }
     case "all_guardians": {
@@ -203,7 +222,11 @@ async function resolveAudience({ audience, class_name, student_ids, attendance_t
       return rows.map((r) => toRecipient(r));
     }
     default:
-      throw createError(400, `Unknown audience "${audience}". Use one of: ${EMAIL_AUDIENCES.join(", ")}`, "VALIDATION_ERROR");
+      throw createError(
+        400,
+        `Unknown audience "${audience}". Use one of: ${EMAIL_AUDIENCES.join(", ")}`,
+        "VALIDATION_ERROR"
+      );
   }
 }
 
@@ -228,7 +251,11 @@ export async function proposeGuardianEmails(args, ctx) {
   const sendable = recipients.filter((r) => EMAIL_RE.test(r.email)).slice(0, MAX_RECIPIENTS);
   const skipped = recipients
     .filter((r) => !EMAIL_RE.test(r.email))
-    .map((r) => ({ student_id: r.student_id, student_name: r.student_name, reason: r.email ? "invalid guardian email" : "no guardian email on file" }));
+    .map((r) => ({
+      student_id: r.student_id,
+      student_name: r.student_name,
+      reason: r.email ? "invalid guardian email" : "no guardian email on file",
+    }));
 
   if (!sendable.length) {
     return {
@@ -279,7 +306,16 @@ async function executeGuardianEmails(payload, action) {
       await pool.execute(
         `INSERT INTO email_outbox (action_id, student_id, to_email, to_name, subject, body, status, provider_message_id)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [action.id, email.student_id, res.deliveredTo, email.to_name, email.subject, email.body, res.status, res.messageId]
+        [
+          action.id,
+          email.student_id,
+          res.deliveredTo,
+          email.to_name,
+          email.subject,
+          email.body,
+          res.status,
+          res.messageId,
+        ]
       );
     } catch (err) {
       counts.failed++;
@@ -294,7 +330,8 @@ async function executeGuardianEmails(payload, action) {
   const delivered = counts.sent + counts.simulated;
   const parts = [];
   if (counts.sent) parts.push(`${counts.sent} sent`);
-  if (counts.simulated) parts.push(`${counts.simulated} simulated (SMTP not configured — nothing was actually delivered)`);
+  if (counts.simulated)
+    parts.push(`${counts.simulated} simulated (SMTP not configured — nothing was actually delivered)`);
   if (counts.failed) parts.push(`${counts.failed} failed`);
   return {
     ok: delivered > 0,
@@ -343,17 +380,30 @@ async function executeAddStudent(payload) {
     const [res] = await conn.execute(
       `INSERT INTO students (first_name, last_name, roll_number, guardian_name, guardian_email, guardian_phone)
        VALUES (?, ?, ?, ?, ?, ?)`,
-      [student.first_name, student.last_name, student.roll_number, student.guardian_name, student.guardian_email, student.guardian_phone]
+      [
+        student.first_name,
+        student.last_name,
+        student.roll_number,
+        student.guardian_name,
+        student.guardian_email,
+        student.guardian_phone,
+      ]
     );
-    await conn.execute(
-      "INSERT INTO enrollments (student_id, classroom_id, start_date) VALUES (?, ?, ?)",
-      [res.insertId, classroom_id, schoolToday()]
-    );
+    await conn.execute("INSERT INTO enrollments (student_id, classroom_id, start_date) VALUES (?, ?, ?)", [
+      res.insertId,
+      classroom_id,
+      schoolToday(),
+    ]);
     await conn.commit();
-    return { ok: true, result: { student_id: res.insertId }, message: `Added ${student.first_name} ${student.last_name} (ID ${res.insertId}).` };
+    return {
+      ok: true,
+      result: { student_id: res.insertId },
+      message: `Added ${student.first_name} ${student.last_name} (ID ${res.insertId}).`,
+    };
   } catch (err) {
     await conn.rollback();
-    if (err.code === "ER_DUP_ENTRY") throw createError(409, "A student with that roll number already exists", "DUPLICATE_ROLL");
+    if (err.code === "ER_DUP_ENTRY")
+      throw createError(409, "A student with that roll number already exists", "DUPLICATE_ROLL");
     throw err;
   } finally {
     conn.release();
@@ -370,7 +420,10 @@ export async function proposeFeePayment(args, ctx) {
   const amount = Number(args.amount);
   if (!(amount > 0)) throw createError(400, "Payment amount must be greater than zero", "VALIDATION_ERROR");
 
-  const [[student]] = await pool.execute("SELECT id, first_name, last_name FROM students WHERE id = ? AND is_active = 1", [args.student_id]);
+  const [[student]] = await pool.execute(
+    "SELECT id, first_name, last_name FROM students WHERE id = ? AND is_active = 1",
+    [args.student_id]
+  );
   if (!student) throw createError(404, `Student ${args.student_id} not found`, "NOT_FOUND");
 
   const [ledgers] = await pool.execute(
@@ -378,9 +431,14 @@ export async function proposeFeePayment(args, ctx) {
     [student.id]
   );
   const owed = ledgers.reduce((sum, l) => sum + (Number(l.amount_due) - Number(l.amount_paid)), 0);
-  if (!ledgers.length) throw createError(400, `${student.first_name} ${student.last_name} has no unpaid fees`, "NOTHING_OWED");
+  if (!ledgers.length)
+    throw createError(400, `${student.first_name} ${student.last_name} has no unpaid fees`, "NOTHING_OWED");
   if (amount > owed + 1e-9) {
-    throw createError(400, `Payment ${formatMoney(amount)} exceeds the outstanding balance ${formatMoney(owed)}`, "PAYMENT_EXCEEDS_FEE");
+    throw createError(
+      400,
+      `Payment ${formatMoney(amount)} exceeds the outstanding balance ${formatMoney(owed)}`,
+      "PAYMENT_EXCEEDS_FEE"
+    );
   }
 
   let remaining = amount;
@@ -423,7 +481,11 @@ async function executeFeePayment(payload) {
     for (const a of payload.allocations) {
       const [[row]] = await conn.execute("SELECT amount_paid FROM fee_ledgers WHERE id = ? FOR UPDATE", [a.fee_id]);
       if (!row || Number(row.amount_paid) !== a.paid_before) {
-        throw createError(409, `Fee record #${a.fee_id} changed after this was proposed. Ask the assistant again.`, "STALE_ACTION");
+        throw createError(
+          409,
+          `Fee record #${a.fee_id} changed after this was proposed. Ask the assistant again.`,
+          "STALE_ACTION"
+        );
       }
       await conn.execute(
         "UPDATE fee_ledgers SET amount_paid = ?, status = ?, paid_date = IF(? = 'paid', ?, paid_date) WHERE id = ?",
@@ -431,7 +493,11 @@ async function executeFeePayment(payload) {
       );
     }
     await conn.commit();
-    return { ok: true, result: { updated: payload.allocations.length }, message: `Payment recorded across ${payload.allocations.length} fee record(s).` };
+    return {
+      ok: true,
+      result: { updated: payload.allocations.length },
+      message: `Payment recorded across ${payload.allocations.length} fee record(s).`,
+    };
   } catch (err) {
     await conn.rollback();
     throw err;

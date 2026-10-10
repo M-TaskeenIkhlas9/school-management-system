@@ -28,9 +28,22 @@ beforeAll(async () => {
   request = supertest(app);
 
   for (const table of [
-    "email_outbox", "agent_actions", "agent_messages", "agent_conversations",
-    "exam_questions", "exams", "insights", "ai_logs", "result_cards", "fee_ledgers",
-    "attendance", "curriculum_items", "enrollments", "students", "teachers", "classrooms",
+    "email_outbox",
+    "agent_actions",
+    "agent_messages",
+    "agent_conversations",
+    "exam_questions",
+    "exams",
+    "insights",
+    "ai_logs",
+    "result_cards",
+    "fee_ledgers",
+    "attendance",
+    "curriculum_items",
+    "enrollments",
+    "students",
+    "teachers",
+    "classrooms",
   ]) {
     await pool.execute(`DELETE FROM ${table}`);
   }
@@ -45,7 +58,9 @@ beforeAll(async () => {
   const [a] = await pool.execute(
     "INSERT INTO students (first_name, last_name, guardian_name, guardian_email) VALUES ('Ali', 'Hassan', 'Hassan Ali', 'hassan@example.com')"
   );
-  const [b] = await pool.execute("INSERT INTO students (first_name, last_name, guardian_name) VALUES ('Zainab', 'Iqbal', 'Iqbal Shah')");
+  const [b] = await pool.execute(
+    "INSERT INTO students (first_name, last_name, guardian_name) VALUES ('Zainab', 'Iqbal', 'Iqbal Shah')"
+  );
   for (const id of [a.insertId, b.insertId]) {
     await pool.execute("INSERT INTO enrollments (student_id, classroom_id) VALUES (?, ?)", [id, c.insertId]);
     await pool.execute(
@@ -61,7 +76,9 @@ afterAll(async () => {
 
 describe("Phase 1 security & bug fixes", () => {
   it("POST /auth/register requires authentication", async () => {
-    const res = await request.post("/auth/register").send({ username: "x", email: "x@example.com", password: "secret123" });
+    const res = await request
+      .post("/auth/register")
+      .send({ username: "x", email: "x@example.com", password: "secret123" });
     expect(res.status).toBe(401);
   });
 
@@ -91,13 +108,19 @@ describe("Validation and errors (zod + Express 5)", () => {
   });
 
   it("rejects an invalid guardian email", async () => {
-    const res = await request.post("/students").set(auth()).send({ first_name: "A", last_name: "B", guardian_email: "nope" });
+    const res = await request
+      .post("/students")
+      .set(auth())
+      .send({ first_name: "A", last_name: "B", guardian_email: "nope" });
     expect(res.status).toBe(400);
     expect(res.body.details.join(" ")).toMatch(/guardian_email/);
   });
 
   it("treats empty optional form fields as null", async () => {
-    const res = await request.post("/students").set(auth()).send({ first_name: "Empty", last_name: "Fields", roll_number: "", date_of_birth: "" });
+    const res = await request
+      .post("/students")
+      .set(auth())
+      .send({ first_name: "Empty", last_name: "Fields", roll_number: "", date_of_birth: "" });
     expect(res.status).toBe(201);
     expect(res.body.roll_number).toBeNull();
     expect(res.body.date_of_birth).toBeNull();
@@ -106,7 +129,10 @@ describe("Validation and errors (zod + Express 5)", () => {
 
   it("rejects an empty chat message with 400", async () => {
     const conv = await request.post("/agent/conversations").set(auth());
-    const res = await request.post(`/agent/conversations/${conv.body.id}/messages`).set(auth()).send({ message: "   " });
+    const res = await request
+      .post(`/agent/conversations/${conv.body.id}/messages`)
+      .set(auth())
+      .send({ message: "   " });
     expect(res.status).toBe(400);
   });
 });
@@ -122,10 +148,15 @@ describe("Students with class assignment (single transaction)", () => {
   });
 
   const activeClasses = async (id) =>
-    (await pool.execute("SELECT classroom_id FROM enrollments WHERE student_id = ? AND is_active = 1", [id]))[0].map((r) => r.classroom_id);
+    (await pool.execute("SELECT classroom_id FROM enrollments WHERE student_id = ? AND is_active = 1", [id]))[0].map(
+      (r) => r.classroom_id
+    );
 
   it("creates the student and enrolls them together", async () => {
-    const res = await request.post("/students").set(auth()).send({ first_name: "Txn", last_name: "Student", classroom_id: String(classA) });
+    const res = await request
+      .post("/students")
+      .set(auth())
+      .send({ first_name: "Txn", last_name: "Student", classroom_id: String(classA) });
     expect(res.status).toBe(201);
     studentId = res.body.id;
     expect(await activeClasses(studentId)).toEqual([classA]);
@@ -138,7 +169,10 @@ describe("Students with class assignment (single transaction)", () => {
   });
 
   it("rolls back the student when the class does not exist", async () => {
-    const res = await request.post("/students").set(auth()).send({ first_name: "Ghost", last_name: "Student", classroom_id: 999999 });
+    const res = await request
+      .post("/students")
+      .set(auth())
+      .send({ first_name: "Ghost", last_name: "Student", classroom_id: 999999 });
     expect(res.status).toBe(400);
     const [rows] = await pool.execute("SELECT id FROM students WHERE first_name = 'Ghost'");
     expect(rows).toHaveLength(0);
@@ -208,9 +242,20 @@ describe("Agent harness", () => {
 
 describe("Paginated lists and summaries", () => {
   beforeAll(async () => {
-    const [[student]] = await pool.query("SELECT s.id, e.classroom_id FROM students s JOIN enrollments e ON e.student_id = s.id WHERE s.first_name = 'Ali' LIMIT 1");
-    for (const [day, status] of [["2026-01-05", "present"], ["2026-01-06", "absent"], ["2026-01-07", "late"]]) {
-      await pool.execute("INSERT INTO attendance (student_id, classroom_id, day, status) VALUES (?, ?, ?, ?)", [student.id, student.classroom_id, day, status]);
+    const [[student]] = await pool.query(
+      "SELECT s.id, e.classroom_id FROM students s JOIN enrollments e ON e.student_id = s.id WHERE s.first_name = 'Ali' LIMIT 1"
+    );
+    for (const [day, status] of [
+      ["2026-01-05", "present"],
+      ["2026-01-06", "absent"],
+      ["2026-01-07", "late"],
+    ]) {
+      await pool.execute("INSERT INTO attendance (student_id, classroom_id, day, status) VALUES (?, ?, ?, ?)", [
+        student.id,
+        student.classroom_id,
+        day,
+        status,
+      ]);
     }
   });
 

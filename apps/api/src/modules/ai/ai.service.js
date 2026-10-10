@@ -9,16 +9,23 @@ if (process.env.OPENAI_API_KEY) {
 
 // ---------- Logging ----------
 function logAi(module, prompt, response, status) {
-  pool.execute(
-    "INSERT INTO ai_logs (module, prompt, response, status) VALUES (?, ?, ?, ?)",
-    [module, prompt, typeof response === "string" ? response : JSON.stringify(response), status]
-  ).catch(() => {});
+  pool
+    .execute("INSERT INTO ai_logs (module, prompt, response, status) VALUES (?, ?, ?, ?)", [
+      module,
+      prompt,
+      typeof response === "string" ? response : JSON.stringify(response),
+      status,
+    ])
+    .catch(() => {});
 }
 
 // ---------- Fallback question builder (preserved from original code) ----------
 function buildQuestions(topics, subject, count = 5) {
   const source = topics
-    ? topics.split(",").map((s) => s.trim()).filter(Boolean)
+    ? topics
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
     : [subject];
   return Array.from({ length: count }, (_, i) => ({
     question: `Explain the key ideas of ${source[i % source.length]}.`,
@@ -76,7 +83,11 @@ Provide a concise 2-3 sentence performance summary.`;
       const completion = await openai.chat.completions.create({
         model: "gpt-3.5-turbo",
         messages: [
-          { role: "system", content: "You are a school academic counselor. Provide concise, professional student performance summaries." },
+          {
+            role: "system",
+            content:
+              "You are a school academic counselor. Provide concise, professional student performance summaries.",
+          },
           { role: "user", content: userPrompt },
         ],
         temperature: 0.6,
@@ -227,7 +238,9 @@ export async function generateInsights() {
     conn.release();
   }
 
-  const [stored] = await pool.execute("SELECT * FROM insights WHERE is_resolved = 0 ORDER BY FIELD(priority,'high','medium','low'), created_at DESC");
+  const [stored] = await pool.execute(
+    "SELECT * FROM insights WHERE is_resolved = 0 ORDER BY FIELD(priority,'high','medium','low'), created_at DESC"
+  );
   return stored;
 }
 

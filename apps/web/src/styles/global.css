@@ -27,7 +27,11 @@
 }
 
 body {
-  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  font-family:
+    "Inter",
+    system-ui,
+    -apple-system,
+    sans-serif;
   background: radial-gradient(circle at top, #f7f9ff, #eef2f7 60%, #ecf0f7);
   color: var(--text);
   line-height: 1.5;
@@ -50,7 +54,9 @@ body {
   top: 0;
   height: 100vh;
   border-right: var(--border);
-  transition: width var(--transition), padding var(--transition);
+  transition:
+    width var(--transition),
+    padding var(--transition);
 }
 
 .sidebar.collapsed {
@@ -411,9 +417,12 @@ body {
   position: absolute;
   inset: 16px;
   border-radius: 12px;
-  background: linear-gradient(transparent 75%, rgba(81, 102, 240, 0.12)),
+  background:
+    linear-gradient(transparent 75%, rgba(81, 102, 240, 0.12)),
     linear-gradient(90deg, rgba(224, 231, 245, 0.7) 1px, transparent 1px);
-  background-size: 100% 40px, 60px 100%;
+  background-size:
+    100% 40px,
+    60px 100%;
 }
 
 .chart-legend {
@@ -540,7 +549,9 @@ body {
 }
 
 .card:focus-within {
-  box-shadow: 0 0 0 3px rgba(81, 102, 240, 0.15), 0 18px 38px rgba(15, 23, 42, 0.12);
+  box-shadow:
+    0 0 0 3px rgba(81, 102, 240, 0.15),
+    0 18px 38px rgba(15, 23, 42, 0.12);
 }
 
 .stat-card h4 {
@@ -1378,16 +1389,6 @@ textarea:focus,
 
 /* ---- AI Orchestrator Chat ---- */
 
-
-
-
-
-
-
-
-
-
-
 /* ---- Predict & XAI ---- */
 .predict-xai-grid {
   display: grid;
@@ -1617,7 +1618,6 @@ textarea:focus,
     width: 100%;
   }
 }
-
 
 /* ---------- Router links styled like the previous buttons ---------- */
 a.nav-item,

@@ -42,7 +42,12 @@ export default function ExamGenerator() {
             <input type="text" placeholder="Subject (e.g., Mathematics)" required {...field("subject")} />
             <input type="number" min="1" max="30" placeholder="Questions" {...field("num_questions")} />
           </div>
-          <textarea rows="6" placeholder="Topics or instructions, e.g. Chapter 3-5: fractions and decimals" required {...field("prompt")} />
+          <textarea
+            rows="6"
+            placeholder="Topics or instructions, e.g. Chapter 3-5: fractions and decimals"
+            required
+            {...field("prompt")}
+          />
           <div className="ai-actions">
             <button type="submit" className="btn primary" disabled={generate.isPending}>
               {generate.isPending ? "Generating…" : "Generate & Save Test"}

@@ -120,7 +120,9 @@ export default function StudentsPage() {
                     <div className="empty-icon">👩‍🎓</div>
                     <div>
                       <h5>{students.length ? "No students match these filters" : "No students yet"}</h5>
-                      <p>{students.length ? "Try clearing a filter." : "Add your first student with the form above."}</p>
+                      <p>
+                        {students.length ? "Try clearing a filter." : "Add your first student with the form above."}
+                      </p>
                     </div>
                   </div>
                 </td>

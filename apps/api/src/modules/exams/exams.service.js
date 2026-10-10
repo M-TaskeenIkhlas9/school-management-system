@@ -15,14 +15,22 @@ export async function getAll() {
 export async function getById(id) {
   const [rows] = await pool.execute("SELECT * FROM exams WHERE id = ?", [id]);
   if (!rows[0]) return null;
-  const [questions] = await pool.execute(
-    "SELECT id, question, marks FROM exam_questions WHERE exam_id = ?",
-    [id]
-  );
+  const [questions] = await pool.execute("SELECT id, question, marks FROM exam_questions WHERE exam_id = ?", [id]);
   return { ...rows[0], questions };
 }
 
-export async function createWithQuestions({ classroom_id, subject, title, prompt, type, total_marks, created_by_ai, ai_prompt_used, ai_generated_content, questions }) {
+export async function createWithQuestions({
+  classroom_id,
+  subject,
+  title,
+  prompt,
+  type,
+  total_marks,
+  created_by_ai,
+  ai_prompt_used,
+  ai_generated_content,
+  questions,
+}) {
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
@@ -30,8 +38,12 @@ export async function createWithQuestions({ classroom_id, subject, title, prompt
       `INSERT INTO exams (classroom_id, subject, title, prompt, type, total_marks, created_by_ai, ai_prompt_used, ai_generated_content)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        classroom_id, subject, title || `${subject} Test`, prompt,
-        type || "Test", total_marks || 50,
+        classroom_id,
+        subject,
+        title || `${subject} Test`,
+        prompt,
+        type || "Test",
+        total_marks || 50,
         created_by_ai ? 1 : 0,
         ai_prompt_used || null,
         ai_generated_content ? JSON.stringify(ai_generated_content) : null,
@@ -40,19 +52,19 @@ export async function createWithQuestions({ classroom_id, subject, title, prompt
     const examId = examResult.insertId;
 
     for (const q of questions) {
-      await conn.execute(
-        "INSERT INTO exam_questions (exam_id, question, marks) VALUES (?, ?, ?)",
-        [examId, q.question || q, q.marks || 5]
-      );
+      await conn.execute("INSERT INTO exam_questions (exam_id, question, marks) VALUES (?, ?, ?)", [
+        examId,
+        q.question || q,
+        q.marks || 5,
+      ]);
     }
 
     await conn.commit();
 
     const [exam] = await pool.execute("SELECT * FROM exams WHERE id = ?", [examId]);
-    const [examQuestions] = await pool.execute(
-      "SELECT id, question, marks FROM exam_questions WHERE exam_id = ?",
-      [examId]
-    );
+    const [examQuestions] = await pool.execute("SELECT id, question, marks FROM exam_questions WHERE exam_id = ?", [
+      examId,
+    ]);
     return { ...exam[0], questions: examQuestions };
   } catch (err) {
     await conn.rollback();

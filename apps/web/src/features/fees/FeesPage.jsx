@@ -35,7 +35,10 @@ export default function FeesPage() {
   return (
     <section className="section active">
       <PageHeader title="Accounts & Fees" subtitle="Track paid, unpaid, and partial fees.">
-        <button className="btn primary" onClick={() => navigate(`/ai-center?ask=${encodeURIComponent(FEE_REMINDER_PROMPT)}`)}>
+        <button
+          className="btn primary"
+          onClick={() => navigate(`/ai-center?ask=${encodeURIComponent(FEE_REMINDER_PROMPT)}`)}
+        >
           Send Reminders
         </button>
       </PageHeader>

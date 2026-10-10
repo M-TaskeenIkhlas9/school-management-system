@@ -18,7 +18,10 @@ function Contributions({ result }) {
             <div key={c.feature} className="xai-bar-row">
               <span className="xai-bar-label">{c.feature}</span>
               <div className="xai-bar-track">
-                <div className={`xai-bar-fill ${tone}`} style={{ width: `${Math.min(100, Math.abs(c.shap_value) * 150)}%` }} />
+                <div
+                  className={`xai-bar-fill ${tone}`}
+                  style={{ width: `${Math.min(100, Math.abs(c.shap_value) * 150)}%` }}
+                />
               </div>
               <span className={`xai-bar-value ${tone}`}>
                 {c.shap_value >= 0 ? "+" : ""}
@@ -109,7 +112,10 @@ export default function PredictPage() {
               value={custom.average_score}
               onChange={(e) => setCustom((p) => ({ ...p, average_score: e.target.value }))}
             />
-            <select value={custom.fee_status} onChange={(e) => setCustom((p) => ({ ...p, fee_status: e.target.value }))}>
+            <select
+              value={custom.fee_status}
+              onChange={(e) => setCustom((p) => ({ ...p, fee_status: e.target.value }))}
+            >
               <option value="Clear">Fee Clear</option>
               <option value="Pending">Fee Pending</option>
             </select>

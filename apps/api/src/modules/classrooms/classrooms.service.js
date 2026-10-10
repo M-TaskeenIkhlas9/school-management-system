@@ -1,17 +1,12 @@
 import pool from "../../db/pool.js";
 
 export async function getAll() {
-  const [rows] = await pool.execute(
-    "SELECT * FROM classrooms WHERE is_active = 1 ORDER BY id DESC"
-  );
+  const [rows] = await pool.execute("SELECT * FROM classrooms WHERE is_active = 1 ORDER BY id DESC");
   return rows;
 }
 
 export async function getById(id) {
-  const [rows] = await pool.execute(
-    "SELECT * FROM classrooms WHERE id = ? AND is_active = 1",
-    [id]
-  );
+  const [rows] = await pool.execute("SELECT * FROM classrooms WHERE id = ? AND is_active = 1", [id]);
   return rows[0] || null;
 }
 
@@ -20,7 +15,7 @@ export async function create({ name, grade, section, academic_year }) {
     "INSERT INTO classrooms (name, grade, section, academic_year) VALUES (?, ?, ?, ?)",
     [name, grade, section || null, academic_year || null]
   );
-  return (await getById(result.insertId));
+  return await getById(result.insertId);
 }
 
 export async function update(id, data) {

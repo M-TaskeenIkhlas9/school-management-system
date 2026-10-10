@@ -1,7 +1,15 @@
 import { Router } from "express";
 import { z } from "zod";
 import * as feeService from "./fees.service.js";
-import validate, { idParam, parseQuery, requiredId, isoDate, optionalText, optionalDate, optionalId } from "../../middleware/validate.js";
+import validate, {
+  idParam,
+  parseQuery,
+  requiredId,
+  isoDate,
+  optionalText,
+  optionalDate,
+  optionalId,
+} from "../../middleware/validate.js";
 import { pageParams } from "../../lib/pagination.js";
 import { createError } from "../../middleware/errorHandler.js";
 

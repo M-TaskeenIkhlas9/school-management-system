@@ -40,7 +40,9 @@ function reportProposal(ctx, outcome) {
   const { id, summary, preview } = outcome.action;
   const extra = [];
   if (preview?.skipped?.length) {
-    extra.push(`${preview.skipped.length} student(s) skipped: ${preview.skipped.map((s) => `${s.student_name} (${s.reason})`).join("; ")}`);
+    extra.push(
+      `${preview.skipped.length} student(s) skipped: ${preview.skipped.map((s) => `${s.student_name} (${s.reason})`).join("; ")}`
+    );
   }
   if (preview?.delivery_mode === "simulated") {
     extra.push("Note: SMTP is not configured, so approved emails will be simulated (recorded but not delivered).");
@@ -81,7 +83,8 @@ export function buildTools(ctx) {
     }),
     {
       name: "find_students",
-      description: "Search active students by (part of) name or roll number. Empty query lists students (max 50). Use this to get student IDs.",
+      description:
+        "Search active students by (part of) name or roll number. Empty query lists students (max 50). Use this to get student IDs.",
       schema: z.object({ query: z.string().nullish().describe("Name fragment or roll number; empty for all") }),
     }
   );
@@ -98,7 +101,12 @@ export function buildTools(ctx) {
         class: p.enrollment?.class_name,
         attendance_rate: p.attendance_rate,
         results: p.results.map((r) => ({ term: r.term, percentage: r.percentage, grade: r.grade })),
-        fees: p.fees.map((f) => ({ month: f.month, due_date: f.due_date, status: f.status, remaining: f.remaining_amount })),
+        fees: p.fees.map((f) => ({
+          month: f.month,
+          due_date: f.due_date,
+          status: f.status,
+          remaining: f.remaining_amount,
+        })),
       });
     }),
     {
@@ -109,12 +117,24 @@ export function buildTools(ctx) {
   );
 
   const listClassrooms = tool(
-    safe(async () => json((await classroomService.getAll()).map((r) => ({ id: r.id, name: r.name, grade: r.grade, section: r.section })))),
+    safe(async () =>
+      json(
+        (await classroomService.getAll()).map((r) => ({ id: r.id, name: r.name, grade: r.grade, section: r.section }))
+      )
+    ),
     { name: "list_classrooms", description: "All active classes with id, name, grade, section.", schema: z.object({}) }
   );
 
   const listTeachers = tool(
-    safe(async () => json((await teacherService.getAll()).map((t) => ({ id: t.id, name: `${t.first_name} ${t.last_name}`, subject: t.subject })))),
+    safe(async () =>
+      json(
+        (await teacherService.getAll()).map((t) => ({
+          id: t.id,
+          name: `${t.first_name} ${t.last_name}`,
+          subject: t.subject,
+        }))
+      )
+    ),
     { name: "list_teachers", description: "All active teachers with id, name, subject.", schema: z.object({}) }
   );
 
@@ -142,12 +162,24 @@ export function buildTools(ctx) {
         }))
       );
     }),
-    { name: "get_fee_defaulters", description: "Unpaid fee records past their due date, with amount remaining and days overdue.", schema: z.object({}) }
+    {
+      name: "get_fee_defaulters",
+      description: "Unpaid fee records past their due date, with amount remaining and days overdue.",
+      schema: z.object({}),
+    }
   );
 
   const listExams = tool(
     safe(async () =>
-      json((await examService.getAll()).map((e) => ({ id: e.id, title: e.title, class: e.class_name, questions: e.question_count, created_at: e.created_at })))
+      json(
+        (await examService.getAll()).map((e) => ({
+          id: e.id,
+          title: e.title,
+          class: e.class_name,
+          questions: e.question_count,
+          created_at: e.created_at,
+        }))
+      )
     ),
     { name: "list_exams", description: "Saved exams with class and number of questions.", schema: z.object({}) }
   );
@@ -213,7 +245,8 @@ export function buildTools(ctx) {
     safe(async (args) => reportProposal(ctx, await actions.proposeFeePayment(args, ctx))),
     {
       name: "propose_fee_payment",
-      description: "Prepare recording a fee payment for a student (applied to the oldest unpaid fees first), for the principal to approve.",
+      description:
+        "Prepare recording a fee payment for a student (applied to the oldest unpaid fees first), for the principal to approve.",
       schema: z.object({
         student_id: z.number().int().describe("Student ID (use find_students first)"),
         amount: z.number().positive(),
@@ -225,7 +258,8 @@ export function buildTools(ctx) {
     safe(async (args) => reportProposal(ctx, await actions.proposeExam(args, ctx))),
     {
       name: "propose_exam",
-      description: "Generate exam questions for a class and subject; the principal reviews them and approves saving the exam.",
+      description:
+        "Generate exam questions for a class and subject; the principal reviews them and approves saving the exam.",
       schema: z.object({
         class_name: z.string(),
         subject: z.string(),

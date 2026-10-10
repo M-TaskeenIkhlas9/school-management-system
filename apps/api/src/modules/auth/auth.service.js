@@ -16,18 +16,14 @@ export async function register(username, email, password) {
     "INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, 'principal')",
     [username, email, hash]
   );
-  const [rows] = await pool.execute(
-    "SELECT id, username, email, role, created_at FROM users WHERE id = ?",
-    [result.insertId]
-  );
+  const [rows] = await pool.execute("SELECT id, username, email, role, created_at FROM users WHERE id = ?", [
+    result.insertId,
+  ]);
   return rows[0];
 }
 
 export async function login(email, password) {
-  const [rows] = await pool.execute(
-    "SELECT * FROM users WHERE email = ? AND is_active = 1",
-    [email]
-  );
+  const [rows] = await pool.execute("SELECT * FROM users WHERE email = ? AND is_active = 1", [email]);
   if (rows.length === 0) {
     throw createError(401, "Invalid email or password", "INVALID_CREDENTIALS");
   }
@@ -36,11 +32,9 @@ export async function login(email, password) {
   if (!match) {
     throw createError(401, "Invalid email or password", "INVALID_CREDENTIALS");
   }
-  const token = jwt.sign(
-    { id: user.id, username: user.username, role: user.role },
-    process.env.JWT_SECRET,
-    { expiresIn: "24h" }
-  );
+  const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, process.env.JWT_SECRET, {
+    expiresIn: "24h",
+  });
   return {
     token,
     user: { id: user.id, username: user.username, email: user.email, role: user.role },

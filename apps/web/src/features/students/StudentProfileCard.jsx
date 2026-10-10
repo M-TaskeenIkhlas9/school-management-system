@@ -6,8 +6,18 @@ export default function StudentProfileCard({ studentId, classLabel, risk, feeSta
   const navigate = useNavigate();
   const { data: profile, isLoading } = useStudent(studentId);
 
-  if (!studentId) return <div className="card profile-card"><div className="empty-card">Select a student to see their profile.</div></div>;
-  if (isLoading || !profile) return <div className="card profile-card"><div className="empty-card">Loading profile…</div></div>;
+  if (!studentId)
+    return (
+      <div className="card profile-card">
+        <div className="empty-card">Select a student to see their profile.</div>
+      </div>
+    );
+  if (isLoading || !profile)
+    return (
+      <div className="card profile-card">
+        <div className="empty-card">Loading profile…</div>
+      </div>
+    );
 
   const avg = average(profile.results.map((r) => Number(r.percentage) || 0));
   return (
@@ -47,11 +57,17 @@ export default function StudentProfileCard({ studentId, classLabel, risk, feeSta
         </div>
         <div className="profile-metric">
           <h5>Academic History</h5>
-          <p>Avg {avg === null ? "—" : Math.round(avg)}% across {profile.results.length} result(s)</p>
+          <p>
+            Avg {avg === null ? "—" : Math.round(avg)}% across {profile.results.length} result(s)
+          </p>
         </div>
         <div className="profile-metric">
           <h5>AI Insight</h5>
-          <p>{risk === "High" ? "Recommend parent meeting and support plan." : "Student performing within expected range."}</p>
+          <p>
+            {risk === "High"
+              ? "Recommend parent meeting and support plan."
+              : "Student performing within expected range."}
+          </p>
         </div>
       </div>
     </div>

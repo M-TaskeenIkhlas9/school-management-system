@@ -14,7 +14,9 @@ function toNumberOr(value, fallback) {
 function computeRiskAndContributions({ attendance_rate, average_score, fee_status }) {
   const att = toNumberOr(attendance_rate, 100);
   const score = toNumberOr(average_score, 100);
-  const feePending = String(fee_status || "").toLowerCase().includes("pending");
+  const feePending = String(fee_status || "")
+    .toLowerCase()
+    .includes("pending");
 
   const contributions = [];
 
@@ -59,9 +61,7 @@ export async function getPredictionForStudent(studentId) {
 
   const feeStatus = profile.fees?.some((f) => f.status !== "paid") ? "Pending" : "Clear";
   const scores = profile.results?.map((r) => Number(r.percentage)) || [];
-  const averageScore = scores.length
-    ? scores.reduce((a, b) => a + b, 0) / scores.length
-    : 100;
+  const averageScore = scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : 100;
 
   return {
     student_id: profile.id,

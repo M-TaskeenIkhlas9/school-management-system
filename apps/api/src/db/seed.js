@@ -63,7 +63,11 @@ export async function seed() {
     }
 
     for (const [first, last, subject] of TEACHERS) {
-      await conn.execute("INSERT INTO teachers (first_name, last_name, subject) VALUES (?, ?, ?)", [first, last, subject]);
+      await conn.execute("INSERT INTO teachers (first_name, last_name, subject) VALUES (?, ?, ?)", [
+        first,
+        last,
+        subject,
+      ]);
     }
 
     for (const [first, last, roll, guardian, email, classIdx, fee, att, scores] of STUDENTS) {
@@ -73,15 +77,34 @@ export async function seed() {
       );
       const studentId = s.insertId;
       const classId = classIds[classIdx];
-      await conn.execute("INSERT INTO enrollments (student_id, classroom_id, start_date) VALUES (?, ?, ?)", [studentId, classId, daysAgo(90)]);
+      await conn.execute("INSERT INTO enrollments (student_id, classroom_id, start_date) VALUES (?, ?, ?)", [
+        studentId,
+        classId,
+        daysAgo(90),
+      ]);
 
       // Fees: monthly 150.00
       const fees = {
-        paid: [[daysAgo(40), 150, "paid"], [daysAgo(10), 150, "paid"]],
-        overdue1: [[daysAgo(40), 150, "paid"], [daysAgo(10), 0, "pending"]],
-        overdue2: [[daysAgo(40), 0, "pending"], [daysAgo(10), 0, "pending"]],
-        partial: [[daysAgo(40), 150, "paid"], [daysAgo(10), 60, "partial"]],
-        upcoming: [[daysAgo(40), 150, "paid"], [daysAgo(-10), 0, "pending"]],
+        paid: [
+          [daysAgo(40), 150, "paid"],
+          [daysAgo(10), 150, "paid"],
+        ],
+        overdue1: [
+          [daysAgo(40), 150, "paid"],
+          [daysAgo(10), 0, "pending"],
+        ],
+        overdue2: [
+          [daysAgo(40), 0, "pending"],
+          [daysAgo(10), 0, "pending"],
+        ],
+        partial: [
+          [daysAgo(40), 150, "paid"],
+          [daysAgo(10), 60, "partial"],
+        ],
+        upcoming: [
+          [daysAgo(40), 150, "paid"],
+          [daysAgo(-10), 0, "pending"],
+        ],
       }[fee];
       for (const [due, paid, status] of fees) {
         await conn.execute(
@@ -96,10 +119,12 @@ export async function seed() {
         if (att === "poor" && d % 2 === 0) status = "absent";
         if (att === "streak" && d <= 3) status = "absent";
         if (att === "good" && d === 7) status = "late";
-        await conn.execute(
-          "INSERT INTO attendance (student_id, classroom_id, day, status) VALUES (?, ?, ?, ?)",
-          [studentId, classId, daysAgo(d), status]
-        );
+        await conn.execute("INSERT INTO attendance (student_id, classroom_id, day, status) VALUES (?, ?, ?, ?)", [
+          studentId,
+          classId,
+          daysAgo(d),
+          status,
+        ]);
       }
 
       // Results for two terms
@@ -112,7 +137,9 @@ export async function seed() {
     }
 
     await conn.commit();
-    console.log(`[seed] Inserted ${CLASSES.length} classes, ${TEACHERS.length} teachers, ${STUDENTS.length} students with fees, attendance and results.`);
+    console.log(
+      `[seed] Inserted ${CLASSES.length} classes, ${TEACHERS.length} teachers, ${STUDENTS.length} students with fees, attendance and results.`
+    );
   } catch (err) {
     await conn.rollback();
     throw err;

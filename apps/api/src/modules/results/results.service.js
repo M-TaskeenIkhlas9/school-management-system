@@ -44,7 +44,7 @@ export async function create({ student_id, classroom_id, term, total_score, perc
     "INSERT INTO result_cards (student_id, classroom_id, term, total_score, percentage, grade, remarks, ai_remarks) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
     [student_id, classroom_id, term, total_score, percentage, grade, remarks || null, ai_remarks || null]
   );
-  return (await getById(result.insertId));
+  return await getById(result.insertId);
 }
 
 export async function generateBatch({ classroom_id, term, results }) {

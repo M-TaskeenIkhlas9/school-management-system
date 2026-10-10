@@ -19,10 +19,7 @@ export async function getAll() {
 }
 
 export async function getById(id) {
-  const [rows] = await pool.execute(
-    "SELECT * FROM students WHERE id = ? AND is_active = 1",
-    [id]
-  );
+  const [rows] = await pool.execute("SELECT * FROM students WHERE id = ? AND is_active = 1", [id]);
   return rows[0] || null;
 }
 
@@ -47,21 +44,15 @@ export async function getProfile(id) {
     [id]
   );
   const att = attRows[0];
-  const attendanceRate = att.total > 0
-    ? Number(((att.present_count / att.total) * 100).toFixed(2))
-    : 100;
+  const attendanceRate = att.total > 0 ? Number(((att.present_count / att.total) * 100).toFixed(2)) : 100;
 
   // Results
-  const [resultRows] = await pool.execute(
-    "SELECT * FROM result_cards WHERE student_id = ? ORDER BY created_at DESC",
-    [id]
-  );
+  const [resultRows] = await pool.execute("SELECT * FROM result_cards WHERE student_id = ? ORDER BY created_at DESC", [
+    id,
+  ]);
 
   // Fees
-  const [feeRows] = await pool.execute(
-    "SELECT * FROM fee_ledgers WHERE student_id = ? ORDER BY due_date DESC",
-    [id]
-  );
+  const [feeRows] = await pool.execute("SELECT * FROM fee_ledgers WHERE student_id = ? ORDER BY due_date DESC", [id]);
   const fees = feeRows.map((f) => ({
     ...f,
     remaining_amount: Number((f.amount_due - f.amount_paid).toFixed(2)),
@@ -76,7 +67,16 @@ export async function getProfile(id) {
   };
 }
 
-const STUDENT_FIELDS = ["first_name", "last_name", "roll_number", "date_of_birth", "guardian_name", "guardian_phone", "guardian_email", "status"];
+const STUDENT_FIELDS = [
+  "first_name",
+  "last_name",
+  "roll_number",
+  "date_of_birth",
+  "guardian_name",
+  "guardian_phone",
+  "guardian_email",
+  "status",
+];
 
 async function assertRollAvailable(conn, rollNumber, exceptId = 0) {
   if (!rollNumber) return;
@@ -93,11 +93,18 @@ async function setActiveClass(conn, studentId, classroomId) {
     "UPDATE enrollments SET is_active = 0, end_date = COALESCE(end_date, ?) WHERE student_id = ? AND classroom_id != ? AND is_active = 1",
     [schoolToday(), studentId, classroomId]
   );
-  const [existing] = await conn.execute("SELECT id FROM enrollments WHERE student_id = ? AND classroom_id = ?", [studentId, classroomId]);
+  const [existing] = await conn.execute("SELECT id FROM enrollments WHERE student_id = ? AND classroom_id = ?", [
+    studentId,
+    classroomId,
+  ]);
   if (existing.length) {
     await conn.execute("UPDATE enrollments SET is_active = 1, end_date = NULL WHERE id = ?", [existing[0].id]);
   } else {
-    await conn.execute("INSERT INTO enrollments (student_id, classroom_id, start_date) VALUES (?, ?, ?)", [studentId, classroomId, schoolToday()]);
+    await conn.execute("INSERT INTO enrollments (student_id, classroom_id, start_date) VALUES (?, ?, ?)", [
+      studentId,
+      classroomId,
+      schoolToday(),
+    ]);
   }
 }
 
@@ -122,7 +129,15 @@ export async function create(data) {
     await assertRollAvailable(conn, data.roll_number);
     const [result] = await conn.execute(
       "INSERT INTO students (first_name, last_name, roll_number, date_of_birth, guardian_name, guardian_phone, guardian_email) VALUES (?, ?, ?, ?, ?, ?, ?)",
-      [data.first_name, data.last_name, data.roll_number || null, data.date_of_birth || null, data.guardian_name || null, data.guardian_phone || null, data.guardian_email || null]
+      [
+        data.first_name,
+        data.last_name,
+        data.roll_number || null,
+        data.date_of_birth || null,
+        data.guardian_name || null,
+        data.guardian_phone || null,
+        data.guardian_email || null,
+      ]
     );
     if (data.classroom_id) await setActiveClass(conn, result.insertId, data.classroom_id);
     return result.insertId;
@@ -137,10 +152,10 @@ export async function update(id, data) {
     await assertRollAvailable(conn, data.roll_number, id);
     const keys = STUDENT_FIELDS.filter((key) => data[key] !== undefined);
     if (keys.length) {
-      await conn.execute(
-        `UPDATE students SET ${keys.map((k) => `${k} = ?`).join(", ")} WHERE id = ?`,
-        [...keys.map((k) => data[k]), id]
-      );
+      await conn.execute(`UPDATE students SET ${keys.map((k) => `${k} = ?`).join(", ")} WHERE id = ?`, [
+        ...keys.map((k) => data[k]),
+        id,
+      ]);
     }
     if (data.classroom_id) await setActiveClass(conn, id, data.classroom_id);
   });

@@ -15,7 +15,7 @@ export async function create({ classroom_id, subject, book_title, topics, chapte
     "INSERT INTO curriculum_items (classroom_id, subject, book_title, topics, chapter_number, learning_objectives) VALUES (?, ?, ?, ?, ?, ?)",
     [classroom_id, subject, book_title || null, topics || null, chapter_number || null, learning_objectives || null]
   );
-  return (await getById(result.insertId));
+  return await getById(result.insertId);
 }
 
 export async function update(id, data) {

@@ -1,7 +1,15 @@
 import { Router } from "express";
 import { z } from "zod";
 import * as resultService from "./results.service.js";
-import validate, { idParam, parseQuery, requiredId, requiredText, optionalLongText, optionalId, optionalText } from "../../middleware/validate.js";
+import validate, {
+  idParam,
+  parseQuery,
+  requiredId,
+  requiredText,
+  optionalLongText,
+  optionalId,
+  optionalText,
+} from "../../middleware/validate.js";
 import { pageParams } from "../../lib/pagination.js";
 import { createError } from "../../middleware/errorHandler.js";
 
@@ -22,11 +30,23 @@ const batchSchema = z.object({
   classroom_id: requiredId(),
   term: requiredText(50),
   results: z
-    .array(z.object({ student_id: requiredId(), total_score: score(), percentage: percentage(), remarks: optionalLongText() }))
+    .array(
+      z.object({
+        student_id: requiredId(),
+        total_score: score(),
+        percentage: percentage(),
+        remarks: optionalLongText(),
+      })
+    )
     .min(1, "No results provided"),
 });
 
-const listQuery = z.object({ ...pageParams, student_id: optionalId(), classroom_id: optionalId(), term: optionalText(50) });
+const listQuery = z.object({
+  ...pageParams,
+  student_id: optionalId(),
+  classroom_id: optionalId(),
+  term: optionalText(50),
+});
 
 const router = Router();
 

@@ -42,8 +42,10 @@ app.use(
   pinoHttp({
     logger,
     autoLogging: { ignore: (req) => req.url === "/health" },
-    customLogLevel: (_req, res, err) => (err || res.statusCode >= 500 ? "error" : res.statusCode >= 400 ? "warn" : "info"),
-    customSuccessMessage: (req, res, ms) => `${req.method} ${req.originalUrl || req.url} → ${res.statusCode} (${Math.round(ms)}ms)`,
+    customLogLevel: (_req, res, err) =>
+      err || res.statusCode >= 500 ? "error" : res.statusCode >= 400 ? "warn" : "info",
+    customSuccessMessage: (req, res, ms) =>
+      `${req.method} ${req.originalUrl || req.url} → ${res.statusCode} (${Math.round(ms)}ms)`,
     customErrorMessage: (req, res) => `${req.method} ${req.originalUrl || req.url} → ${res.statusCode}`,
     // Keep only what is useful; never log headers (tokens) or bodies.
     serializers: {

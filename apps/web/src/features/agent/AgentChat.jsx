@@ -48,7 +48,10 @@ export default function AgentChat({ initialInput = "" }) {
   }, []);
 
   useEffect(() => {
-    agentApi.status().then(setStatus).catch(() => setStatus(null));
+    agentApi
+      .status()
+      .then(setStatus)
+      .catch(() => setStatus(null));
     refreshConversations()
       // A pre-filled request (e.g. "Send Reminders") starts a fresh chat; otherwise resume the latest one.
       .then((list) => !initialInput && list[0] && loadConversation(list[0].id))
@@ -81,7 +84,11 @@ export default function AgentChat({ initialInput = "" }) {
         setActiveId(conv.id);
       }
       const turn = await agentApi.sendMessage(conversationId, message);
-      setMessages((prev) => [...prev.filter((m) => !String(m.id).startsWith("tmp-")), turn.userMessage, turn.assistantMessage]);
+      setMessages((prev) => [
+        ...prev.filter((m) => !String(m.id).startsWith("tmp-")),
+        turn.userMessage,
+        turn.assistantMessage,
+      ]);
       setActions((prev) => [...prev, ...turn.actions]);
       refreshConversations().catch(() => {});
     } catch (err) {
@@ -153,7 +160,12 @@ export default function AgentChat({ initialInput = "" }) {
               <button type="button" className="agent-conv" onClick={() => loadConversation(c.id)} title={c.title}>
                 {c.title}
               </button>
-              <button type="button" className="agent-conv-delete" onClick={() => removeConversation(c.id)} aria-label="Delete conversation">
+              <button
+                type="button"
+                className="agent-conv-delete"
+                onClick={() => removeConversation(c.id)}
+                aria-label="Delete conversation"
+              >
                 ×
               </button>
             </li>
@@ -194,9 +206,7 @@ export default function AgentChat({ initialInput = "" }) {
           )}
           {messages.map((m) => (
             <div key={m.id} className={`agent-msg ${m.role} ${m.metadata?.kind === "action_result" ? "result" : ""}`}>
-              <div className="agent-bubble">
-                {m.role === "assistant" ? <Markdown text={m.content} /> : m.content}
-              </div>
+              <div className="agent-bubble">{m.role === "assistant" ? <Markdown text={m.content} /> : m.content}</div>
               {actionsByMessage.get(m.id)?.map(renderAction)}
             </div>
           ))}

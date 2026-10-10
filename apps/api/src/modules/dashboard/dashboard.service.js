@@ -3,15 +3,9 @@ import pool from "../../db/pool.js";
 import { schoolToday as today } from "../../config/env.js";
 
 export async function getStats() {
-  const [[students]] = await pool.execute(
-    "SELECT COUNT(*) as count FROM students WHERE is_active = 1"
-  );
-  const [[teachers]] = await pool.execute(
-    "SELECT COUNT(*) as count FROM teachers WHERE is_active = 1"
-  );
-  const [[classes]] = await pool.execute(
-    "SELECT COUNT(*) as count FROM classrooms WHERE is_active = 1"
-  );
+  const [[students]] = await pool.execute("SELECT COUNT(*) as count FROM students WHERE is_active = 1");
+  const [[teachers]] = await pool.execute("SELECT COUNT(*) as count FROM teachers WHERE is_active = 1");
+  const [[classes]] = await pool.execute("SELECT COUNT(*) as count FROM classrooms WHERE is_active = 1");
   const [[fees]] = await pool.execute(
     "SELECT COALESCE(SUM(amount_paid),0) as collected, COALESCE(SUM(amount_due),0) as due FROM fee_ledgers"
   );

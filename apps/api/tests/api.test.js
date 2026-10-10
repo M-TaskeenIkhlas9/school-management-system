@@ -1,4 +1,3 @@
-
 // Set test env before any imports. DB host/user/password come from .env;
 // the database is always the dedicated *_test one (created by `npm test`).
 process.env.NODE_ENV = "test";
@@ -97,19 +96,14 @@ describe("Classrooms", () => {
   });
 
   it("GET /classrooms returns list", async () => {
-    const res = await request
-      .get("/classrooms")
-      .set("Authorization", `Bearer ${token}`);
+    const res = await request.get("/classrooms").set("Authorization", `Bearer ${token}`);
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
     expect(res.body.length).toBeGreaterThan(0);
   });
 
   it("POST /classrooms without required field returns 400", async () => {
-    const res = await request
-      .post("/classrooms")
-      .set("Authorization", `Bearer ${token}`)
-      .send({ section: "A" });
+    const res = await request.post("/classrooms").set("Authorization", `Bearer ${token}`).send({ section: "A" });
     expect(res.status).toBe(400);
     expect(res.body.code).toBe("VALIDATION_ERROR");
   });
@@ -117,32 +111,24 @@ describe("Classrooms", () => {
 
 describe("Students", () => {
   it("POST /students creates a student", async () => {
-    const res = await request
-      .post("/students")
-      .set("Authorization", `Bearer ${token}`)
-      .send({
-        first_name: "Test",
-        last_name: "Student",
-        guardian_name: "Mr. Parent",
-        guardian_phone: "123456",
-      });
+    const res = await request.post("/students").set("Authorization", `Bearer ${token}`).send({
+      first_name: "Test",
+      last_name: "Student",
+      guardian_name: "Mr. Parent",
+      guardian_phone: "123456",
+    });
     expect(res.status).toBe(201);
     expect(res.body.first_name).toBe("Test");
     studentId = res.body.id;
   });
 
   it("POST /students with empty body returns 400", async () => {
-    const res = await request
-      .post("/students")
-      .set("Authorization", `Bearer ${token}`)
-      .send({});
+    const res = await request.post("/students").set("Authorization", `Bearer ${token}`).send({});
     expect(res.status).toBe(400);
   });
 
   it("GET /students/:id returns student profile", async () => {
-    const res = await request
-      .get(`/students/${studentId}`)
-      .set("Authorization", `Bearer ${token}`);
+    const res = await request.get(`/students/${studentId}`).set("Authorization", `Bearer ${token}`);
     expect(res.status).toBe(200);
     expect(res.body.attendance_rate).toBeDefined();
     expect(res.body.results).toBeDefined();
@@ -150,9 +136,7 @@ describe("Students", () => {
   });
 
   it("GET /students/99999 returns 404", async () => {
-    const res = await request
-      .get("/students/99999")
-      .set("Authorization", `Bearer ${token}`);
+    const res = await request.get("/students/99999").set("Authorization", `Bearer ${token}`);
     expect(res.status).toBe(404);
   });
 });
@@ -177,9 +161,7 @@ describe("Teachers", () => {
   });
 
   it("DELETE /teachers/:id soft-deletes teacher", async () => {
-    const res = await request
-      .delete(`/teachers/${teacherId}`)
-      .set("Authorization", `Bearer ${token}`);
+    const res = await request.delete(`/teachers/${teacherId}`).set("Authorization", `Bearer ${token}`);
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
   });
@@ -256,31 +238,25 @@ describe("Fees", () => {
 
 describe("Results", () => {
   it("POST /results auto-calculates grade", async () => {
-    const res = await request
-      .post("/results")
-      .set("Authorization", `Bearer ${token}`)
-      .send({
-        student_id: studentId,
-        classroom_id: classroomId,
-        term: "Term 1",
-        total_score: 92,
-        percentage: 92,
-      });
+    const res = await request.post("/results").set("Authorization", `Bearer ${token}`).send({
+      student_id: studentId,
+      classroom_id: classroomId,
+      term: "Term 1",
+      total_score: 92,
+      percentage: 92,
+    });
     expect(res.status).toBe(201);
     expect(res.body.grade).toBe("A+");
   });
 
   it("POST /results grade B for 75%", async () => {
-    const res = await request
-      .post("/results")
-      .set("Authorization", `Bearer ${token}`)
-      .send({
-        student_id: studentId,
-        classroom_id: classroomId,
-        term: "Term 2",
-        total_score: 75,
-        percentage: 75,
-      });
+    const res = await request.post("/results").set("Authorization", `Bearer ${token}`).send({
+      student_id: studentId,
+      classroom_id: classroomId,
+      term: "Term 2",
+      total_score: 75,
+      percentage: 75,
+    });
     expect(res.status).toBe(201);
     expect(res.body.grade).toBe("B");
   });
@@ -292,9 +268,7 @@ describe("Results", () => {
       .send({
         classroom_id: classroomId,
         term: "Final",
-        results: [
-          { student_id: studentId, total_score: 45, percentage: 45, remarks: "Needs improvement" },
-        ],
+        results: [{ student_id: studentId, total_score: 45, percentage: 45, remarks: "Needs improvement" }],
       });
     expect(res.status).toBe(201);
     expect(Array.isArray(res.body)).toBe(true);
@@ -310,15 +284,12 @@ describe("Exams & AI", () => {
       .set("Authorization", `Bearer ${token}`)
       .send({ classroom_id: classroomId, subject: "Math", topics: "Algebra,Geometry" });
 
-    const res = await request
-      .post("/ai/exams/generate")
-      .set("Authorization", `Bearer ${token}`)
-      .send({
-        classroom_id: classroomId,
-        subject: "Math",
-        prompt: "Generate a test on Algebra",
-        num_questions: 3,
-      });
+    const res = await request.post("/ai/exams/generate").set("Authorization", `Bearer ${token}`).send({
+      classroom_id: classroomId,
+      subject: "Math",
+      prompt: "Generate a test on Algebra",
+      num_questions: 3,
+    });
     expect(res.status).toBe(201);
     expect(res.body.questions).toBeDefined();
     expect(res.body.questions.length).toBe(3);
@@ -326,18 +297,14 @@ describe("Exams & AI", () => {
   });
 
   it("GET /exams returns list with class_name and question_count", async () => {
-    const res = await request
-      .get("/exams")
-      .set("Authorization", `Bearer ${token}`);
+    const res = await request.get("/exams").set("Authorization", `Bearer ${token}`);
     expect(res.status).toBe(200);
     expect(res.body[0].class_name).toBeDefined();
     expect(res.body[0].question_count).toBeDefined();
   });
 
   it("GET /ai/students/attention returns flagged students", async () => {
-    const res = await request
-      .get("/ai/students/attention")
-      .set("Authorization", `Bearer ${token}`);
+    const res = await request.get("/ai/students/attention").set("Authorization", `Bearer ${token}`);
     expect(res.status).toBe(200);
     expect(res.body.generated_at).toBeDefined();
     expect(Array.isArray(res.body.students)).toBe(true);
@@ -346,9 +313,7 @@ describe("Exams & AI", () => {
 
 describe("Dashboard", () => {
   it("GET /dashboard returns all 6 stats", async () => {
-    const res = await request
-      .get("/dashboard")
-      .set("Authorization", `Bearer ${token}`);
+    const res = await request.get("/dashboard").set("Authorization", `Bearer ${token}`);
     expect(res.status).toBe(200);
     expect(res.body.totalStudents).toBeGreaterThanOrEqual(1);
     expect(res.body.totalTeachers).toBeDefined();

@@ -8,7 +8,9 @@ function linePoints(data) {
   const range = Math.max(...values) - min || 1;
   const step = (WIDTH - PADDING * 2) / (data.length - 1 || 1);
   return data
-    .map((point, i) => `${PADDING + i * step},${HEIGHT - PADDING - ((point.value - min) / range) * (HEIGHT - PADDING * 2)}`)
+    .map(
+      (point, i) => `${PADDING + i * step},${HEIGHT - PADDING - ((point.value - min) / range) * (HEIGHT - PADDING * 2)}`
+    )
     .join(" ");
 }
 
@@ -24,7 +26,10 @@ export default function TrendChart({ series }) {
         </linearGradient>
       </defs>
       <polyline fill="none" stroke="#5166f0" strokeWidth="3" strokeLinecap="round" points={points} />
-      <polygon fill="url(#trend)" points={`${points} ${WIDTH - PADDING},${HEIGHT - PADDING} ${PADDING},${HEIGHT - PADDING}`} />
+      <polygon
+        fill="url(#trend)"
+        points={`${points} ${WIDTH - PADDING},${HEIGHT - PADDING} ${PADDING},${HEIGHT - PADDING}`}
+      />
     </svg>
   );
 }

@@ -20,7 +20,11 @@ export default function AppLayout() {
         </div>
         <nav className="sidebar__nav">
           {navItems.map((item) => (
-            <NavLink key={item.path} to={item.path} className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}>
+            <NavLink
+              key={item.path}
+              to={item.path}
+              className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
+            >
               <span className={`nav-icon ${item.colorClass}`} aria-hidden="true">
                 {item.icon}
               </span>

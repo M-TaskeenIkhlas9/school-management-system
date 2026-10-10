@@ -31,7 +31,10 @@ export default function ResultsPage() {
       toast.error("This student is not enrolled in a class yet. Assign a class on the Students page first.");
       return;
     }
-    create.mutate({ ...form, student_id: studentId, classroom_id: classroomId }, { onSuccess: () => setForm(emptyForm) });
+    create.mutate(
+      { ...form, student_id: studentId, classroom_id: classroomId },
+      { onSuccess: () => setForm(emptyForm) }
+    );
   };
 
   return (

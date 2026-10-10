@@ -88,7 +88,9 @@ export default function LoginPage() {
               >
                 Quick login (dev)
               </button>
-              <p className="login-hint">Dev default: {DEV_EMAIL} / {DEV_PASSWORD}</p>
+              <p className="login-hint">
+                Dev default: {DEV_EMAIL} / {DEV_PASSWORD}
+              </p>
             </>
           )}
         </form>

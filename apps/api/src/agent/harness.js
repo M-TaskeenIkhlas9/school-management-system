@@ -71,7 +71,7 @@ const messageType = (m) => m?.type ?? m?._getType?.();
 
 function textOf(content) {
   if (typeof content === "string") return content;
-  if (Array.isArray(content)) return content.map((c) => (typeof c === "string" ? c : c?.text ?? "")).join("");
+  if (Array.isArray(content)) return content.map((c) => (typeof c === "string" ? c : (c?.text ?? ""))).join("");
   return content ? String(content) : "";
 }
 
@@ -88,7 +88,7 @@ function extractReply(result, newFromIndex) {
 function describeLlmError(err) {
   const msg = String(err?.message || err).toLowerCase();
   if (msg.includes("429") || msg.includes("rate limit") || msg.includes("tokens per day")) {
-    return "The AI model's rate limit was reached. Try again later, or ask a simpler question (e.g. \"Email parents whose fees are due\").";
+    return 'The AI model\'s rate limit was reached. Try again later, or ask a simpler question (e.g. "Email parents whose fees are due").';
   }
   if (msg.includes("econnrefused") || msg.includes("fetch failed")) {
     return "I couldn't reach the AI model. If you use Ollama, make sure it is running (ollama run llama3.2).";

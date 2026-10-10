@@ -17,10 +17,7 @@ export function ToastProvider({ children }) {
     [dismiss]
   );
 
-  const api = useMemo(
-    () => ({ success: (m) => show("success", m), error: (m) => show("error", m) }),
-    [show]
-  );
+  const api = useMemo(() => ({ success: (m) => show("success", m), error: (m) => show("error", m) }), [show]);
 
   return (
     <ToastContext.Provider value={api}>
@@ -29,7 +26,9 @@ export function ToastProvider({ children }) {
         {toasts.map((t) => (
           <div key={t.id} className={`toast toast--${t.kind}`}>
             <span>{t.message}</span>
-            <button type="button" onClick={() => dismiss(t.id)} aria-label="Dismiss">×</button>
+            <button type="button" onClick={() => dismiss(t.id)} aria-label="Dismiss">
+              ×
+            </button>
           </div>
         ))}
       </div>

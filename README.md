@@ -35,15 +35,15 @@ Log in with `DEFAULT_PRINCIPAL_EMAIL` / `DEFAULT_PRINCIPAL_PASSWORD`
 
 ## Scripts (run from the repo root)
 
-| Command | What it does |
-|---|---|
-| `npm run dev` | API (auto-restart) + web dev server together |
-| `npm run dev:api` / `npm run dev:web` | Just one of them |
-| `npm test` | API tests on `school_management_test` — never touches your real database |
-| `npm run migrate` | Apply new SQL migrations (`apps/api/src/db/migrations`) |
-| `npm run seed` | Demo data (empty database only) |
-| `npm run build` | Production build of the web app |
-| `npm run db:up` | Start the local MySQL container |
+| Command                               | What it does                                                             |
+| ------------------------------------- | ------------------------------------------------------------------------ |
+| `npm run dev`                         | API (auto-restart) + web dev server together                             |
+| `npm run dev:api` / `npm run dev:web` | Just one of them                                                         |
+| `npm test`                            | API tests on `school_management_test` — never touches your real database |
+| `npm run migrate`                     | Apply new SQL migrations (`apps/api/src/db/migrations`)                  |
+| `npm run seed`                        | Demo data (empty database only)                                          |
+| `npm run build`                       | Production build of the web app                                          |
+| `npm run db:up`                       | Start the local MySQL container                                          |
 
 ## AI School Assistant (AI Center)
 
@@ -60,9 +60,9 @@ Anything that sends or changes something appears as a card with the full preview
 recipient and the exact email text) and **Approve / Reject** buttons. Nothing happens until you
 approve, and what you approve is exactly what runs.
 
-| Setting (`apps/api/.env`) | Effect |
-|---|---|
+| Setting (`apps/api/.env`)                                    | Effect                                                                                                  |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
 | `GROQ_API_KEY` (free) / `OPENAI_API_KEY` / `USE_OLLAMA=true` | Enables the AI model. Without one, built-in rules handle common requests (incl. fee/attendance emails). |
-| `AGENT_MODEL` | Override the model (Groq default `openai/gpt-oss-120b`). |
-| `SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD`, `EMAIL_FROM` | Real email delivery. If unset, emails are **simulated** (recorded, not delivered). |
-| `EMAIL_REDIRECT_TO` | Testing: send every email to this address instead of parents. |
+| `AGENT_MODEL`                                                | Override the model (Groq default `openai/gpt-oss-120b`).                                                |
+| `SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD`, `EMAIL_FROM`      | Real email delivery. If unset, emails are **simulated** (recorded, not delivered).                      |
+| `EMAIL_REDIRECT_TO`                                          | Testing: send every email to this address instead of parents.                                           |

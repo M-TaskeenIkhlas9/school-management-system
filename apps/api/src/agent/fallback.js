@@ -12,14 +12,16 @@ import * as actions from "./actions.js";
 
 export const HELP_TEXT =
   "I can help with:\n" +
-  "• \"How many students?\" • \"List students / teachers / classes\"\n" +
-  "• \"Who needs attention?\"\n" +
-  "• \"Email parents whose fees are due\" • \"Email parents of students with low attendance\"\n" +
+  '• "How many students?" • "List students / teachers / classes"\n' +
+  '• "Who needs attention?"\n' +
+  '• "Email parents whose fees are due" • "Email parents of students with low attendance"\n' +
   "With an AI model configured I can also add students, record payments and draft exams.";
 
 /** @returns {Promise<{content: string, actions: object[]} | null>} null when no rule matches */
 export async function handleRuleBased(message, ctx) {
-  const q = String(message || "").toLowerCase().trim();
+  const q = String(message || "")
+    .toLowerCase()
+    .trim();
   if (!q) return null;
   const reply = (content, proposed = []) => ({ content, actions: proposed });
 
@@ -54,7 +56,10 @@ export async function handleRuleBased(message, ctx) {
   }
   if (/\b(list|show|get|all)\b.*\bstudents?\b/.test(q) || q === "students") {
     const students = await studentService.getAll();
-    const list = students.slice(0, 50).map((s) => `• ${s.first_name} ${s.last_name} (ID ${s.id})`).join("\n");
+    const list = students
+      .slice(0, 50)
+      .map((s) => `• ${s.first_name} ${s.last_name} (ID ${s.id})`)
+      .join("\n");
     return reply(list ? `Students:\n${list}` : "No students found.");
   }
   if (/\b(list|show|get|all)\b.*\bteachers?\b/.test(q) || q === "teachers") {

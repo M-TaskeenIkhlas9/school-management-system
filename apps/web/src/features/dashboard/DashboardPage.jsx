@@ -13,7 +13,7 @@ export default function DashboardPage() {
   const { data: recentFees } = useFeesPage({ page: 1, pageSize: 2 });
   const { students, classLabelOf } = useLookups();
   const byTerm = trends?.results_by_term ?? [];
-  const series = byTerm.length ? byTerm : trends?.attendance_by_day ?? [];
+  const series = byTerm.length ? byTerm : (trends?.attendance_by_day ?? []);
 
   const s = stats || {};
 

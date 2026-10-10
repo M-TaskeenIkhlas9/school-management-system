@@ -48,8 +48,7 @@ const emptyToNull = (v) => (v === "" ? null : v);
 
 export const requiredText = (max = 255) => z.string().trim().min(1, "is required").max(max);
 
-export const optionalText = (max = 255) =>
-  z.preprocess(emptyToNull, z.string().trim().max(max).nullish());
+export const optionalText = (max = 255) => z.preprocess(emptyToNull, z.string().trim().max(max).nullish());
 
 export const optionalLongText = () => z.preprocess(emptyToNull, z.string().trim().nullish());
 
@@ -60,8 +59,12 @@ export const optionalId = () => z.preprocess(emptyToNull, z.coerce.number().int(
 export const optionalNumber = () => z.preprocess(emptyToNull, z.coerce.number().nullish());
 
 export const isoDate = () =>
-  z.string().regex(/^\d{4}-\d{2}-\d{2}/, "must be a date (YYYY-MM-DD)").transform((s) => s.slice(0, 10));
+  z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}/, "must be a date (YYYY-MM-DD)")
+    .transform((s) => s.slice(0, 10));
 
 export const optionalDate = () => z.preprocess(emptyToNull, isoDate().nullish());
 
-export const optionalEmail = () => z.preprocess(emptyToNull, z.string().trim().email("must be a valid email").nullish());
+export const optionalEmail = () =>
+  z.preprocess(emptyToNull, z.string().trim().email("must be a valid email").nullish());

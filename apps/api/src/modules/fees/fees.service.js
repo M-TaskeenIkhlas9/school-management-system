@@ -32,12 +32,12 @@ export async function create({ student_id, month, due_date, amount_due, amount_p
   if (paid > Number(amount_due)) {
     throw createError(400, "Payment cannot exceed total fee amount", "PAYMENT_EXCEEDS_FEE");
   }
-  const autoStatus = paid >= Number(amount_due) ? "paid" : paid > 0 ? "partial" : (status || "pending");
+  const autoStatus = paid >= Number(amount_due) ? "paid" : paid > 0 ? "partial" : status || "pending";
   const [result] = await pool.execute(
     "INSERT INTO fee_ledgers (student_id, month, due_date, amount_due, amount_paid, status, paid_date) VALUES (?, ?, ?, ?, ?, ?, ?)",
     [student_id, month || null, due_date, amount_due, paid, autoStatus, paid_date || null]
   );
-  return (await getById(result.insertId));
+  return await getById(result.insertId);
 }
 
 export async function update(id, data) {

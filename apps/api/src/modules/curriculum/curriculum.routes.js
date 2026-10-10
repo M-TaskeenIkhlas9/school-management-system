@@ -1,7 +1,14 @@
 import { Router } from "express";
 import { z } from "zod";
 import * as curriculumService from "./curriculum.service.js";
-import validate, { idParam, requiredId, requiredText, optionalText, optionalLongText, optionalNumber } from "../../middleware/validate.js";
+import validate, {
+  idParam,
+  requiredId,
+  requiredText,
+  optionalText,
+  optionalLongText,
+  optionalNumber,
+} from "../../middleware/validate.js";
 import { createError } from "../../middleware/errorHandler.js";
 
 const curriculumSchema = z.object({

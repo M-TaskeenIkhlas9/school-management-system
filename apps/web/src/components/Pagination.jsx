@@ -11,7 +11,12 @@ export default function Pagination({ data, onPageChange }) {
         <button type="button" className="btn ghost small" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
           ← Prev
         </button>
-        <button type="button" className="btn ghost small" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>
+        <button
+          type="button"
+          className="btn ghost small"
+          disabled={page >= totalPages}
+          onClick={() => onPageChange(page + 1)}
+        >
           Next →
         </button>
       </div>
