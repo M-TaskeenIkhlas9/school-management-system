@@ -111,6 +111,40 @@ describe("Validation and errors (zod + Express 5)", () => {
   });
 });
 
+describe("Students with class assignment (single transaction)", () => {
+  let classA;
+  let classB;
+  let studentId;
+
+  beforeAll(async () => {
+    [{ insertId: classA }] = await pool.execute("INSERT INTO classrooms (name, grade) VALUES ('Txn A', '7')");
+    [{ insertId: classB }] = await pool.execute("INSERT INTO classrooms (name, grade) VALUES ('Txn B', '8')");
+  });
+
+  const activeClasses = async (id) =>
+    (await pool.execute("SELECT classroom_id FROM enrollments WHERE student_id = ? AND is_active = 1", [id]))[0].map((r) => r.classroom_id);
+
+  it("creates the student and enrolls them together", async () => {
+    const res = await request.post("/students").set(auth()).send({ first_name: "Txn", last_name: "Student", classroom_id: String(classA) });
+    expect(res.status).toBe(201);
+    studentId = res.body.id;
+    expect(await activeClasses(studentId)).toEqual([classA]);
+  });
+
+  it("moves the student to a new class, deactivating the old enrollment", async () => {
+    const res = await request.put(`/students/${studentId}`).set(auth()).send({ classroom_id: classB });
+    expect(res.status).toBe(200);
+    expect(await activeClasses(studentId)).toEqual([classB]);
+  });
+
+  it("rolls back the student when the class does not exist", async () => {
+    const res = await request.post("/students").set(auth()).send({ first_name: "Ghost", last_name: "Student", classroom_id: 999999 });
+    expect(res.status).toBe(400);
+    const [rows] = await pool.execute("SELECT id FROM students WHERE first_name = 'Ghost'");
+    expect(rows).toHaveLength(0);
+  });
+});
+
 describe("Agent harness", () => {
   it("creates a conversation", async () => {
     const res = await request.post("/agent/conversations").set(auth());

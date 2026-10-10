@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import * as studentService from "./students.service.js";
-import validate, { idParam, requiredText, optionalText, optionalDate, optionalEmail } from "../../middleware/validate.js";
+import validate, { idParam, requiredText, optionalText, optionalDate, optionalEmail, optionalId } from "../../middleware/validate.js";
 import { createError } from "../../middleware/errorHandler.js";
 
 const studentSchema = z.object({
@@ -13,6 +13,7 @@ const studentSchema = z.object({
   guardian_phone: optionalText(30),
   guardian_email: optionalEmail(),
   status: z.enum(["active", "inactive"]).optional(),
+  classroom_id: optionalId(), // enroll / move class in the same transaction
 });
 
 const router = Router();

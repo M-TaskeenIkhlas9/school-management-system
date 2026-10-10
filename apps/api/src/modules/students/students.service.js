@@ -1,4 +1,5 @@
 import pool from "../../db/pool.js";
+import { schoolToday } from "../../config/env.js";
 import { createError } from "../../middleware/errorHandler.js";
 
 export async function getAll() {
@@ -66,38 +67,74 @@ export async function getProfile(id) {
   };
 }
 
-export async function create({ first_name, last_name, roll_number, date_of_birth, guardian_name, guardian_phone, guardian_email }) {
-  if (roll_number) {
-    const [dup] = await pool.execute("SELECT id FROM students WHERE roll_number = ?", [roll_number]);
-    if (dup.length > 0) {
-      throw createError(409, "Roll number already exists", "DUPLICATE_ROLL");
-    }
-  }
-  const [result] = await pool.execute(
-    "INSERT INTO students (first_name, last_name, roll_number, date_of_birth, guardian_name, guardian_phone, guardian_email) VALUES (?, ?, ?, ?, ?, ?, ?)",
-    [first_name, last_name, roll_number || null, date_of_birth || null, guardian_name || null, guardian_phone || null, guardian_email || null]
-  );
-  return (await getById(result.insertId));
+const STUDENT_FIELDS = ["first_name", "last_name", "roll_number", "date_of_birth", "guardian_name", "guardian_phone", "guardian_email", "status"];
+
+async function assertRollAvailable(conn, rollNumber, exceptId = 0) {
+  if (!rollNumber) return;
+  const [dup] = await conn.execute("SELECT id FROM students WHERE roll_number = ? AND id != ?", [rollNumber, exceptId]);
+  if (dup.length > 0) throw createError(409, "Roll number already exists", "DUPLICATE_ROLL");
 }
 
+/** Make `classroomId` the student's only active class (reusing an old enrollment row if one exists). */
+async function setActiveClass(conn, studentId, classroomId) {
+  const [rooms] = await conn.execute("SELECT id FROM classrooms WHERE id = ? AND is_active = 1", [classroomId]);
+  if (!rooms.length) throw createError(400, "Class not found", "CLASS_NOT_FOUND");
+
+  await conn.execute(
+    "UPDATE enrollments SET is_active = 0, end_date = COALESCE(end_date, ?) WHERE student_id = ? AND classroom_id != ? AND is_active = 1",
+    [schoolToday(), studentId, classroomId]
+  );
+  const [existing] = await conn.execute("SELECT id FROM enrollments WHERE student_id = ? AND classroom_id = ?", [studentId, classroomId]);
+  if (existing.length) {
+    await conn.execute("UPDATE enrollments SET is_active = 1, end_date = NULL WHERE id = ?", [existing[0].id]);
+  } else {
+    await conn.execute("INSERT INTO enrollments (student_id, classroom_id, start_date) VALUES (?, ?, ?)", [studentId, classroomId, schoolToday()]);
+  }
+}
+
+async function inTransaction(work) {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const result = await work(conn);
+    await conn.commit();
+    return result;
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
+/** Create a student and (optionally) enroll them in `classroom_id`, atomically. */
+export async function create(data) {
+  const id = await inTransaction(async (conn) => {
+    await assertRollAvailable(conn, data.roll_number);
+    const [result] = await conn.execute(
+      "INSERT INTO students (first_name, last_name, roll_number, date_of_birth, guardian_name, guardian_phone, guardian_email) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      [data.first_name, data.last_name, data.roll_number || null, data.date_of_birth || null, data.guardian_name || null, data.guardian_phone || null, data.guardian_email || null]
+    );
+    if (data.classroom_id) await setActiveClass(conn, result.insertId, data.classroom_id);
+    return result.insertId;
+  });
+  return getById(id);
+}
+
+/** Update student fields and (optionally) move them to `classroom_id`, atomically. */
 export async function update(id, data) {
-  if (data.roll_number) {
-    const [dup] = await pool.execute("SELECT id FROM students WHERE roll_number = ? AND id != ?", [data.roll_number, id]);
-    if (dup.length > 0) {
-      throw createError(409, "Roll number already exists", "DUPLICATE_ROLL");
+  if (!(await getById(id))) return null;
+  await inTransaction(async (conn) => {
+    await assertRollAvailable(conn, data.roll_number, id);
+    const keys = STUDENT_FIELDS.filter((key) => data[key] !== undefined);
+    if (keys.length) {
+      await conn.execute(
+        `UPDATE students SET ${keys.map((k) => `${k} = ?`).join(", ")} WHERE id = ?`,
+        [...keys.map((k) => data[k]), id]
+      );
     }
-  }
-  const fields = [];
-  const values = [];
-  for (const key of ["first_name", "last_name", "roll_number", "date_of_birth", "guardian_name", "guardian_phone", "guardian_email", "status"]) {
-    if (data[key] !== undefined) {
-      fields.push(`${key} = ?`);
-      values.push(data[key]);
-    }
-  }
-  if (!fields.length) return getById(id);
-  values.push(id);
-  await pool.execute(`UPDATE students SET ${fields.join(", ")} WHERE id = ?`, values);
+    if (data.classroom_id) await setActiveClass(conn, id, data.classroom_id);
+  });
   return getById(id);
 }
 

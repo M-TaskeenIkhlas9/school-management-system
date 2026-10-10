@@ -45,6 +45,8 @@ export const optionalLongText = () => z.preprocess(emptyToNull, z.string().trim(
 
 export const requiredId = () => z.coerce.number().int().positive();
 
+export const optionalId = () => z.preprocess(emptyToNull, z.coerce.number().int().positive().nullish());
+
 export const optionalNumber = () => z.preprocess(emptyToNull, z.coerce.number().nullish());
 
 export const isoDate = () =>
