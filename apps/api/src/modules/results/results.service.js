@@ -1,4 +1,5 @@
 import pool from "../../db/pool.js";
+import { pageResult, pageWindow, whereClause } from "../../lib/pagination.js";
 
 export function calcGrade(percentage) {
   const p = Number(percentage);
@@ -10,9 +11,26 @@ export function calcGrade(percentage) {
   return "F";
 }
 
-export async function getAll() {
-  const [rows] = await pool.execute("SELECT * FROM result_cards ORDER BY id DESC");
-  return rows;
+/** One page of result cards (newest first) with student and class names. */
+export async function list({ student_id, classroom_id, term, ...page }) {
+  const where = whereClause([
+    ["r.student_id = ?", student_id],
+    ["r.classroom_id = ?", classroom_id],
+    ["r.term = ?", term],
+  ]);
+  const [[{ total }]] = await pool.query(`SELECT COUNT(*) AS total FROM result_cards r ${where.sql}`, where.params);
+  const { limit, offset } = pageWindow(page);
+  const [rows] = await pool.query(
+    `SELECT r.*, CONCAT(s.first_name, ' ', s.last_name) AS student_name, c.name AS class_name
+     FROM result_cards r
+     JOIN students s ON s.id = r.student_id
+     JOIN classrooms c ON c.id = r.classroom_id
+     ${where.sql}
+     ORDER BY r.id DESC
+     LIMIT ? OFFSET ?`,
+    [...where.params, limit, offset]
+  );
+  return pageResult(rows, total, page);
 }
 
 export async function getById(id) {

@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { z } from "zod";
 import * as attendanceService from "./attendance.service.js";
-import validate, { idParam, requiredId, optionalDate } from "../../middleware/validate.js";
+import validate, { idParam, parseQuery, requiredId, optionalDate, optionalId } from "../../middleware/validate.js";
+import { pageParams } from "../../lib/pagination.js";
 import { createError } from "../../middleware/errorHandler.js";
 
 const status = z.enum(["present", "absent", "late"]);
@@ -18,10 +19,24 @@ const updateAttendanceSchema = z.object({
   status: status.optional(),
 });
 
+const listQuery = z.object({
+  ...pageParams,
+  student_id: optionalId(),
+  classroom_id: optionalId(),
+  status: status.optional(),
+  from: optionalDate(),
+  to: optionalDate(),
+});
+
 const router = Router();
 
-router.get("/", async (_req, res) => {
-  res.json(await attendanceService.getAll());
+// GET /attendance?page=&pageSize=&student_id=&classroom_id=&status=&from=&to=
+router.get("/", async (req, res) => {
+  res.json(await attendanceService.list(parseQuery(listQuery, req.query)));
+});
+
+router.get("/summary", async (_req, res) => {
+  res.json(await attendanceService.summary());
 });
 
 router.post("/", validate(createAttendanceSchema), async (req, res) => {

@@ -1,35 +1,24 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { api } from "../../api/client.js";
-import { keys, useApiMutation, useAttendance, useAttention, useDashboard } from "../../api/queries.js";
+import { keys, useApiMutation, useAttendancePage, useAttendanceSummary, useAttention } from "../../api/queries.js";
 import { useLookups } from "../../lib/useLookups.js";
 import { badgeClass, formatDate, fullName } from "../../lib/format.js";
 import { useToast } from "../../components/Toast.jsx";
 import PageHeader from "../../components/PageHeader.jsx";
+import Pagination from "../../components/Pagination.jsx";
 
 const emptyForm = { student_id: "", day: "", status: "present" };
-const attended = (status) => status === "present" || status === "late";
 
 export default function AttendancePage() {
   const toast = useToast();
-  const { data: entries = [] } = useAttendance();
-  const { data: stats } = useDashboard();
+  const { data: summary } = useAttendanceSummary();
   const { data: attention } = useAttention();
-  const { students, studentName, classroomName, classIdOf } = useLookups();
+  const { students, classrooms, classIdOf } = useLookups();
   const [form, setForm] = useState(emptyForm);
+  const [filters, setFilters] = useState({ classroom_id: "", status: "", page: 1 });
+  const { data: records, isFetching } = useAttendancePage({ ...filters, pageSize: 20 });
 
-  // Attendance rate per class over all recorded days.
-  const classRates = useMemo(() => {
-    const byClass = new Map();
-    for (const row of entries) {
-      const c = byClass.get(row.classroom_id) || { total: 0, attended: 0 };
-      c.total++;
-      if (attended(row.status)) c.attended++;
-      byClass.set(row.classroom_id, c);
-    }
-    return [...byClass.entries()]
-      .map(([classroomId, c]) => ({ classroomId, rate: Math.round((c.attended / c.total) * 100) }))
-      .sort((a, b) => b.rate - a.rate);
-  }, [entries]);
+  const setFilter = (name) => (e) => setFilters((f) => ({ ...f, [name]: e.target.value, page: 1 }));
 
   const create = useApiMutation((values) => api.post("/attendance", values), {
     invalidate: [keys.attendance, keys.attention],
@@ -84,26 +73,44 @@ export default function AttendancePage() {
       </div>
       <div className="grid-2">
         <div className="card">
-          <h4>Daily Summary</h4>
+          <h4>Today</h4>
           <p>
-            Attendance today: <strong>{stats?.todayAttendance ?? 0}%</strong>
+            Attendance today:{" "}
+            <strong>{summary?.today.rate === null || !summary ? "not marked yet" : `${summary.today.rate}%`}</strong>
           </p>
+          <p>Records marked today: {summary?.today.marked ?? 0}</p>
           <p>Students needing attention: {attention?.students?.length ?? 0}</p>
         </div>
         <div className="card">
-          <h4>By Class</h4>
-          {classRates.length === 0 && <p className="muted">No attendance recorded yet.</p>}
-          {classRates.map((c) => (
-            <p key={c.classroomId}>
-              {classroomName(c.classroomId)}: <strong>{c.rate}%</strong>
+          <h4>By Class (all recorded days)</h4>
+          {!summary?.by_class.length && <p className="muted">No attendance recorded yet.</p>}
+          {summary?.by_class.map((c) => (
+            <p key={c.classroom_id}>
+              {c.class_name}: <strong>{c.rate}%</strong> <span className="muted">({c.records} records)</span>
             </p>
           ))}
         </div>
       </div>
       <div className="card table-card">
         <div className="card__title">
-          <h5>Recent Attendance</h5>
-          <span>Latest entries</span>
+          <h5>Attendance Records</h5>
+          <span>{isFetching ? "Loading…" : "Newest first"}</span>
+        </div>
+        <div className="filters">
+          <select value={filters.classroom_id} onChange={setFilter("classroom_id")}>
+            <option value="">All classes</option>
+            {classrooms.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+          <select value={filters.status} onChange={setFilter("status")}>
+            <option value="">Any status</option>
+            <option value="present">Present</option>
+            <option value="late">Late</option>
+            <option value="absent">Absent</option>
+          </select>
         </div>
         <table>
           <thead>
@@ -115,15 +122,15 @@ export default function AttendancePage() {
             </tr>
           </thead>
           <tbody>
-            {entries.length === 0 && (
+            {records?.items.length === 0 && (
               <tr>
-                <td colSpan="4">No attendance marked yet.</td>
+                <td colSpan="4">No attendance records match.</td>
               </tr>
             )}
-            {entries.slice(0, 20).map((row) => (
+            {records?.items.map((row) => (
               <tr key={row.id}>
-                <td>{studentName(row.student_id)}</td>
-                <td>{classroomName(row.classroom_id)}</td>
+                <td>{row.student_name}</td>
+                <td>{row.class_name}</td>
                 <td>{formatDate(row.day)}</td>
                 <td>
                   <span className={`badge ${badgeClass(row.status)}`}>{row.status}</span>
@@ -132,6 +139,7 @@ export default function AttendancePage() {
             ))}
           </tbody>
         </table>
+        <Pagination data={records} onPageChange={(page) => setFilters((f) => ({ ...f, page }))} />
       </div>
     </section>
   );

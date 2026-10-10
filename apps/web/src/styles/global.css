@@ -1666,3 +1666,19 @@ a.ai-fab {
   color: var(--muted);
   cursor: pointer;
 }
+
+/* ---------- Pagination ---------- */
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 4px 0;
+  font-size: 13px;
+}
+
+.pagination__buttons {
+  display: flex;
+  gap: 8px;
+}

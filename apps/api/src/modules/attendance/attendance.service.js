@@ -2,10 +2,50 @@ import pool from "../../db/pool.js";
 
 import { schoolToday as today } from "../../config/env.js";
 import { createError } from "../../middleware/errorHandler.js";
+import { pageResult, pageWindow, whereClause } from "../../lib/pagination.js";
 
-export async function getAll() {
-  const [rows] = await pool.execute("SELECT * FROM attendance ORDER BY id DESC");
-  return rows;
+const attendedSql = "CASE WHEN a.status IN ('present','late') THEN 1 ELSE 0 END";
+
+/** One page of attendance records (newest day first) with student and class names. */
+export async function list({ student_id, classroom_id, status, from, to, ...page }) {
+  const where = whereClause([
+    ["a.student_id = ?", student_id],
+    ["a.classroom_id = ?", classroom_id],
+    ["a.status = ?", status],
+    ["a.day >= ?", from],
+    ["a.day <= ?", to],
+  ]);
+  const [[{ total }]] = await pool.query(`SELECT COUNT(*) AS total FROM attendance a ${where.sql}`, where.params);
+  const { limit, offset } = pageWindow(page);
+  const [rows] = await pool.query(
+    `SELECT a.*, CONCAT(s.first_name, ' ', s.last_name) AS student_name, c.name AS class_name
+     FROM attendance a
+     JOIN students s ON s.id = a.student_id
+     JOIN classrooms c ON c.id = a.classroom_id
+     ${where.sql}
+     ORDER BY a.day DESC, a.id DESC
+     LIMIT ? OFFSET ?`,
+    [...where.params, limit, offset]
+  );
+  return pageResult(rows, total, page);
+}
+
+/** Aggregates for the attendance page: today's rate and the overall rate per class. */
+export async function summary() {
+  const [[todayRow]] = await pool.query(
+    `SELECT COUNT(*) AS marked, AVG(${attendedSql}) AS rate FROM attendance a WHERE a.day = ?`,
+    [today()]
+  );
+  const [byClass] = await pool.query(
+    `SELECT a.classroom_id, c.name AS class_name, COUNT(*) AS records, ROUND(AVG(${attendedSql}) * 100) AS rate
+     FROM attendance a JOIN classrooms c ON c.id = a.classroom_id
+     GROUP BY a.classroom_id, c.name
+     ORDER BY rate DESC`
+  );
+  return {
+    today: { marked: Number(todayRow.marked), rate: todayRow.rate === null ? null : Math.round(todayRow.rate * 100) },
+    by_class: byClass.map((r) => ({ ...r, rate: Number(r.rate), records: Number(r.records) })),
+  };
 }
 
 export async function create({ student_id, classroom_id, day, status, marked_by }) {

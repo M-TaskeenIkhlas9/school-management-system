@@ -1,11 +1,14 @@
 import { Router } from "express";
 import { z } from "zod";
 import * as feeService from "./fees.service.js";
-import validate, { idParam, requiredId, isoDate, optionalText, optionalDate } from "../../middleware/validate.js";
+import validate, { idParam, parseQuery, requiredId, isoDate, optionalText, optionalDate, optionalId } from "../../middleware/validate.js";
+import { pageParams } from "../../lib/pagination.js";
 import { createError } from "../../middleware/errorHandler.js";
 
 const money = () => z.coerce.number().min(0);
 const optionalMoney = () => z.preprocess((v) => (v === "" || v === null ? undefined : v), money().optional());
+
+const feeStatus = z.enum(["pending", "paid", "partial", "overdue"]);
 
 const feeSchema = z.object({
   student_id: requiredId(),
@@ -13,14 +16,17 @@ const feeSchema = z.object({
   due_date: isoDate(),
   amount_due: money(),
   amount_paid: optionalMoney(),
-  status: z.enum(["pending", "paid", "partial", "overdue"]).optional(),
+  status: feeStatus.optional(),
   paid_date: optionalDate(),
 });
 
+const listQuery = z.object({ ...pageParams, student_id: optionalId(), status: feeStatus.optional() });
+
 const router = Router();
 
-router.get("/", async (_req, res) => {
-  res.json(await feeService.getAll());
+// GET /fees?page=&pageSize=&student_id=&status=
+router.get("/", async (req, res) => {
+  res.json(await feeService.list(parseQuery(listQuery, req.query)));
 });
 
 router.get("/defaulters", async (_req, res) => {

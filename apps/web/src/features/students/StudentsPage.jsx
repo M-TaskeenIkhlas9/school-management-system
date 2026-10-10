@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { api } from "../../api/client.js";
-import { keys, useApiMutation, useAttention, useFees } from "../../api/queries.js";
+import { keys, useApiMutation, useAttention } from "../../api/queries.js";
 import { useLookups } from "../../lib/useLookups.js";
 import { badgeClass, formatDate, fullName } from "../../lib/format.js";
 import PageHeader from "../../components/PageHeader.jsx";
@@ -9,7 +9,6 @@ import StudentProfileCard from "./StudentProfileCard.jsx";
 
 export default function StudentsPage() {
   const { students, classrooms, classIdOf, classLabelOf } = useLookups();
-  const { data: fees = [] } = useFees();
   const { data: attention } = useAttention();
 
   const [selectedId, setSelectedId] = useState(null);
@@ -19,12 +18,7 @@ export default function StudentsPage() {
   const [feeFilter, setFeeFilter] = useState("");
   const [riskFilter, setRiskFilter] = useState("");
 
-  // Latest fee status per student (fees come newest first).
-  const feeStatusOf = useMemo(() => {
-    const map = new Map();
-    for (const fee of fees) if (!map.has(fee.student_id)) map.set(fee.student_id, fee.status);
-    return (id) => map.get(id);
-  }, [fees]);
+  const feeStatusOf = (id) => students.find((s) => s.id === id)?.latest_fee_status ?? null;
   const riskOf = useMemo(() => {
     const flagged = new Set((attention?.students || []).map((s) => s.student_id));
     return (id) => (flagged.has(id) ? "High" : "Low");
@@ -41,7 +35,7 @@ export default function StudentsPage() {
   const save = useApiMutation(
     ({ id, values }) => (id ? api.put(`/students/${id}`, values) : api.post("/students", values)),
     {
-      invalidate: [keys.students, keys.enrollments],
+      invalidate: [keys.students],
       success: (student) => `Saved ${fullName(student)}`,
     }
   );

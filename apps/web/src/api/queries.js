@@ -1,6 +1,6 @@
 // Data hooks: one cached query per resource, plus a mutation helper that
 // refreshes the affected queries and reports success/failure as a toast.
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "./client.js";
 import { useToast } from "../components/Toast.jsx";
 
@@ -11,7 +11,6 @@ export const keys = {
   teachers: ["teachers"],
   classrooms: ["classrooms"],
   curriculum: ["curriculum"],
-  enrollments: ["enrollments"],
   attendance: ["attendance"],
   fees: ["fees"],
   results: ["results"],
@@ -26,12 +25,28 @@ export const useStudents = listQuery(keys.students, "/students");
 export const useTeachers = listQuery(keys.teachers, "/teachers");
 export const useClassrooms = listQuery(keys.classrooms, "/classrooms");
 export const useCurriculum = listQuery(keys.curriculum, "/curriculum");
-export const useEnrollments = listQuery(keys.enrollments, "/enrollments");
-export const useAttendance = listQuery(keys.attendance, "/attendance");
-export const useFees = listQuery(keys.fees, "/fees");
-export const useResults = listQuery(keys.results, "/results");
+export const useAttendanceSummary = listQuery([...keys.attendance, "summary"], "/attendance/summary");
+export const useTrends = listQuery([...keys.dashboard, "trends"], "/dashboard/trends");
+export const useDefaulters = listQuery([...keys.fees, "defaulters"], "/fees/defaulters");
 export const useExams = listQuery(keys.exams, "/exams");
 export const useAttention = listQuery(keys.attention, "/ai/students/attention");
+
+/**
+ * One page of a paginated list: { items, total, page, pageSize, totalPages }.
+ * Empty params are dropped; the previous page stays visible while the next loads.
+ */
+function usePaged(baseKey, path, params) {
+  const clean = Object.fromEntries(Object.entries(params).filter(([, v]) => v !== "" && v !== null && v !== undefined));
+  return useQuery({
+    queryKey: [...baseKey, "page", clean],
+    queryFn: () => api.get(`${path}?${new URLSearchParams(clean)}`),
+    placeholderData: keepPreviousData,
+  });
+}
+
+export const useAttendancePage = (params) => usePaged(keys.attendance, "/attendance", params);
+export const useFeesPage = (params) => usePaged(keys.fees, "/fees", params);
+export const useResultsPage = (params) => usePaged(keys.results, "/results", params);
 
 export function useStudent(id) {
   return useQuery({ queryKey: keys.student(id), queryFn: () => api.get(`/students/${id}`), enabled: Boolean(id) });

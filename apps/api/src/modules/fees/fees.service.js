@@ -1,10 +1,25 @@
 import pool from "../../db/pool.js";
 import { schoolToday } from "../../config/env.js";
 import { createError } from "../../middleware/errorHandler.js";
+import { pageResult, pageWindow, whereClause } from "../../lib/pagination.js";
 
-export async function getAll() {
-  const [rows] = await pool.execute("SELECT * FROM fee_ledgers ORDER BY id DESC");
-  return rows.map(addRemaining);
+/** One page of fee records (latest due date first) with student names. */
+export async function list({ student_id, status, ...page }) {
+  const where = whereClause([
+    ["fl.student_id = ?", student_id],
+    ["fl.status = ?", status],
+  ]);
+  const [[{ total }]] = await pool.query(`SELECT COUNT(*) AS total FROM fee_ledgers fl ${where.sql}`, where.params);
+  const { limit, offset } = pageWindow(page);
+  const [rows] = await pool.query(
+    `SELECT fl.*, CONCAT(s.first_name, ' ', s.last_name) AS student_name
+     FROM fee_ledgers fl JOIN students s ON s.id = fl.student_id
+     ${where.sql}
+     ORDER BY fl.due_date DESC, fl.id DESC
+     LIMIT ? OFFSET ?`,
+    [...where.params, limit, offset]
+  );
+  return pageResult(rows.map(addRemaining), total, page);
 }
 
 export async function getById(id) {

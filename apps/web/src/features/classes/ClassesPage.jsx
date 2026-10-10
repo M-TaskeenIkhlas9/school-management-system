@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { api } from "../../api/client.js";
-import { keys, useApiMutation, useClassrooms, useCurriculum, useEnrollments } from "../../api/queries.js";
+import { keys, useApiMutation, useClassrooms, useCurriculum, useStudents } from "../../api/queries.js";
 import PageHeader from "../../components/PageHeader.jsx";
 
 const emptyClass = { name: "", grade: "", section: "" };
@@ -8,7 +8,7 @@ const emptyClass = { name: "", grade: "", section: "" };
 export default function ClassesPage() {
   const { data: classrooms = [] } = useClassrooms();
   const { data: curriculum = [] } = useCurriculum();
-  const { data: enrollments = [] } = useEnrollments();
+  const { data: students = [] } = useStudents();
   const [form, setForm] = useState(emptyClass);
 
   const create = useApiMutation((values) => api.post("/classrooms", values), {
@@ -46,7 +46,7 @@ export default function ClassesPage() {
         {classrooms.length === 0 && <div className="card empty-card">Add classes to see them here.</div>}
         {classrooms.map((room) => {
           const subjects = curriculum.filter((c) => c.classroom_id === room.id).map((c) => c.subject);
-          const studentCount = enrollments.filter((e) => e.classroom_id === room.id && e.is_active).length;
+          const studentCount = students.filter((st) => st.classroom_id === room.id).length;
           return (
             <div className="class-card" key={room.id}>
               <div className="class-header">

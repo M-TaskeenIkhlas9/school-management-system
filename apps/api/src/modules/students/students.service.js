@@ -2,9 +2,18 @@ import pool from "../../db/pool.js";
 import { schoolToday } from "../../config/env.js";
 import { createError } from "../../middleware/errorHandler.js";
 
+/** Active students with their current class and latest fee status (one row each). */
 export async function getAll() {
   const [rows] = await pool.execute(
-    "SELECT * FROM students WHERE is_active = 1 ORDER BY id DESC"
+    `SELECT s.*, e.classroom_id, c.name AS class_name, c.section AS class_section,
+            (SELECT fl.status FROM fee_ledgers fl WHERE fl.student_id = s.id
+             ORDER BY fl.due_date DESC, fl.id DESC LIMIT 1) AS latest_fee_status
+     FROM students s
+     LEFT JOIN (SELECT student_id, MIN(classroom_id) AS classroom_id
+                FROM enrollments WHERE is_active = 1 GROUP BY student_id) e ON e.student_id = s.id
+     LEFT JOIN classrooms c ON c.id = e.classroom_id
+     WHERE s.is_active = 1
+     ORDER BY s.id DESC`
   );
   return rows;
 }

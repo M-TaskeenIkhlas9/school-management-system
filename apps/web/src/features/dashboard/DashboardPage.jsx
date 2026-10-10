@@ -1,43 +1,21 @@
-import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAttendance, useAttention, useCurriculum, useDashboard, useFees, useResults } from "../../api/queries.js";
+import { useAttention, useCurriculum, useDashboard, useFeesPage, useTrends } from "../../api/queries.js";
 import { useLookups } from "../../lib/useLookups.js";
-import { average, formatCurrency, fullName } from "../../lib/format.js";
+import { formatCurrency, fullName } from "../../lib/format.js";
 import TrendChart from "./TrendChart.jsx";
-
-/** Average result % per term; falls back to daily attendance % when there are no results. */
-function useTrendSeries(results, attendance) {
-  return useMemo(() => {
-    const groupAverage = (rows, keyOf, valueOf) => {
-      const groups = new Map();
-      for (const row of rows) {
-        const key = keyOf(row);
-        groups.set(key, [...(groups.get(key) || []), valueOf(row)]);
-      }
-      return [...groups.entries()].map(([label, values]) => ({ label, value: Math.round(average(values)) }));
-    };
-    if (results.length) return groupAverage(results, (r) => r.term || "Term", (r) => Number(r.percentage) || 0);
-    return groupAverage(
-      attendance,
-      (a) => String(a.day).slice(0, 10),
-      (a) => (a.status === "present" || a.status === "late" ? 100 : 0)
-    ).slice(0, 8);
-  }, [results, attendance]);
-}
 
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { data: stats, isLoading } = useDashboard();
   const { data: attention } = useAttention();
-  const { data: fees = [] } = useFees();
   const { data: curriculum = [] } = useCurriculum();
-  const { data: results = [] } = useResults();
-  const { data: attendance = [] } = useAttendance();
-  const { students, studentName, classLabelOf } = useLookups();
-  const series = useTrendSeries(results, attendance);
+  const { data: trends } = useTrends();
+  const { data: recentFees } = useFeesPage({ page: 1, pageSize: 2 });
+  const { students, classLabelOf } = useLookups();
+  const byTerm = trends?.results_by_term ?? [];
+  const series = byTerm.length ? byTerm : trends?.attendance_by_day ?? [];
 
   const s = stats || {};
-  const pendingFees = fees.filter((f) => f.status !== "paid").length;
 
   return (
     <section className="section active dashboard">
@@ -103,7 +81,7 @@ export default function DashboardPage() {
         <div className="card chart-panel">
           <div className="card__title">
             <h5>Academic Performance Trends</h5>
-            <span>{results.length ? "Average result by term" : "Daily attendance"}</span>
+            <span>{byTerm.length ? "Average result by term" : "Daily attendance (last 14 days)"}</span>
           </div>
           <div className="chart-placeholder">
             <TrendChart series={series} />
@@ -121,7 +99,7 @@ export default function DashboardPage() {
           </div>
           <div className="ai-hub-item">
             <span className="badge warning pill">Medium</span>
-            <p>{pendingFees} fee records unpaid.</p>
+            <p>{s.unpaidFees ?? 0} fee records unpaid.</p>
           </div>
           <div className="ai-hub-item">
             <span className="badge info pill">Info</span>
@@ -171,13 +149,13 @@ export default function DashboardPage() {
                 <span>Added to {classLabelOf(student.id)}</span>
               </li>
             ))}
-            {fees.slice(0, 2).map((fee) => (
+            {(recentFees?.items ?? []).map((fee) => (
               <li key={`fee-${fee.id}`}>
-                <strong>{studentName(fee.student_id)}</strong>
+                <strong>{fee.student_name}</strong>
                 <span>Fee due {formatCurrency(fee.amount_due)}</span>
               </li>
             ))}
-            {students.length === 0 && fees.length === 0 && <li>Activity will appear here as you manage records.</li>}
+            {students.length === 0 && !recentFees?.total && <li>Activity will appear here as you manage records.</li>}
           </ul>
         </div>
       </div>

@@ -233,46 +233,33 @@ export async function generateInsights() {
 
 // ---------- Attention report (backward compat with existing endpoint) ----------
 export async function getStudentsNeedingAttention() {
-  const [students] = await pool.execute("SELECT * FROM students WHERE is_active = 1");
-
-  const [attendance] = await pool.execute("SELECT student_id, status FROM attendance");
-  const attMap = new Map();
-  for (const row of attendance) {
-    const s = attMap.get(row.student_id) || { total: 0, present: 0 };
-    s.total++;
-    if (row.status === "present" || row.status === "late") s.present++;
-    attMap.set(row.student_id, s);
-  }
-
-  const [results] = await pool.execute("SELECT student_id, percentage FROM result_cards");
-  const scoreMap = new Map();
-  for (const row of results) {
-    const list = scoreMap.get(row.student_id) || [];
-    list.push(Number(row.percentage));
-    scoreMap.set(row.student_id, list);
-  }
-
-  const flagged = students
-    .map((student) => {
-      const att = attMap.get(student.id) || { total: 0, present: 0 };
-      const attendanceRate = att.total ? (att.present / att.total) * 100 : 100;
-      const scores = scoreMap.get(student.id) || [];
-      const averageScore = scores.length
-        ? scores.reduce((a, b) => a + b, 0) / scores.length
-        : 100;
-      const reasons = [];
-      if (attendanceRate < 75) reasons.push("low attendance");
-      if (averageScore < 50) reasons.push("low scores");
-      if (!reasons.length) return null;
-      return {
-        student_id: student.id,
-        student_name: `${student.first_name} ${student.last_name}`.trim(),
-        attendance_rate: Number(attendanceRate.toFixed(2)),
-        average_score: Number(averageScore.toFixed(2)),
-        reasons,
-      };
-    })
-    .filter(Boolean);
-
+  // Aggregated in SQL so this stays cheap as attendance grows. Students with no records
+  // count as 100% / 100 (not flagged), matching the original behaviour.
+  const [rows] = await pool.execute(
+    `SELECT s.id, s.first_name, s.last_name,
+            COALESCE(att.rate, 100) AS attendance_rate,
+            COALESCE(res.avg_score, 100) AS average_score
+     FROM students s
+     LEFT JOIN (SELECT student_id, AVG(CASE WHEN status IN ('present','late') THEN 1 ELSE 0 END) * 100 AS rate
+                FROM attendance GROUP BY student_id) att ON att.student_id = s.id
+     LEFT JOIN (SELECT student_id, AVG(percentage) AS avg_score FROM result_cards GROUP BY student_id) res ON res.student_id = s.id
+     WHERE s.is_active = 1
+       AND (COALESCE(att.rate, 100) < 75 OR COALESCE(res.avg_score, 100) < 50)
+     ORDER BY s.first_name, s.last_name`
+  );
+  const flagged = rows.map((r) => {
+    const attendanceRate = Number(r.attendance_rate);
+    const averageScore = Number(r.average_score);
+    const reasons = [];
+    if (attendanceRate < 75) reasons.push("low attendance");
+    if (averageScore < 50) reasons.push("low scores");
+    return {
+      student_id: r.id,
+      student_name: `${r.first_name} ${r.last_name}`.trim(),
+      attendance_rate: Number(attendanceRate.toFixed(2)),
+      average_score: Number(averageScore.toFixed(2)),
+      reasons,
+    };
+  });
   return { generated_at: new Date().toISOString(), students: flagged };
 }

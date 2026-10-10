@@ -206,6 +206,64 @@ describe("Agent harness", () => {
   });
 });
 
+describe("Paginated lists and summaries", () => {
+  beforeAll(async () => {
+    const [[student]] = await pool.query("SELECT s.id, e.classroom_id FROM students s JOIN enrollments e ON e.student_id = s.id WHERE s.first_name = 'Ali' LIMIT 1");
+    for (const [day, status] of [["2026-01-05", "present"], ["2026-01-06", "absent"], ["2026-01-07", "late"]]) {
+      await pool.execute("INSERT INTO attendance (student_id, classroom_id, day, status) VALUES (?, ?, ?, ?)", [student.id, student.classroom_id, day, status]);
+    }
+  });
+
+  it("pages attendance newest first with names attached", async () => {
+    const res = await request.get("/attendance?pageSize=2").set(auth());
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ total: 3, page: 1, pageSize: 2, totalPages: 2 });
+    expect(res.body.items).toHaveLength(2);
+    expect(res.body.items[0].day.slice(0, 10)).toBe("2026-01-07");
+    expect(res.body.items[0].student_name).toBe("Ali Hassan");
+    const page2 = await request.get("/attendance?pageSize=2&page=2").set(auth());
+    expect(page2.body.items).toHaveLength(1);
+  });
+
+  it("filters attendance by status", async () => {
+    const res = await request.get("/attendance?status=absent").set(auth());
+    expect(res.body.total).toBe(1);
+    expect(res.body.items[0].status).toBe("absent");
+  });
+
+  it("rejects invalid paging values", async () => {
+    const res = await request.get("/attendance?pageSize=5000").set(auth());
+    expect(res.status).toBe(400);
+  });
+
+  it("summarises attendance per class (late counts as attended)", async () => {
+    const res = await request.get("/attendance/summary").set(auth());
+    expect(res.status).toBe(200);
+    expect(res.body.by_class[0]).toMatchObject({ class_name: "Class 5", records: 3, rate: 67 });
+  });
+
+  it("pages and filters fees", async () => {
+    const res = await request.get("/fees?status=pending").set(auth());
+    expect(res.status).toBe(200);
+    expect(res.body.total).toBeGreaterThan(0);
+    expect(res.body.items.every((f) => f.status === "pending")).toBe(true);
+    expect(res.body.items[0]).toHaveProperty("student_name");
+  });
+
+  it("includes class and latest fee status in the student list", async () => {
+    const res = await request.get("/students").set(auth());
+    const ali = res.body.find((s) => s.first_name === "Ali");
+    expect(ali).toMatchObject({ class_name: "Class 5", latest_fee_status: "pending" });
+  });
+
+  it("returns chart data for the dashboard", async () => {
+    const res = await request.get("/dashboard/trends").set(auth());
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.results_by_term)).toBe(true);
+    expect(Array.isArray(res.body.attendance_by_day)).toBe(true);
+  });
+});
+
 describe("Security hardening", () => {
   it("sends security headers and hides the framework", async () => {
     const res = await request.get("/health");

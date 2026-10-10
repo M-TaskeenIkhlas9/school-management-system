@@ -1,21 +1,22 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client.js";
-import { keys, useApiMutation, useDashboard, useFees } from "../../api/queries.js";
+import { keys, useApiMutation, useDashboard, useDefaulters, useFeesPage } from "../../api/queries.js";
 import { useLookups } from "../../lib/useLookups.js";
 import { badgeClass, formatCurrency, formatDate, fullName } from "../../lib/format.js";
 import PageHeader from "../../components/PageHeader.jsx";
+import Pagination from "../../components/Pagination.jsx";
 
 const emptyForm = { student_id: "", due_date: "", amount_due: "", amount_paid: "" };
 export const FEE_REMINDER_PROMPT = "Email the parents whose fees are due";
 
 export default function FeesPage() {
   const navigate = useNavigate();
-  const { data: fees = [] } = useFees();
   const { data: stats } = useDashboard();
-  const { data: defaulters = [] } = useQuery({ queryKey: [...keys.fees, "defaulters"], queryFn: () => api.get("/fees/defaulters") });
-  const { students, studentName } = useLookups();
+  const { data: defaulters = [] } = useDefaulters();
+  const { students } = useLookups();
+  const [filters, setFilters] = useState({ status: "", page: 1 });
+  const { data: fees } = useFeesPage({ ...filters, pageSize: 20 });
   const [form, setForm] = useState(emptyForm);
 
   const create = useApiMutation((values) => api.post("/fees", values), {
@@ -107,7 +108,15 @@ export default function FeesPage() {
       <div className="card table-card">
         <div className="card__title">
           <h5>Fee Records</h5>
-          <span>Latest first</span>
+          <span>Latest due date first</span>
+        </div>
+        <div className="filters">
+          <select value={filters.status} onChange={(e) => setFilters({ status: e.target.value, page: 1 })}>
+            <option value="">Any status</option>
+            <option value="pending">Pending</option>
+            <option value="partial">Partial</option>
+            <option value="paid">Paid</option>
+          </select>
         </div>
         <table>
           <thead>
@@ -120,14 +129,14 @@ export default function FeesPage() {
             </tr>
           </thead>
           <tbody>
-            {fees.length === 0 && (
+            {fees?.items.length === 0 && (
               <tr>
-                <td colSpan="5">No fee records yet.</td>
+                <td colSpan="5">No fee records match.</td>
               </tr>
             )}
-            {fees.slice(0, 30).map((fee) => (
+            {fees?.items.map((fee) => (
               <tr key={fee.id}>
-                <td>{studentName(fee.student_id)}</td>
+                <td>{fee.student_name}</td>
                 <td>{formatDate(fee.due_date)}</td>
                 <td>{formatCurrency(fee.amount_due)}</td>
                 <td>{formatCurrency(fee.amount_paid)}</td>
@@ -138,6 +147,7 @@ export default function FeesPage() {
             ))}
           </tbody>
         </table>
+        <Pagination data={fees} onPageChange={(page) => setFilters((f) => ({ ...f, page }))} />
       </div>
     </section>
   );

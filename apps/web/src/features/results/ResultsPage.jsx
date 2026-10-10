@@ -1,18 +1,20 @@
 import { useState } from "react";
 import { api } from "../../api/client.js";
-import { keys, useApiMutation, useResults } from "../../api/queries.js";
+import { keys, useApiMutation, useResultsPage } from "../../api/queries.js";
 import { useLookups } from "../../lib/useLookups.js";
 import { fullName } from "../../lib/format.js";
 import { useToast } from "../../components/Toast.jsx";
 import PageHeader from "../../components/PageHeader.jsx";
+import Pagination from "../../components/Pagination.jsx";
 
 const emptyForm = { student_id: "", term: "", total_score: "", percentage: "", remarks: "" };
 
 export default function ResultsPage() {
   const toast = useToast();
-  const { data: results = [] } = useResults();
-  const { students, studentName, classroomName, classIdOf } = useLookups();
+  const { students, classrooms, classIdOf } = useLookups();
   const [form, setForm] = useState(emptyForm);
+  const [filters, setFilters] = useState({ classroom_id: "", page: 1 });
+  const { data: results } = useResultsPage({ ...filters, pageSize: 20 });
 
   const create = useApiMutation((values) => api.post("/results", values), {
     invalidate: [keys.results, keys.attention],
@@ -61,6 +63,16 @@ export default function ResultsPage() {
         </form>
       </div>
       <div className="card table-card">
+        <div className="filters">
+          <select value={filters.classroom_id} onChange={(e) => setFilters({ classroom_id: e.target.value, page: 1 })}>
+            <option value="">All classes</option>
+            {classrooms.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
         <table>
           <thead>
             <tr>
@@ -73,15 +85,15 @@ export default function ResultsPage() {
             </tr>
           </thead>
           <tbody>
-            {results.length === 0 && (
+            {results?.items.length === 0 && (
               <tr>
-                <td colSpan="6">No results added yet.</td>
+                <td colSpan="6">No results match.</td>
               </tr>
             )}
-            {results.map((row) => (
+            {results?.items.map((row) => (
               <tr key={row.id}>
-                <td>{studentName(row.student_id)}</td>
-                <td>{classroomName(row.classroom_id)}</td>
+                <td>{row.student_name}</td>
+                <td>{row.class_name}</td>
                 <td>{row.term}</td>
                 <td>{row.percentage}%</td>
                 <td>
@@ -92,6 +104,7 @@ export default function ResultsPage() {
             ))}
           </tbody>
         </table>
+        <Pagination data={results} onPageChange={(page) => setFilters((f) => ({ ...f, page }))} />
       </div>
     </section>
   );

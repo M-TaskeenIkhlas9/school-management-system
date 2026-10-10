@@ -23,6 +23,16 @@ export default function validate(schema) {
   };
 }
 
+/** Parse and validate req.query with a zod schema (Express 5 query is read-only). */
+export function parseQuery(schema, query) {
+  const result = schema.safeParse(query ?? {});
+  if (!result.success) {
+    const details = result.error.issues.map((i) => `${i.path.join(".") || "query"}: ${i.message}`);
+    throw createError(400, "Invalid query parameters", "VALIDATION_ERROR", details);
+  }
+  return result.data;
+}
+
 /** Parse a positive integer route param (e.g. :id) or throw 400. */
 export function idParam(req, name = "id") {
   const id = Number(req.params[name]);
