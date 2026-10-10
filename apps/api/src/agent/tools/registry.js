@@ -5,6 +5,7 @@ import attendanceTools from "./attendance.js";
 import resultTools from "./results.js";
 import feeTools from "./fees.js";
 import reportTools from "./reports.js";
+import actionTools from "./actions.js";
 
 export { ToolError } from "./helpers.js";
 
@@ -19,6 +20,7 @@ export const ALL_TOOLS = [
   ...resultTools,
   ...feeTools,
   ...reportTools,
+  ...actionTools,
 ];
 
 const byName = new Map(ALL_TOOLS.map((t) => [t.name, t]));

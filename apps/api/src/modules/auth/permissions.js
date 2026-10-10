@@ -23,6 +23,9 @@ export const PERMISSIONS = [
   "reports:read",
   "users:manage",
   "assistant:use",
+  "messages:draft",
+  "messages:send",
+  "messages:read",
 ];
 
 const ROLE_PERMISSIONS = {
@@ -31,7 +34,17 @@ const ROLE_PERMISSIONS = {
   // Runs the school's records and accounts, but not money.
   admin: PERMISSIONS.filter((p) => !p.startsWith("fees:")),
   // Fees and payments; student and class details only to identify who pays.
-  accountant: ["dashboard:read", "students:read", "classes:read", "fees:read", "fees:write", "assistant:use"],
+  accountant: [
+    "dashboard:read",
+    "students:read",
+    "classes:read",
+    "fees:read",
+    "fees:write",
+    "assistant:use",
+    "messages:draft",
+    "messages:send",
+    "messages:read",
+  ],
   // Own classes only (see CLASS_SCOPED_ROLES): students, attendance, results, exams.
   teacher: [
     "dashboard:read",
@@ -44,6 +57,9 @@ const ROLE_PERMISSIONS = {
     "exams:read",
     "exams:write",
     "assistant:use",
+    // Drafts to their classes' parents need approval by someone with messages:send.
+    "messages:draft",
+    "messages:read",
   ],
 };
 

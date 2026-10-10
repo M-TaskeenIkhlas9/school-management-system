@@ -7,6 +7,9 @@ import * as store from "./store.js";
 import { runAgent, DEFAULT_LIMITS } from "./engine/runAgent.js";
 import { describeModel, getModel } from "./llm/index.js";
 import { toolsForUser } from "./tools/registry.js";
+import * as actions from "./actions/actions.service.js";
+import { channelModes } from "../messaging/channels/index.js";
+import { optionalText } from "../middleware/validate.js";
 
 const router = Router();
 
@@ -15,6 +18,7 @@ router.get("/status", (req, res) => {
     model: getModel() ? (describeModel() ?? { model: getModel().name }) : null,
     limits: DEFAULT_LIMITS,
     tools: toolsForUser(req.user).map((t) => ({ name: t.name, description: t.description })),
+    channels: channelModes(),
   });
 });
 
@@ -30,7 +34,11 @@ router.get("/conversations/:id", async (req, res) => {
   const id = idParam(req);
   const conversation = await store.getConversation(req.user.id, id);
   const [messages, runs] = await Promise.all([store.recentMessages(id, 500), store.runsForConversation(id)]);
-  res.json({ conversation, messages, runs });
+  const conversationActions = await actions.forRuns(
+    req.user,
+    runs.map((r) => r.id)
+  );
+  res.json({ conversation, messages, runs, actions: conversationActions });
 });
 
 router.delete("/conversations/:id", async (req, res) => {
@@ -86,5 +94,35 @@ router.post(
     res.end();
   }
 );
+
+// ---------- Approval-gated actions ----------
+
+router.get("/actions", async (req, res) => {
+  const status = ["pending", "executing", "executed", "rejected", "failed", "expired"].includes(req.query.status)
+    ? req.query.status
+    : undefined;
+  res.json(await actions.listForUser(req.user, { status }));
+});
+
+router.get("/actions/:id", async (req, res) => {
+  res.json(actions.publicAction(await actions.getForUser(req.user, idParam(req))));
+});
+
+const editSchema = z.object({
+  subject: z.string().trim().min(1).max(300).optional(),
+  body: z.string().trim().min(1).max(4000).optional(),
+});
+
+router.patch("/actions/:id", validate(editSchema), async (req, res) => {
+  res.json(actions.publicAction(await actions.edit(req, idParam(req), req.body)));
+});
+
+router.post("/actions/:id/approve", async (req, res) => {
+  res.json(actions.publicAction(await actions.approve(req, idParam(req))));
+});
+
+router.post("/actions/:id/reject", validate(z.object({ reason: optionalText(300) })), async (req, res) => {
+  res.json(actions.publicAction(await actions.reject(req, idParam(req), req.body.reason)));
+});
 
 export default router;

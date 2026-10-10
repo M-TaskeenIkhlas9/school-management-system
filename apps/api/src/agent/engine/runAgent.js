@@ -99,7 +99,13 @@ export async function runAgent({ user, conversationId, message, model, emit = ()
     { role: "system", content: systemPrompt({ user, tools, classNames }) },
     ...history.map((m) => ({ role: m.role, content: m.content })),
   ];
-  const ctx = { user, req: { user } };
+  const ctx = {
+    user,
+    req: { user },
+    conversationId,
+    runId,
+    onAction: (action) => emit("action_proposed", { action }),
+  };
   const runSignal = AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)].filter(Boolean));
 
   let seq = 0;
