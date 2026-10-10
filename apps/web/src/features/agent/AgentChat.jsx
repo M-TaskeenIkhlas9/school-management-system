@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { agentApi } from "./api.js";
 import ActionCard from "./ActionCard.jsx";
 import Markdown from "./Markdown.jsx";
@@ -11,18 +12,19 @@ const SUGGESTIONS = [
   "Give me a quick summary of the school today",
 ];
 
-export default function AgentChat() {
+export default function AgentChat({ initialInput = "" }) {
   const [status, setStatus] = useState(null);
   const [conversations, setConversations] = useState([]);
   const [activeId, setActiveId] = useState(null);
   const [messages, setMessages] = useState([]);
   const [actions, setActions] = useState([]);
-  const [input, setInput] = useState("");
+  const [input, setInput] = useState(initialInput);
   const [sending, setSending] = useState(false);
   const [loadingThread, setLoadingThread] = useState(false);
   const [busyActionId, setBusyActionId] = useState(null);
   const [error, setError] = useState("");
   const bottomRef = useRef(null);
+  const queryClient = useQueryClient();
 
   const loadConversation = useCallback(async (id) => {
     setLoadingThread(true);
@@ -48,9 +50,10 @@ export default function AgentChat() {
   useEffect(() => {
     agentApi.status().then(setStatus).catch(() => setStatus(null));
     refreshConversations()
-      .then((list) => list[0] && loadConversation(list[0].id))
+      // A pre-filled request (e.g. "Send Reminders") starts a fresh chat; otherwise resume the latest one.
+      .then((list) => !initialInput && list[0] && loadConversation(list[0].id))
       .catch((err) => setError(err.message));
-  }, [refreshConversations, loadConversation]);
+  }, [refreshConversations, loadConversation, initialInput]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -94,8 +97,12 @@ export default function AgentChat() {
     setBusyActionId(actionId);
     setError("");
     try {
-      if (decision === "approve") await agentApi.approve(actionId);
-      else await agentApi.reject(actionId);
+      if (decision === "approve") {
+        await agentApi.approve(actionId);
+        queryClient.invalidateQueries(); // an approved action may have changed students, fees, exams…
+      } else {
+        await agentApi.reject(actionId);
+      }
     } catch (err) {
       setError(err.message);
     } finally {

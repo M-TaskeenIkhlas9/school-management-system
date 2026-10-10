@@ -1618,3 +1618,51 @@ textarea:focus,
   }
 }
 
+
+/* ---------- Router links styled like the previous buttons ---------- */
+a.nav-item,
+a.ai-fab {
+  text-decoration: none;
+}
+
+/* ---------- Toasts ---------- */
+.toast-stack {
+  position: fixed;
+  right: 20px;
+  bottom: 96px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 1000;
+  max-width: min(420px, calc(100vw - 32px));
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  box-shadow: var(--shadow);
+  background: #fff;
+  border-left: 4px solid var(--success);
+}
+
+.toast--error {
+  border-left-color: var(--danger);
+  background: #fff7f7;
+}
+
+.toast span {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+
+.toast button {
+  background: none;
+  border: 0;
+  font-size: 16px;
+  color: var(--muted);
+  cursor: pointer;
+}

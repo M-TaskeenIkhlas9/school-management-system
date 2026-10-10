@@ -4,34 +4,46 @@ Principal-facing school management: students, teachers, classes, curriculum, att
 fees, results, exams — plus an **AI School Assistant** that answers questions and prepares
 actions (like emailing parents about overdue fees) that run only after the principal approves them.
 
-- **Frontend:** React 18 + Vite (`client/`) — http://localhost:5173
-- **Backend:** Node 22 + Express (`server/`) — http://localhost:4000
+- **Web:** React 18 + Vite + React Router + TanStack Query (`apps/web`) — http://localhost:5173
+- **API:** Node 22 + Express 5 + zod (`apps/api`) — http://localhost:4000
 - **Database:** MySQL 8
+
+See [docs/architecture.md](docs/architecture.md) for how the code is organised.
 
 ## Setup
 
 ```bash
-# 1. MySQL (any MySQL 8 works; this starts one in Docker on port 3307)
-docker run -d --name school-mysql -e MYSQL_ROOT_PASSWORD=schoolroot -p 127.0.0.1:3307:3306 mysql:8.0
+# 1. Install dependencies (root + both apps)
+npm run setup
 
-# 2. Backend
-cd server
-cp .env.example .env        # then fill in DB_*, JWT_SECRET (and optionally GROQ_API_KEY, SMTP_*)
-npm install
-npm run migrate             # creates the database and applies server/migrations/*.sql
-npm run seed                # optional demo data (only on an empty database)
-npm run dev
+# 2. Database (any MySQL 8 works; this starts one in Docker on port 3307)
+npm run db:up
 
-# 3. Frontend (new terminal)
-cd client
-npm install
-npm run dev
+# 3. Configure the API
+cp apps/api/.env.example apps/api/.env
+#    set DB_PORT=3307, DB_PASSWORD=schoolroot, a random JWT_SECRET,
+#    and optionally GROQ_API_KEY and SMTP_* (see below)
+
+# 4. Create tables, add demo data (optional), run everything
+npm run migrate
+npm run seed
+npm run dev        # starts API and web together
 ```
 
-Log in with the principal from `DEFAULT_PRINCIPAL_EMAIL` / `DEFAULT_PRINCIPAL_PASSWORD`
+Log in with `DEFAULT_PRINCIPAL_EMAIL` / `DEFAULT_PRINCIPAL_PASSWORD`
 (development default: `admin@school.com` / `admin123`).
 
-After a reboot: `docker start school-mysql`, then `npm run dev` in `server/` and `client/`.
+## Scripts (run from the repo root)
+
+| Command | What it does |
+|---|---|
+| `npm run dev` | API (auto-restart) + web dev server together |
+| `npm run dev:api` / `npm run dev:web` | Just one of them |
+| `npm test` | API tests on `school_management_test` — never touches your real database |
+| `npm run migrate` | Apply new SQL migrations (`apps/api/src/db/migrations`) |
+| `npm run seed` | Demo data (empty database only) |
+| `npm run build` | Production build of the web app |
+| `npm run db:up` | Start the local MySQL container |
 
 ## AI School Assistant (AI Center)
 
@@ -44,37 +56,13 @@ Chat in plain language, e.g.:
 - "Record a payment of 150 for Usman"
 - "Make a 10-question maths test for Class 5"
 
-How it works:
+Anything that sends or changes something appears as a card with the full preview (every
+recipient and the exact email text) and **Approve / Reject** buttons. Nothing happens until you
+approve, and what you approve is exactly what runs.
 
-1. The agent (LangChain tool-calling) reads real data through **read tools**.
-2. Anything that sends or changes something goes through a **propose tool**, which stores a
-   *pending action* with a full preview (every recipient and the exact email text, fee
-   allocations, generated questions…).
-3. The principal clicks **Approve** or **Reject** on the card. Approval executes exactly the
-   stored preview — the AI is not consulted again. Double approvals are refused, and pending
-   actions expire after 24 h.
-4. Every email is recorded in `email_outbox`; conversations, messages and actions are saved.
-
-| Setting | Effect |
+| Setting (`apps/api/.env`) | Effect |
 |---|---|
-| `GROQ_API_KEY` (free) / `OPENAI_API_KEY` / `USE_OLLAMA=true` | Enables the AI model. Without one, a rule-based fallback handles common requests (incl. fee/attendance emails). |
+| `GROQ_API_KEY` (free) / `OPENAI_API_KEY` / `USE_OLLAMA=true` | Enables the AI model. Without one, built-in rules handle common requests (incl. fee/attendance emails). |
 | `AGENT_MODEL` | Override the model (Groq default `openai/gpt-oss-120b`). |
 | `SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD`, `EMAIL_FROM` | Real email delivery. If unset, emails are **simulated** (recorded, not delivered). |
 | `EMAIL_REDIRECT_TO` | Testing: send every email to this address instead of parents. |
-
-Code: `server/agent/` (`harness.js` runs a turn, `tools.js`, `actions.js` propose/approve,
-`store.js` persistence, `fallback.js`), `server/routes/agent.js`, `client/src/features/agent/`.
-
-## Scripts (server)
-
-| Command | What it does |
-|---|---|
-| `npm run dev` | API with auto-restart |
-| `npm run migrate` | Apply new SQL migrations |
-| `npm run seed` | Demo data (empty DB only) |
-| `npm test` | Creates/migrates `school_management_test` and runs Jest there — never touches your real DB |
-
-## Database changes
-
-Add a new file `server/migrations/NNN_description.sql` and run `npm run migrate`.
-Applied migrations are tracked in the `schema_migrations` table.
