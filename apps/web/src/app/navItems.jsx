@@ -100,6 +100,28 @@ export const navItems = [
     ),
   },
   {
+    path: "/approvals",
+    permission: "messages:draft",
+    label: "Approvals",
+    colorClass: "nav-icon--orange",
+    icon: (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2Z" />
+      </svg>
+    ),
+  },
+  {
+    path: "/outbox",
+    permission: "messages:read",
+    label: "Outbox",
+    colorClass: "nav-icon--slate",
+    icon: (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M2 21 23 12 2 3v7l15 2-15 2v7Z" />
+      </svg>
+    ),
+  },
+  {
     path: "/predict",
     permission: "reports:read",
     label: "Predict & XAI",

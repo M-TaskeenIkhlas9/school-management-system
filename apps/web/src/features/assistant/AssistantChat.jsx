@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { assistantApi, streamMessage } from "./api.js";
 import Markdown from "./Markdown.jsx";
 import RunTrace from "./RunTrace.jsx";
+import ActionCard from "../actions/ActionCard.jsx";
+import "../actions/actions.css";
 import "./assistant.css";
 
 const SUGGESTIONS = [
@@ -29,6 +31,7 @@ export default function AssistantChat() {
   const [conversations, setConversations] = useState([]);
   const [activeId, setActiveId] = useState(null);
   const [messages, setMessages] = useState([]);
+  const [actions, setActions] = useState([]);
   const [input, setInput] = useState("");
   const [running, setRunning] = useState(false);
   const [liveSteps, setLiveSteps] = useState([]);
@@ -49,6 +52,7 @@ export default function AssistantChat() {
     const data = await assistantApi.getConversation(id);
     setActiveId(id);
     setMessages(data.messages);
+    setActions(data.actions ?? []);
   }, []);
 
   useEffect(() => {
@@ -66,6 +70,7 @@ export default function AssistantChat() {
   const startNew = () => {
     setActiveId(null);
     setMessages([]);
+    setActions([]);
     setOpenTrace(null);
     setError("");
   };
@@ -96,6 +101,8 @@ export default function AssistantChat() {
               const i = prev.findLastIndex((s) => !s.done && s.label === data.label);
               return prev.map((s, j) => (j === i ? { ...s, done: true, status: data.status } : s));
             });
+          } else if (event === "action_proposed") {
+            setActions((prev) => [...prev, data.action]);
           } else if (event === "message") {
             setMessages((prev) => [
               ...prev,
@@ -153,7 +160,7 @@ export default function AssistantChat() {
         <header className="assistant__header">
           <div>
             <h4>School Assistant</h4>
-            <p className="muted">Looks things up and reports. It can&apos;t change records or send messages yet.</p>
+            <p className="muted">Looks things up and prepares messages or payments — nothing happens until approved.</p>
           </div>
           {status?.model && <span className="badge success">{status.model.model}</span>}
         </header>
@@ -190,6 +197,9 @@ export default function AssistantChat() {
                   {openTrace === m.run_id ? "Hide steps" : "Show steps"}
                 </button>
               )}
+              {m.role === "assistant" &&
+                m.run_id &&
+                actions.filter((a) => a.run_id === m.run_id).map((a) => <ActionCard key={a.id} action={a} />)}
               {openTrace === m.run_id && <RunTrace runId={m.run_id} />}
             </div>
           ))}

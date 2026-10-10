@@ -14,6 +14,8 @@ import ResultsPage from "../features/results/ResultsPage.jsx";
 import FeesPage from "../features/fees/FeesPage.jsx";
 import PredictPage from "../features/predict/PredictPage.jsx";
 import SettingsPage from "../features/settings/SettingsPage.jsx";
+import ApprovalsPage from "../features/actions/ApprovalsPage.jsx";
+import OutboxPage from "../features/actions/OutboxPage.jsx";
 
 // Every page with the permission required to open it.
 const pages = [
@@ -27,6 +29,8 @@ const pages = [
   { path: "results", element: <ResultsPage />, permission: "results:read" },
   { path: "fees", element: <FeesPage />, permission: "fees:read" },
   { path: "predict", element: <PredictPage />, permission: "reports:read" },
+  { path: "approvals", element: <ApprovalsPage />, permission: "messages:draft" },
+  { path: "outbox", element: <OutboxPage />, permission: "messages:read" },
   { path: "settings", element: <SettingsPage />, permission: "users:manage" },
 ];
 
