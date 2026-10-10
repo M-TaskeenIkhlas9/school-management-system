@@ -1,49 +1,48 @@
 import { Router } from "express";
+import { z } from "zod";
 import * as resultService from "./results.service.js";
-import validate from "../../middleware/validate.js";
+import validate, { idParam, requiredId, requiredText, optionalLongText } from "../../middleware/validate.js";
+import { createError } from "../../middleware/errorHandler.js";
+
+const score = () => z.coerce.number().min(0);
+const percentage = () => z.coerce.number().min(0).max(100);
+
+const resultSchema = z.object({
+  student_id: requiredId(),
+  classroom_id: requiredId(),
+  term: requiredText(50),
+  total_score: score(),
+  percentage: percentage(),
+  remarks: optionalLongText(),
+  ai_remarks: optionalLongText(),
+});
+
+const batchSchema = z.object({
+  classroom_id: requiredId(),
+  term: requiredText(50),
+  results: z
+    .array(z.object({ student_id: requiredId(), total_score: score(), percentage: percentage(), remarks: optionalLongText() }))
+    .min(1, "No results provided"),
+});
 
 const router = Router();
 
-router.get("/", async (_req, res, next) => {
-  try {
-    res.json(await resultService.getAll());
-  } catch (err) { next(err); }
+router.get("/", async (_req, res) => {
+  res.json(await resultService.getAll());
 });
 
-router.get("/:id", async (req, res, next) => {
-  try {
-    const result = await resultService.getById(Number(req.params.id));
-    if (!result) return res.status(404).json({ error: "Result not found" });
-    res.json(result);
-  } catch (err) { next(err); }
+router.get("/:id", async (req, res) => {
+  const result = await resultService.getById(idParam(req));
+  if (!result) throw createError(404, "Result not found", "NOT_FOUND");
+  res.json(result);
 });
 
-router.post(
-  "/",
-  validate({
-    student_id: { required: true, type: "number" },
-    classroom_id: { required: true, type: "number" },
-    term: { required: true, type: "string" },
-    total_score: { required: true, type: "number", min: 0 },
-    percentage: { required: true, type: "number", min: 0, max: 100 },
-  }),
-  async (req, res, next) => {
-    try {
-      const result = await resultService.create(req.body);
-      res.status(201).json(result);
-    } catch (err) { next(err); }
-  }
-);
+router.post("/", validate(resultSchema), async (req, res) => {
+  res.status(201).json(await resultService.create(req.body));
+});
 
-router.post("/generate", async (req, res, next) => {
-  try {
-    const { classroom_id, term, results } = req.body;
-    if (!Array.isArray(results) || results.length === 0) {
-      return res.status(400).json({ error: "No results provided" });
-    }
-    const created = await resultService.generateBatch({ classroom_id, term, results });
-    res.status(201).json(created);
-  } catch (err) { next(err); }
+router.post("/generate", validate(batchSchema), async (req, res) => {
+  res.status(201).json(await resultService.generateBatch(req.body));
 });
 
 export default router;

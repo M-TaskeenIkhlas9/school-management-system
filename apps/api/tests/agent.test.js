@@ -77,6 +77,40 @@ describe("Phase 1 security & bug fixes", () => {
   });
 });
 
+describe("Validation and errors (zod + Express 5)", () => {
+  it("rejects a non-numeric id with 400", async () => {
+    const res = await request.get("/students/abc").set(auth());
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("returns 404 in the standard error format", async () => {
+    const res = await request.get("/students/999999").set(auth());
+    expect(res.status).toBe(404);
+    expect(res.body).toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  it("rejects an invalid guardian email", async () => {
+    const res = await request.post("/students").set(auth()).send({ first_name: "A", last_name: "B", guardian_email: "nope" });
+    expect(res.status).toBe(400);
+    expect(res.body.details.join(" ")).toMatch(/guardian_email/);
+  });
+
+  it("treats empty optional form fields as null", async () => {
+    const res = await request.post("/students").set(auth()).send({ first_name: "Empty", last_name: "Fields", roll_number: "", date_of_birth: "" });
+    expect(res.status).toBe(201);
+    expect(res.body.roll_number).toBeNull();
+    expect(res.body.date_of_birth).toBeNull();
+    await pool.execute("DELETE FROM students WHERE id = ?", [res.body.id]);
+  });
+
+  it("rejects an empty chat message with 400", async () => {
+    const conv = await request.post("/agent/conversations").set(auth());
+    const res = await request.post(`/agent/conversations/${conv.body.id}/messages`).set(auth()).send({ message: "   " });
+    expect(res.status).toBe(400);
+  });
+});
+
 describe("Agent harness", () => {
   it("creates a conversation", async () => {
     const res = await request.post("/agent/conversations").set(auth());

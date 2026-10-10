@@ -1,53 +1,55 @@
+import { z } from "zod";
 import { createError } from "./errorHandler.js";
 
 /**
- * Validate request body against a schema object.
+ * Validate (and normalise) the request body with a zod schema.
+ * On success req.body is replaced by the parsed value (unknown fields stripped,
+ * numbers coerced). On failure → 400 { error, code: "VALIDATION_ERROR", details: [...] }.
  *
- * Schema format:
- *   { field: { required?: boolean, type?: string, min?: number, max?: number, enum?: string[] } }
- *
- * Usage:  router.post("/", validate({ name: { required: true, type: "string" } }), handler)
+ * Usage: router.post("/", validate(createStudentSchema), handler)
  */
 export default function validate(schema) {
   return (req, _res, next) => {
-    const errors = [];
-    for (const [field, rules] of Object.entries(schema)) {
-      const value = req.body[field];
-      const missing = value === undefined || value === null || value === "";
-
-      if (rules.required && missing) {
-        errors.push(`${field} is required`);
-        continue;
-      }
-
-      if (missing) continue;
-
-      if (rules.type === "number" && typeof value !== "number" && isNaN(Number(value))) {
-        errors.push(`${field} must be a number`);
-        continue;
-      }
-
-      if (rules.type === "string" && typeof value !== "string") {
-        errors.push(`${field} must be a string`);
-        continue;
-      }
-
-      const num = Number(value);
-      if (rules.min !== undefined && num < rules.min) {
-        errors.push(`${field} must be at least ${rules.min}`);
-      }
-      if (rules.max !== undefined && num > rules.max) {
-        errors.push(`${field} must be at most ${rules.max}`);
-      }
-
-      if (rules.enum && !rules.enum.includes(value)) {
-        errors.push(`${field} must be one of: ${rules.enum.join(", ")}`);
-      }
+    const result = schema.safeParse(req.body ?? {});
+    if (!result.success) {
+      const details = result.error.issues.map((issue) => {
+        const field = issue.path.join(".");
+        return field ? `${field}: ${issue.message}` : issue.message;
+      });
+      return next(createError(400, "Validation failed", "VALIDATION_ERROR", details));
     }
-
-    if (errors.length) {
-      return next(createError(400, "Validation failed", "VALIDATION_ERROR", errors));
-    }
+    req.body = result.data;
     next();
   };
 }
+
+/** Parse a positive integer route param (e.g. :id) or throw 400. */
+export function idParam(req, name = "id") {
+  const id = Number(req.params[name]);
+  if (!Number.isInteger(id) || id <= 0) throw createError(400, `Invalid ${name}`, "VALIDATION_ERROR");
+  return id;
+}
+
+// ---------- Field helpers shared by module schemas ----------
+// HTML forms send "" for empty inputs. Optional fields map "" to null, so an edit
+// form can clear a value; a field that is absent stays undefined (left unchanged).
+
+const emptyToNull = (v) => (v === "" ? null : v);
+
+export const requiredText = (max = 255) => z.string().trim().min(1, "is required").max(max);
+
+export const optionalText = (max = 255) =>
+  z.preprocess(emptyToNull, z.string().trim().max(max).nullish());
+
+export const optionalLongText = () => z.preprocess(emptyToNull, z.string().trim().nullish());
+
+export const requiredId = () => z.coerce.number().int().positive();
+
+export const optionalNumber = () => z.preprocess(emptyToNull, z.coerce.number().nullish());
+
+export const isoDate = () =>
+  z.string().regex(/^\d{4}-\d{2}-\d{2}/, "must be a date (YYYY-MM-DD)").transform((s) => s.slice(0, 10));
+
+export const optionalDate = () => z.preprocess(emptyToNull, isoDate().nullish());
+
+export const optionalEmail = () => z.preprocess(emptyToNull, z.string().trim().email("must be a valid email").nullish());

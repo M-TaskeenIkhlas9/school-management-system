@@ -1,5 +1,6 @@
 import pool from "../../db/pool.js";
 import { schoolToday } from "../../config/env.js";
+import { createError } from "../../middleware/errorHandler.js";
 
 export async function getAll() {
   const [rows] = await pool.execute("SELECT * FROM fee_ledgers ORDER BY id DESC");
@@ -14,10 +15,7 @@ export async function getById(id) {
 export async function create({ student_id, month, due_date, amount_due, amount_paid, status, paid_date }) {
   const paid = Number(amount_paid) || 0;
   if (paid > Number(amount_due)) {
-    const err = new Error("Payment cannot exceed total fee amount");
-    err.status = 400;
-    err.code = "PAYMENT_EXCEEDS_FEE";
-    throw err;
+    throw createError(400, "Payment cannot exceed total fee amount", "PAYMENT_EXCEEDS_FEE");
   }
   const autoStatus = paid >= Number(amount_due) ? "paid" : paid > 0 ? "partial" : (status || "pending");
   const [result] = await pool.execute(
@@ -36,10 +34,7 @@ export async function update(id, data) {
     const newPaid = data.amount_paid !== undefined ? Number(data.amount_paid) : Number(existing.amount_paid);
     const totalDue = data.amount_due !== undefined ? Number(data.amount_due) : Number(existing.amount_due);
     if (newPaid > totalDue) {
-      const err = new Error("Payment cannot exceed total fee amount");
-      err.status = 400;
-      err.code = "PAYMENT_EXCEEDS_FEE";
-      throw err;
+      throw createError(400, "Payment cannot exceed total fee amount", "PAYMENT_EXCEEDS_FEE");
     }
     if (!data.status) {
       data.status = newPaid >= totalDue ? "paid" : newPaid > 0 ? "partial" : "pending";

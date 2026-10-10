@@ -1,4 +1,5 @@
 import pool from "../../db/pool.js";
+import * as aiService from "../ai/ai.service.js";
 
 export async function getAll() {
   const [rows] = await pool.execute(
@@ -59,4 +60,30 @@ export async function createWithQuestions({ classroom_id, subject, title, prompt
   } finally {
     conn.release();
   }
+}
+
+/** Generate questions with AI (using the class curriculum as context) and save the exam. */
+export async function generateWithAi({ classroom_id, subject, prompt, num_questions, type, total_marks }) {
+  const [curriculum] = await pool.execute(
+    "SELECT topics FROM curriculum_items WHERE classroom_id = ? AND subject = ? LIMIT 1",
+    [classroom_id, subject]
+  );
+  const questions = await aiService.generateExamQuestions({
+    subject,
+    topics: curriculum[0]?.topics || prompt,
+    prompt,
+    num_questions: num_questions || 5,
+  });
+  return createWithQuestions({
+    classroom_id,
+    subject,
+    title: `${subject} Test`,
+    prompt,
+    type: type || "Test",
+    total_marks: total_marks || questions.reduce((sum, q) => sum + (q.marks || 5), 0),
+    created_by_ai: true,
+    ai_prompt_used: prompt,
+    ai_generated_content: { questions },
+    questions,
+  });
 }

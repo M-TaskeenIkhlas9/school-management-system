@@ -1,47 +1,45 @@
 import { Router } from "express";
+import { z } from "zod";
 import * as studentService from "./students.service.js";
-import validate from "../../middleware/validate.js";
+import validate, { idParam, requiredText, optionalText, optionalDate, optionalEmail } from "../../middleware/validate.js";
+import { createError } from "../../middleware/errorHandler.js";
+
+const studentSchema = z.object({
+  first_name: requiredText(100),
+  last_name: requiredText(100),
+  roll_number: optionalText(50),
+  date_of_birth: optionalDate(),
+  guardian_name: optionalText(200),
+  guardian_phone: optionalText(30),
+  guardian_email: optionalEmail(),
+  status: z.enum(["active", "inactive"]).optional(),
+});
 
 const router = Router();
 
-router.get("/", async (_req, res, next) => {
-  try {
-    res.json(await studentService.getAll());
-  } catch (err) { next(err); }
+router.get("/", async (_req, res) => {
+  res.json(await studentService.getAll());
 });
 
-router.get("/:id", async (req, res, next) => {
-  try {
-    const profile = await studentService.getProfile(Number(req.params.id));
-    if (!profile) return res.status(404).json({ error: "Student not found" });
-    res.json(profile);
-  } catch (err) { next(err); }
+router.get("/:id", async (req, res) => {
+  const profile = await studentService.getProfile(idParam(req));
+  if (!profile) throw createError(404, "Student not found", "NOT_FOUND");
+  res.json(profile);
 });
 
-router.post(
-  "/",
-  validate({ first_name: { required: true, type: "string" }, last_name: { required: true, type: "string" } }),
-  async (req, res, next) => {
-    try {
-      const student = await studentService.create(req.body);
-      res.status(201).json(student);
-    } catch (err) { next(err); }
-  }
-);
-
-router.put("/:id", async (req, res, next) => {
-  try {
-    const student = await studentService.update(Number(req.params.id), req.body);
-    if (!student) return res.status(404).json({ error: "Student not found" });
-    res.json(student);
-  } catch (err) { next(err); }
+router.post("/", validate(studentSchema), async (req, res) => {
+  res.status(201).json(await studentService.create(req.body));
 });
 
-router.delete("/:id", async (req, res, next) => {
-  try {
-    await studentService.remove(Number(req.params.id));
-    res.json({ success: true });
-  } catch (err) { next(err); }
+router.put("/:id", validate(studentSchema.partial()), async (req, res) => {
+  const student = await studentService.update(idParam(req), req.body);
+  if (!student) throw createError(404, "Student not found", "NOT_FOUND");
+  res.json(student);
+});
+
+router.delete("/:id", async (req, res) => {
+  await studentService.remove(idParam(req));
+  res.json({ success: true });
 });
 
 export default router;

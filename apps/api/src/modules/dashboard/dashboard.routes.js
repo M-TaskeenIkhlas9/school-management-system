@@ -3,10 +3,8 @@ import * as dashboardService from "./dashboard.service.js";
 
 const router = Router();
 
-router.get("/", async (_req, res, next) => {
-  try {
-    res.json(await dashboardService.getStats());
-  } catch (err) { next(err); }
+router.get("/", async (_req, res) => {
+  res.json(await dashboardService.getStats());
 });
 
 export default router;

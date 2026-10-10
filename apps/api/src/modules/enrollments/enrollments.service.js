@@ -1,5 +1,6 @@
 import pool from "../../db/pool.js";
 import { schoolToday } from "../../config/env.js";
+import { createError } from "../../middleware/errorHandler.js";
 
 export async function getAll() {
   const [rows] = await pool.execute(
@@ -23,10 +24,7 @@ export async function create({ student_id, classroom_id, start_date, is_active }
     return rows[0];
   } catch (err) {
     if (err.code === "ER_DUP_ENTRY") {
-      const e = new Error("Student is already enrolled in this class");
-      e.status = 409;
-      e.code = "DUPLICATE_ENROLLMENT";
-      throw e;
+      throw createError(409, "Student is already enrolled in this class", "DUPLICATE_ENROLLMENT");
     }
     throw err;
   }

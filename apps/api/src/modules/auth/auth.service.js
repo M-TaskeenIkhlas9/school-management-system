@@ -1,16 +1,14 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import pool from "../../db/pool.js";
+import { createError } from "../../middleware/errorHandler.js";
 
 const SALT_ROUNDS = 10;
 
 export async function register(username, email, password) {
   const [existing] = await pool.execute("SELECT id FROM users WHERE email = ?", [email]);
   if (existing.length > 0) {
-    const err = new Error("Email already registered");
-    err.status = 409;
-    err.code = "DUPLICATE_EMAIL";
-    throw err;
+    throw createError(409, "Email already registered", "DUPLICATE_EMAIL");
   }
   const hash = await bcrypt.hash(password, SALT_ROUNDS);
   const [result] = await pool.execute(
@@ -30,18 +28,12 @@ export async function login(email, password) {
     [email]
   );
   if (rows.length === 0) {
-    const err = new Error("Invalid email or password");
-    err.status = 401;
-    err.code = "INVALID_CREDENTIALS";
-    throw err;
+    throw createError(401, "Invalid email or password", "INVALID_CREDENTIALS");
   }
   const user = rows[0];
   const match = await bcrypt.compare(password, user.password_hash);
   if (!match) {
-    const err = new Error("Invalid email or password");
-    err.status = 401;
-    err.code = "INVALID_CREDENTIALS";
-    throw err;
+    throw createError(401, "Invalid email or password", "INVALID_CREDENTIALS");
   }
   const token = jwt.sign(
     { id: user.id, username: user.username, role: user.role },

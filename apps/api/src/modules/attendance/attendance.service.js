@@ -1,6 +1,7 @@
 import pool from "../../db/pool.js";
 
 import { schoolToday as today } from "../../config/env.js";
+import { createError } from "../../middleware/errorHandler.js";
 
 export async function getAll() {
   const [rows] = await pool.execute("SELECT * FROM attendance ORDER BY id DESC");
@@ -17,10 +18,7 @@ export async function create({ student_id, classroom_id, day, status, marked_by 
     return rows[0];
   } catch (err) {
     if (err.code === "ER_DUP_ENTRY") {
-      const e = new Error("Attendance already recorded for this student on this date");
-      e.status = 409;
-      e.code = "DUPLICATE_ATTENDANCE";
-      throw e;
+      throw createError(409, "Attendance already recorded for this student on this date", "DUPLICATE_ATTENDANCE");
     }
     throw err;
   }

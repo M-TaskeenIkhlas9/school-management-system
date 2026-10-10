@@ -1,32 +1,31 @@
 import { Router } from "express";
+import { z } from "zod";
 import * as enrollmentService from "./enrollments.service.js";
-import validate from "../../middleware/validate.js";
+import validate, { idParam, requiredId, optionalDate } from "../../middleware/validate.js";
+import { createError } from "../../middleware/errorHandler.js";
+
+const enrollmentSchema = z.object({
+  student_id: requiredId(),
+  classroom_id: requiredId(),
+  start_date: optionalDate(),
+  end_date: optionalDate(),
+  is_active: z.boolean().optional(),
+});
 
 const router = Router();
 
-router.get("/", async (_req, res, next) => {
-  try {
-    res.json(await enrollmentService.getAll());
-  } catch (err) { next(err); }
+router.get("/", async (_req, res) => {
+  res.json(await enrollmentService.getAll());
 });
 
-router.post(
-  "/",
-  validate({ student_id: { required: true, type: "number" }, classroom_id: { required: true, type: "number" } }),
-  async (req, res, next) => {
-    try {
-      const enrollment = await enrollmentService.create(req.body);
-      res.status(201).json(enrollment);
-    } catch (err) { next(err); }
-  }
-);
+router.post("/", validate(enrollmentSchema), async (req, res) => {
+  res.status(201).json(await enrollmentService.create(req.body));
+});
 
-router.put("/:id", async (req, res, next) => {
-  try {
-    const enrollment = await enrollmentService.update(Number(req.params.id), req.body);
-    if (!enrollment) return res.status(404).json({ error: "Enrollment not found" });
-    res.json(enrollment);
-  } catch (err) { next(err); }
+router.put("/:id", validate(enrollmentSchema.partial()), async (req, res) => {
+  const enrollment = await enrollmentService.update(idParam(req), req.body);
+  if (!enrollment) throw createError(404, "Enrollment not found", "NOT_FOUND");
+  res.json(enrollment);
 });
 
 export default router;

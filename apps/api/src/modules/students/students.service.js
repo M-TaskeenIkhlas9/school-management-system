@@ -1,4 +1,5 @@
 import pool from "../../db/pool.js";
+import { createError } from "../../middleware/errorHandler.js";
 
 export async function getAll() {
   const [rows] = await pool.execute(
@@ -69,10 +70,7 @@ export async function create({ first_name, last_name, roll_number, date_of_birth
   if (roll_number) {
     const [dup] = await pool.execute("SELECT id FROM students WHERE roll_number = ?", [roll_number]);
     if (dup.length > 0) {
-      const err = new Error("Roll number already exists");
-      err.status = 409;
-      err.code = "DUPLICATE_ROLL";
-      throw err;
+      throw createError(409, "Roll number already exists", "DUPLICATE_ROLL");
     }
   }
   const [result] = await pool.execute(
@@ -86,10 +84,7 @@ export async function update(id, data) {
   if (data.roll_number) {
     const [dup] = await pool.execute("SELECT id FROM students WHERE roll_number = ? AND id != ?", [data.roll_number, id]);
     if (dup.length > 0) {
-      const err = new Error("Roll number already exists");
-      err.status = 409;
-      err.code = "DUPLICATE_ROLL";
-      throw err;
+      throw createError(409, "Roll number already exists", "DUPLICATE_ROLL");
     }
   }
   const fields = [];
