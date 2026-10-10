@@ -26,6 +26,7 @@ import aiRoutes from "./modules/ai/ai.routes.js";
 import predictRoutes from "./modules/predict/predict.routes.js";
 import userRoutes from "./modules/users/users.routes.js";
 import guardianRoutes from "./modules/guardians/guardians.routes.js";
+import agentRoutes from "./agent/agent.routes.js";
 
 const app = express();
 
@@ -82,6 +83,7 @@ app.use("/ai/exams", byMethod("exams:read", "exams:write"), examRoutes); // back
 app.use("/ai", requirePermission("reports:read"), aiRoutes);
 app.use("/predict", requirePermission("reports:read"), predictRoutes);
 app.use("/users", requirePermission("users:manage"), userRoutes);
+app.use("/assistant", requirePermission("assistant:use"), agentRoutes);
 
 // ---------- Error handler ----------
 app.use(errorHandler);

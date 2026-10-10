@@ -1,8 +1,8 @@
 import logger from "../lib/logger.js";
 
 /**
- * Final error handler. Known errors (createError) are returned as-is.
- * Unexpected errors (status 500: DB failures, bugs) are logged in full but the client
+ * Final error handler. Known errors (createError) are returned as-is, whatever their status.
+ * Unexpected errors (DB failures, bugs) are logged in full but the client
  * only gets a generic message outside development, so internals (SQL, table names) never leak.
  */
 export default function errorHandler(err, req, res, _next) {
@@ -12,7 +12,8 @@ export default function errorHandler(err, req, res, _next) {
   }
 
   const status = err.status || err.statusCode || 500;
-  const expected = status < 500;
+  // Errors raised on purpose with createError() are safe to show, even 5xx (e.g. 503 "not configured").
+  const expected = status < 500 || err.expose === true;
 
   if (expected) {
     req.log?.debug({ code: err.code, details: err.details }, err.message);
@@ -32,6 +33,7 @@ export function createError(status, message, code, details) {
   const err = new Error(message);
   err.status = status;
   err.code = code || "ERROR";
+  err.expose = true;
   if (details) err.details = details;
   return err;
 }

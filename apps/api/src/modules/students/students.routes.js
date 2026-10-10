@@ -10,7 +10,8 @@ import validate, {
   optionalId,
 } from "../../middleware/validate.js";
 import { createError } from "../../middleware/errorHandler.js";
-import { assertStudentAccess, classScope, hasPermission } from "../../middleware/access.js";
+import { assertStudentAccess, classScope } from "../../middleware/access.js";
+import { redactStudent } from "./students.redact.js";
 
 const studentSchema = z.object({
   first_name: requiredText(100),
@@ -25,18 +26,6 @@ const studentSchema = z.object({
 });
 
 const router = Router();
-
-/** Remove data the caller may not see (e.g. fees for a teacher). */
-function redactStudent(req, student) {
-  const out = { ...student };
-  if (!hasPermission(req, "fees:read")) {
-    delete out.latest_fee_status;
-    delete out.fees;
-  }
-  if (!hasPermission(req, "results:read")) delete out.results;
-  if (!hasPermission(req, "attendance:read")) delete out.attendance_rate;
-  return out;
-}
 
 router.get("/", async (req, res) => {
   const students = await studentService.getAll({ classIds: classScope(req) });

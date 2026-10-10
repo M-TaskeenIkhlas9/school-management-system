@@ -71,3 +71,43 @@ export async function generateBatch({ classroom_id, term, results }) {
     conn.release();
   }
 }
+
+/**
+ * Averages for reporting: overall, per class and term, grade spread, and the lowest results.
+ * Limited to `classIds` when given.
+ */
+export async function summary({ classIds = null, classroom_id, term } = {}) {
+  const where = whereClause([
+    ["r.classroom_id IN (?)", classIds],
+    ["r.classroom_id = ?", classroom_id],
+    ["r.term = ?", term],
+  ]);
+  const [[overall]] = await pool.query(
+    `SELECT COUNT(*) AS results, ROUND(AVG(r.percentage), 1) AS average FROM result_cards r ${where.sql}`,
+    where.params
+  );
+  const [byClassTerm] = await pool.query(
+    `SELECT c.name AS class_name, r.term, COUNT(*) AS results, ROUND(AVG(r.percentage), 1) AS average
+     FROM result_cards r JOIN classrooms c ON c.id = r.classroom_id ${where.sql}
+     GROUP BY c.name, r.term ORDER BY c.name, MIN(r.created_at)`,
+    where.params
+  );
+  const [grades] = await pool.query(
+    `SELECT r.grade, COUNT(*) AS count FROM result_cards r ${where.sql} GROUP BY r.grade ORDER BY r.grade`,
+    where.params
+  );
+  const [lowest] = await pool.query(
+    `SELECT CONCAT(s.first_name, ' ', s.last_name) AS student, c.name AS class_name, r.term, r.percentage, r.grade
+     FROM result_cards r JOIN students s ON s.id = r.student_id JOIN classrooms c ON c.id = r.classroom_id
+     ${where.sql} ORDER BY r.percentage ASC LIMIT 10`,
+    where.params
+  );
+  const num = (v) => (v === null ? null : Number(v));
+  return {
+    results: Number(overall.results),
+    average: num(overall.average),
+    by_class_and_term: byClassTerm.map((r) => ({ ...r, results: Number(r.results), average: num(r.average) })),
+    grade_distribution: grades.map((g) => ({ grade: g.grade, count: Number(g.count) })),
+    lowest: lowest.map((r) => ({ ...r, percentage: num(r.percentage) })),
+  };
+}
