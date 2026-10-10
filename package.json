@@ -11,9 +11,19 @@
     "test": "npm test --prefix apps/api",
     "migrate": "npm run migrate --prefix apps/api",
     "seed": "npm run seed --prefix apps/api",
-    "db:up": "docker compose up -d mysql"
+    "db:up": "docker compose up -d mysql",
+    "lint": "eslint apps",
+    "lint:fix": "eslint apps --fix",
+    "format": "prettier --write apps docs README.md",
+    "format:check": "prettier --check apps docs README.md"
   },
   "devDependencies": {
-    "concurrently": "^9.2.5"
+    "@eslint/js": "^9.39.5",
+    "concurrently": "^9.2.5",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "globals": "^15.15.0",
+    "prettier": "^3.9.10"
   }
 }

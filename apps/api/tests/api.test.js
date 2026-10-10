@@ -1,4 +1,3 @@
-import { jest } from "@jest/globals";
 
 // Set test env before any imports. DB host/user/password come from .env;
 // the database is always the dedicated *_test one (created by `npm test`).

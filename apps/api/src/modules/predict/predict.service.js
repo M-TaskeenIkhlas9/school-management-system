@@ -1,4 +1,3 @@
-import pool from "../../db/pool.js";
 import * as studentService from "../students/students.service.js";
 
 /** Parse a number, keeping legitimate zeros; fall back only when missing/invalid. */

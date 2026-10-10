@@ -20,3 +20,6 @@ arms_cache/
 
 # Local databases
 *.db
+
+# Vite dependency cache
+.vite/
