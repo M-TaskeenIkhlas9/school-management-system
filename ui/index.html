@@ -1,0 +1,619 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EduManage AI - School Management System</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar__brand">
+          <span class="brand-dot"></span>
+          <div>
+            <h1>EduManage AI</h1>
+            <p>Smart School Control Center</p>
+          </div>
+        </div>
+        <nav class="sidebar__nav">
+          <button class="nav-item active" data-section="dashboard">Dashboard</button>
+          <button class="nav-item" data-section="students">Students</button>
+          <button class="nav-item" data-section="teachers">Teachers</button>
+          <button class="nav-item" data-section="classes">Classes & Curriculum</button>
+          <button class="nav-item" data-section="ai-center">AI Center</button>
+          <button class="nav-item" data-section="exams">Exams & Tests</button>
+          <button class="nav-item" data-section="attendance">Attendance</button>
+          <button class="nav-item" data-section="results">Results & Report Cards</button>
+          <button class="nav-item" data-section="accounts">Accounts & Fees</button>
+          <button class="nav-item" data-section="insights">Insights & Alerts</button>
+          <button class="nav-item" data-section="settings">Settings</button>
+        </nav>
+        <div class="sidebar__footer">
+          <div class="session-pill">Session: 2025-2026</div>
+          <button class="collapse-btn" id="collapseBtn">Collapse</button>
+        </div>
+      </aside>
+
+      <div class="main">
+        <header class="topbar">
+          <div class="topbar__title">
+            <h2>Cambridge Public School</h2>
+            <span>Academic Session 2025-2026</span>
+          </div>
+          <div class="topbar__actions">
+            <label class="search">
+              <input type="search" placeholder="Search students, fees, exams..." />
+            </label>
+            <button class="icon-btn">🔔</button>
+            <button class="icon-btn">⚙️</button>
+          </div>
+        </header>
+
+        <main class="content">
+          <section class="section active" id="dashboard">
+            <div class="section__header">
+              <div>
+                <h3>Dashboard Overview</h3>
+                <p>AI-assisted insights for today's school operations.</p>
+              </div>
+              <div class="section__actions">
+                <button class="btn ghost">Download Summary</button>
+                <button class="btn primary">Ask AI</button>
+              </div>
+            </div>
+
+            <div class="cards-grid">
+              <div class="card stat-card">
+                <p>Total Students</p>
+                <h4>1,250</h4>
+                <span class="trend up">+3.4% this term</span>
+              </div>
+              <div class="card stat-card">
+                <p>Total Teachers</p>
+                <h4>85</h4>
+                <span class="trend neutral">Stable</span>
+              </div>
+              <div class="card stat-card">
+                <p>Active Classes</p>
+                <h4>45</h4>
+                <span class="trend up">+2 new sections</span>
+              </div>
+              <div class="card stat-card">
+                <p>Fee Collected</p>
+                <h4>$1.2M</h4>
+                <span class="trend up">92% collected</span>
+              </div>
+              <div class="card stat-card">
+                <p>Today's Attendance</p>
+                <h4>92%</h4>
+                <span class="trend down">-1.2% vs last week</span>
+              </div>
+            </div>
+
+            <div class="ai-insights">
+              <div class="card ai-card">
+                <h5>Students Requiring Attention</h5>
+                <p>8 students flagged for low attendance and declining scores.</p>
+                <button class="btn link">Review list</button>
+              </div>
+              <div class="card ai-card">
+                <h5>Fee Defaulters (AI Prioritized)</h5>
+                <p>12 accounts likely to miss payment this month.</p>
+                <button class="btn link">View reminders</button>
+              </div>
+              <div class="card ai-card">
+                <h5>Low-Performing Subjects</h5>
+                <p>Mathematics Grade 7B and English Grade 5A need support.</p>
+                <button class="btn link">Create intervention</button>
+              </div>
+            </div>
+
+            <div class="charts-grid">
+              <div class="card chart-card">
+                <div class="card__title">
+                  <h5>Attendance Trend</h5>
+                  <span>Last 8 weeks</span>
+                </div>
+                <div class="chart">
+                  <svg viewBox="0 0 200 80" aria-hidden="true">
+                    <polyline
+                      fill="none"
+                      stroke="#5b6ef5"
+                      stroke-width="3"
+                      points="0,55 20,48 40,50 60,42 80,45 100,35 120,30 140,28 160,32 180,26 200,22"
+                    />
+                  </svg>
+                </div>
+              </div>
+              <div class="card chart-card">
+                <div class="card__title">
+                  <h5>Fee Collection Trend</h5>
+                  <span>Monthly</span>
+                </div>
+                <div class="chart">
+                  <svg viewBox="0 0 200 80" aria-hidden="true">
+                    <polyline
+                      fill="none"
+                      stroke="#36b37e"
+                      stroke-width="3"
+                      points="0,60 20,55 40,52 60,46 80,42 100,38 120,34 140,30 160,26 180,22 200,18"
+                    />
+                  </svg>
+                </div>
+              </div>
+              <div class="card chart-card">
+                <div class="card__title">
+                  <h5>Academic Performance</h5>
+                  <span>Class average</span>
+                </div>
+                <div class="chart">
+                  <svg viewBox="0 0 200 80" aria-hidden="true">
+                    <polyline
+                      fill="none"
+                      stroke="#ff9f43"
+                      stroke-width="3"
+                      points="0,50 20,46 40,42 60,44 80,38 100,36 120,32 140,28 160,30 180,24 200,20"
+                    />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid-2">
+              <div class="card table-card">
+                <div class="card__title">
+                  <h5>Upcoming Exams</h5>
+                  <span>Next 7 days</span>
+                </div>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Class</th>
+                      <th>Subject</th>
+                      <th>Date</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Grade 7B</td>
+                      <td>Mathematics</td>
+                      <td>Feb 10</td>
+                      <td><span class="badge warning">Draft</span></td>
+                    </tr>
+                    <tr>
+                      <td>Grade 5A</td>
+                      <td>English</td>
+                      <td>Feb 12</td>
+                      <td><span class="badge success">AI Ready</span></td>
+                    </tr>
+                    <tr>
+                      <td>Grade 8A</td>
+                      <td>Science</td>
+                      <td>Feb 13</td>
+                      <td><span class="badge primary">Scheduled</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="card table-card">
+                <div class="card__title">
+                  <h5>Priority Alerts</h5>
+                  <span>AI generated</span>
+                </div>
+                <ul class="alert-list">
+                  <li>
+                    <span class="badge danger">High</span>
+                    Attendance below 60% for 3 students in Grade 6C.
+                  </li>
+                  <li>
+                    <span class="badge warning">Medium</span>
+                    Fee pending for 18 students in Grade 9A.
+                  </li>
+                  <li>
+                    <span class="badge info">Low</span>
+                    English improvement suggestions for Grade 5A.
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <section class="section" id="students">
+            <div class="section__header">
+              <div>
+                <h3>Students</h3>
+                <p>Search, filter, and review student profiles.</p>
+              </div>
+              <button class="btn primary">Add Student</button>
+            </div>
+            <div class="card table-card">
+              <div class="filters">
+                <input type="text" placeholder="Search students" />
+                <select>
+                  <option>All Classes</option>
+                  <option>Grade 5A</option>
+                  <option>Grade 7B</option>
+                </select>
+                <select>
+                  <option>Fee Status</option>
+                  <option>Paid</option>
+                  <option>Pending</option>
+                </select>
+                <select>
+                  <option>Performance Risk</option>
+                  <option>High</option>
+                  <option>Medium</option>
+                  <option>Low</option>
+                </select>
+              </div>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Student</th>
+                    <th>Class</th>
+                    <th>Attendance</th>
+                    <th>Fee Status</th>
+                    <th>AI Risk</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Alisha Sharma</td>
+                    <td>Grade 7B</td>
+                    <td>68%</td>
+                    <td><span class="badge warning">Pending</span></td>
+                    <td><span class="badge danger">High</span></td>
+                  </tr>
+                  <tr>
+                    <td>Hamza Khan</td>
+                    <td>Grade 6A</td>
+                    <td>92%</td>
+                    <td><span class="badge success">Paid</span></td>
+                    <td><span class="badge info">Low</span></td>
+                  </tr>
+                  <tr>
+                    <td>Mariam Ashraf</td>
+                    <td>Grade 5A</td>
+                    <td>80%</td>
+                    <td><span class="badge warning">Partial</span></td>
+                    <td><span class="badge warning">Medium</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="card">
+              <div class="profile">
+                <div>
+                  <h4>Alisha Sharma</h4>
+                  <p>Grade 7B • Roll #23</p>
+                </div>
+                <button class="btn ghost">Ask AI about this student</button>
+              </div>
+              <div class="profile-grid">
+                <div>
+                  <h5>Attendance</h5>
+                  <p>68% last 30 days</p>
+                </div>
+                <div>
+                  <h5>Fee Status</h5>
+                  <p>Pending - $120</p>
+                </div>
+                <div>
+                  <h5>Academic History</h5>
+                  <p>Average 63% this term</p>
+                </div>
+                <div>
+                  <h5>AI Insight</h5>
+                  <p>Recommend parent meeting and weekly tutoring.</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="section" id="teachers">
+            <div class="section__header">
+              <div>
+                <h3>Teachers</h3>
+                <p>Workload, assigned classes, and AI suggestions.</p>
+              </div>
+              <button class="btn primary">Add Teacher</button>
+            </div>
+            <div class="grid-2">
+              <div class="card">
+                <h4>Mr. Ahmed Tariq</h4>
+                <p>Mathematics • Grade 7B, 8A</p>
+                <div class="tag-row">
+                  <span class="badge info">Attendance 96%</span>
+                  <span class="badge primary">Performance Strong</span>
+                </div>
+                <p class="muted">AI Suggestion: Add peer tutoring sessions for Grade 7B.</p>
+              </div>
+              <div class="card">
+                <h4>Ms. Sara Malik</h4>
+                <p>English • Grade 5A, 6C</p>
+                <div class="tag-row">
+                  <span class="badge warning">Attendance 82%</span>
+                  <span class="badge warning">Support Needed</span>
+                </div>
+                <p class="muted">AI Suggestion: Reduce workload to improve class results.</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="section" id="classes">
+            <div class="section__header">
+              <div>
+                <h3>Classes & Curriculum</h3>
+                <p>Map subjects, books, and AI-ready curriculum tags.</p>
+              </div>
+              <button class="btn primary">Add Class</button>
+            </div>
+            <div class="card">
+              <div class="class-grid">
+                <div class="class-card">
+                  <h4>Grade 7B</h4>
+                  <p>Subjects: Math, Science, English</p>
+                  <div class="tag-row">
+                    <span class="badge primary">Curriculum Tagged</span>
+                    <span class="badge info">Books Linked</span>
+                  </div>
+                </div>
+                <div class="class-card">
+                  <h4>Grade 5A</h4>
+                  <p>Subjects: English, Social Studies</p>
+                  <div class="tag-row">
+                    <span class="badge warning">Missing Chapters</span>
+                  </div>
+                </div>
+                <div class="class-card">
+                  <h4>Grade 8A</h4>
+                  <p>Subjects: Math, Science, Urdu</p>
+                  <div class="tag-row">
+                    <span class="badge success">AI Ready</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="section" id="ai-center">
+            <div class="section__header">
+              <div>
+                <h3>AI Center</h3>
+                <p>Generate tests, worksheets, and lesson plans.</p>
+              </div>
+              <button class="btn primary">Save Prompt</button>
+            </div>
+            <div class="grid-2">
+              <div class="card">
+                <h4>AI Command Panel</h4>
+                <textarea rows="6" placeholder="Generate Class 7 Maths test from Chapter 3-5"></textarea>
+                <div class="tag-row">
+                  <button class="btn primary">Generate Test</button>
+                  <button class="btn ghost">Lesson Plan</button>
+                  <button class="btn ghost">Worksheet</button>
+                </div>
+              </div>
+              <div class="card">
+                <h4>Preview</h4>
+                <div class="preview">
+                  <p><strong>Class 7 Maths Test</strong></p>
+                  <p>1. Solve for x: 3x + 5 = 20</p>
+                  <p>2. Explain the concept of linear equations.</p>
+                  <p>3. Find the area of a triangle with base 10 and height 8.</p>
+                </div>
+                <button class="btn ghost">Edit & Save</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="section" id="exams">
+            <div class="section__header">
+              <div>
+                <h3>Exams & Tests</h3>
+                <p>Calendar view and AI-generated exams.</p>
+              </div>
+              <button class="btn primary">Create Exam</button>
+            </div>
+            <div class="card table-card">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Exam</th>
+                    <th>Class</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th>AI</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Midterm Math</td>
+                    <td>Grade 7B</td>
+                    <td>Feb 15</td>
+                    <td><span class="badge primary">Scheduled</span></td>
+                    <td><span class="badge success">AI Generated</span></td>
+                  </tr>
+                  <tr>
+                    <td>English Quiz</td>
+                    <td>Grade 5A</td>
+                    <td>Feb 12</td>
+                    <td><span class="badge warning">Draft</span></td>
+                    <td><span class="badge warning">Manual</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="section" id="attendance">
+            <div class="section__header">
+              <div>
+                <h3>Attendance</h3>
+                <p>Daily tracking and AI insights.</p>
+              </div>
+              <button class="btn primary">Mark Attendance</button>
+            </div>
+            <div class="grid-2">
+              <div class="card">
+                <h4>Daily Summary</h4>
+                <p>Overall attendance: <strong>92%</strong></p>
+                <p>Irregular students: 8</p>
+                <p class="muted">AI Insight: Grade 6C needs follow-up.</p>
+              </div>
+              <div class="card">
+                <h4>Monthly Report</h4>
+                <p>Best attendance: Grade 5A (96%)</p>
+                <p>Lowest attendance: Grade 7B (72%)</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="section" id="results">
+            <div class="section__header">
+              <div>
+                <h3>Results & Report Cards</h3>
+                <p>Enter marks and generate AI remarks.</p>
+              </div>
+              <button class="btn primary">Generate Report Cards</button>
+            </div>
+            <div class="card table-card">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Student</th>
+                    <th>Class</th>
+                    <th>Average</th>
+                    <th>AI Remark</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Alisha Sharma</td>
+                    <td>Grade 7B</td>
+                    <td>63%</td>
+                    <td>Needs consistent practice in algebra.</td>
+                    <td><span class="badge warning">Needs Review</span></td>
+                  </tr>
+                  <tr>
+                    <td>Hamza Khan</td>
+                    <td>Grade 6A</td>
+                    <td>88%</td>
+                    <td>Excellent progress this term.</td>
+                    <td><span class="badge success">Ready</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="section" id="accounts">
+            <div class="section__header">
+              <div>
+                <h3>Accounts & Fees</h3>
+                <p>Track paid, unpaid, and partial fees.</p>
+              </div>
+              <button class="btn primary">Send Reminders</button>
+            </div>
+            <div class="grid-2">
+              <div class="card">
+                <h4>Fee Summary</h4>
+                <p>Total due: $180,000</p>
+                <p>Collected this month: $120,000</p>
+                <p class="muted">AI Suggestion: Offer partial payment plans.</p>
+              </div>
+              <div class="card">
+                <h4>Defaulters (AI Prioritized)</h4>
+                <ul class="alert-list">
+                  <li><span class="badge danger">High</span> Grade 9A - 6 students</li>
+                  <li><span class="badge warning">Medium</span> Grade 7B - 5 students</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <section class="section" id="insights">
+            <div class="section__header">
+              <div>
+                <h3>Insights & Alerts</h3>
+                <p>AI-generated alerts and priorities.</p>
+              </div>
+              <button class="btn primary">Export Insights</button>
+            </div>
+            <div class="cards-grid">
+              <div class="card ai-card">
+                <h5>Students Needing Attention</h5>
+                <p>8 students flagged across Grades 6-8.</p>
+                <button class="btn link">Open list</button>
+              </div>
+              <div class="card ai-card">
+                <h5>Weak Subjects</h5>
+                <p>Math Grade 7B and English Grade 5A.</p>
+                <button class="btn link">View analysis</button>
+              </div>
+              <div class="card ai-card">
+                <h5>Fee Risk</h5>
+                <p>12 likely defaulters due this month.</p>
+                <button class="btn link">Send reminders</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="section" id="settings">
+            <div class="section__header">
+              <div>
+                <h3>Settings</h3>
+                <p>Manage school profile and AI preferences.</p>
+              </div>
+              <button class="btn primary">Save Settings</button>
+            </div>
+            <div class="card">
+              <div class="form-grid">
+                <label>
+                  School Name
+                  <input type="text" value="Cambridge Public School" />
+                </label>
+                <label>
+                  Academic Session
+                  <input type="text" value="2025-2026" />
+                </label>
+                <label>
+                  AI Response Mode
+                  <select>
+                    <option>Balanced</option>
+                    <option>Detailed</option>
+                    <option>Brief</option>
+                  </select>
+                </label>
+                <label>
+                  Notification Preference
+                  <select>
+                    <option>Email + SMS</option>
+                    <option>Email only</option>
+                    <option>SMS only</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <button class="ai-fab" title="Ask AI Assistant">✨</button>
+    <script src="app.js"></script>
+  </body>
+</html>
+
+
+
+

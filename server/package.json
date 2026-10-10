@@ -1,0 +1,33 @@
+{
+  "name": "school-management-server",
+  "version": "2.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch index.js",
+    "start": "node index.js",
+    "migrate": "node scripts/migrate.js",
+    "test:db": "DB_NAME=school_management_test node scripts/migrate.js",
+    "test": "npm run test:db && NODE_ENV=test DB_NAME=school_management_test NODE_OPTIONS=--experimental-vm-modules jest --runInBand",
+    "seed": "node scripts/seed.js"
+  },
+  "dependencies": {
+    "@langchain/core": "^1.1.30",
+    "@langchain/groq": "^1.1.4",
+    "@langchain/ollama": "^1.2.6",
+    "@langchain/openai": "^1.2.12",
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.18.3",
+    "jsonwebtoken": "^9.0.3",
+    "langchain": "^1.2.29",
+    "mysql2": "^3.12.0",
+    "nodemailer": "^6.10.1",
+    "openai": "^6.25.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "jest": "^30.2.0",
+    "supertest": "^7.2.2"
+  }
+}
