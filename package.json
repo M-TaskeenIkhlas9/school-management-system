@@ -1,0 +1,19 @@
+{
+  "name": "school-management-system",
+  "private": true,
+  "description": "EduManage AI — school management system (API + web)",
+  "scripts": {
+    "setup": "npm install && npm install --prefix apps/api && npm install --prefix apps/web",
+    "dev": "concurrently -n api,web -c blue,green \"npm run dev --prefix apps/api\" \"npm run dev --prefix apps/web\"",
+    "dev:api": "npm run dev --prefix apps/api",
+    "dev:web": "npm run dev --prefix apps/web",
+    "build": "npm run build --prefix apps/web",
+    "test": "npm test --prefix apps/api",
+    "migrate": "npm run migrate --prefix apps/api",
+    "seed": "npm run seed --prefix apps/api",
+    "db:up": "docker compose up -d mysql"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.5"
+  }
+}

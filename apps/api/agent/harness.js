@@ -93,7 +93,7 @@ function describeLlmError(err) {
     return "I couldn't reach the AI model. If you use Ollama, make sure it is running (ollama run llama3.2).";
   }
   if (msg.includes("401") || msg.includes("api key") || msg.includes("unauthorized")) {
-    return "The AI model rejected the API key. Check GROQ_API_KEY / OPENAI_API_KEY in server/.env.";
+    return "The AI model rejected the API key. Check GROQ_API_KEY / OPENAI_API_KEY in apps/api/.env.";
   }
   return "Something went wrong while I was working on that. Please try rephrasing.";
 }
@@ -146,7 +146,7 @@ export async function runTurn({ userId, conversationId, message }) {
       content = fallback.content;
       ctx.proposedActions.push(...fallback.actions);
     } else {
-      content = `No AI model is configured, so I can only handle a few fixed requests.\n${HELP_TEXT}\n\nTo enable the full assistant, set GROQ_API_KEY (free) in server/.env.`;
+      content = `No AI model is configured, so I can only handle a few fixed requests.\n${HELP_TEXT}\n\nTo enable the full assistant, set GROQ_API_KEY (free) in apps/api/.env.`;
     }
   }
 

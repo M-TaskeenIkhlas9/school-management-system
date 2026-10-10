@@ -1,0 +1,22 @@
+# Local development database.
+#   npm run db:up      (or: docker compose up -d mysql)
+# Matches apps/api/.env.example defaults when you set DB_PORT=3307, DB_PASSWORD=schoolroot.
+# Dev-only credentials — do not use this file for production.
+services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: schoolroot
+      MYSQL_DATABASE: school_management
+    ports:
+      - "127.0.0.1:3307:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pschoolroot"]
+      interval: 5s
+      retries: 20
+
+volumes:
+  mysql-data:
