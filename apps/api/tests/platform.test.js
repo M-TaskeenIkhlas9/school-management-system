@@ -1,13 +1,7 @@
-// Agent harness + Phase 1 regression tests. Runs against the *_test database only.
+// Platform regression tests (security, validation, students, pagination). *_test database only.
 process.env.NODE_ENV = "test";
 process.env.JWT_SECRET = "test-secret-that-is-long-enough-for-config-check";
 process.env.DB_NAME = process.env.DB_NAME || "school_management_test";
-// Force the deterministic rule-based path: no LLM calls, no tokens spent.
-process.env.GROQ_API_KEY = "";
-process.env.OPENAI_API_KEY = "";
-process.env.USE_OLLAMA = "false";
-// Never deliver real email from tests.
-process.env.SMTP_HOST = "";
 
 if (!process.env.DB_NAME.endsWith("_test")) {
   throw new Error(`Refusing to run destructive tests against "${process.env.DB_NAME}" — DB_NAME must end with _test`);
@@ -16,10 +10,8 @@ if (!process.env.DB_NAME.endsWith("_test")) {
 let request;
 let pool;
 let token;
-let conversationId;
 
 const auth = () => ({ Authorization: `Bearer ${token}` });
-const outboxCount = async () => (await pool.query("SELECT COUNT(*) AS n FROM email_outbox"))[0][0].n;
 
 beforeAll(async () => {
   const supertest = (await import("supertest")).default;
@@ -28,10 +20,6 @@ beforeAll(async () => {
   request = supertest(app);
 
   for (const table of [
-    "email_outbox",
-    "agent_actions",
-    "agent_messages",
-    "agent_conversations",
     "exam_questions",
     "exams",
     "insights",
@@ -126,15 +114,6 @@ describe("Validation and errors (zod + Express 5)", () => {
     expect(res.body.date_of_birth).toBeNull();
     await pool.execute("DELETE FROM students WHERE id = ?", [res.body.id]);
   });
-
-  it("rejects an empty chat message with 400", async () => {
-    const conv = await request.post("/agent/conversations").set(auth());
-    const res = await request
-      .post(`/agent/conversations/${conv.body.id}/messages`)
-      .set(auth())
-      .send({ message: "   " });
-    expect(res.status).toBe(400);
-  });
 });
 
 describe("Students with class assignment (single transaction)", () => {
@@ -176,67 +155,6 @@ describe("Students with class assignment (single transaction)", () => {
     expect(res.status).toBe(400);
     const [rows] = await pool.execute("SELECT id FROM students WHERE first_name = 'Ghost'");
     expect(rows).toHaveLength(0);
-  });
-});
-
-describe("Agent harness", () => {
-  it("creates a conversation", async () => {
-    const res = await request.post("/agent/conversations").set(auth());
-    expect(res.status).toBe(201);
-    conversationId = res.body.id;
-  });
-
-  it("proposes fee reminder emails without sending anything", async () => {
-    const res = await request
-      .post(`/agent/conversations/${conversationId}/messages`)
-      .set(auth())
-      .send({ message: "Send the email to the parents whose fees are due" });
-    expect(res.status).toBe(200);
-    expect(res.body.actions).toHaveLength(1);
-    const action = res.body.actions[0];
-    expect(action.type).toBe("send_guardian_emails");
-    expect(action.status).toBe("pending");
-    expect(action.preview.emails).toHaveLength(1);
-    expect(action.preview.emails[0].to).toBe("hassan@example.com");
-    expect(action.preview.emails[0].body).toContain("$150.00");
-    expect(action.preview.skipped[0].student_name).toBe("Zainab Iqbal");
-    expect(await outboxCount()).toBe(0);
-  });
-
-  it("approving executes exactly the previewed emails (simulated without SMTP)", async () => {
-    const conv = await request.get(`/agent/conversations/${conversationId}`).set(auth());
-    const actionId = conv.body.actions[0].id;
-
-    const res = await request.post(`/agent/actions/${actionId}/approve`).set(auth());
-    expect(res.status).toBe(200);
-    expect(res.body.status).toBe("executed");
-    expect(res.body.result.simulated).toBe(1);
-    expect(await outboxCount()).toBe(1);
-
-    const again = await request.post(`/agent/actions/${actionId}/approve`).set(auth());
-    expect(again.status).toBe(409);
-    expect(await outboxCount()).toBe(1);
-
-    const after = await request.get(`/agent/conversations/${conversationId}`).set(auth());
-    expect(after.body.messages.at(-1).content).toMatch(/Approved and done/);
-  });
-
-  it("rejecting a proposal sends nothing", async () => {
-    const turn = await request
-      .post(`/agent/conversations/${conversationId}/messages`)
-      .set(auth())
-      .send({ message: "remind parents about unpaid fees" });
-    const actionId = turn.body.actions[0].id;
-
-    const res = await request.post(`/agent/actions/${actionId}/reject`).set(auth());
-    expect(res.status).toBe(200);
-    expect(res.body.status).toBe("rejected");
-    expect(await outboxCount()).toBe(1);
-  });
-
-  it("returns 404 for another user's / missing conversation", async () => {
-    const res = await request.get("/agent/conversations/999999").set(auth());
-    expect(res.status).toBe(404);
   });
 });
 

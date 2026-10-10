@@ -8,7 +8,7 @@ import pinoHttp from "pino-http";
 import logger from "./lib/logger.js";
 
 import errorHandler from "./middleware/errorHandler.js";
-import auth, { requireRole } from "./middleware/auth.js";
+import auth from "./middleware/auth.js";
 
 import authRoutes from "./modules/auth/auth.routes.js";
 import dashboardRoutes from "./modules/dashboard/dashboard.routes.js";
@@ -23,7 +23,6 @@ import resultRoutes from "./modules/results/results.routes.js";
 import examRoutes from "./modules/exams/exams.routes.js";
 import aiRoutes from "./modules/ai/ai.routes.js";
 import predictRoutes from "./modules/predict/predict.routes.js";
-import agentRoutes from "./agent/agent.routes.js";
 
 const app = express();
 
@@ -76,9 +75,6 @@ app.use("/exams", examRoutes);
 app.use("/ai/exams", examRoutes); // backward compatibility: /ai/exams/generate
 app.use("/ai", aiRoutes);
 app.use("/predict", predictRoutes);
-
-// AI agent: persistent chat + approval-gated actions (principal only)
-app.use("/agent", requireRole("principal"), agentRoutes);
 
 // ---------- Error handler ----------
 app.use(errorHandler);
