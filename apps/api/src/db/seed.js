@@ -71,11 +71,20 @@ export async function seed() {
     }
 
     for (const [first, last, roll, guardian, email, classIdx, fee, att, scores] of STUDENTS) {
-      const [s] = await conn.execute(
-        "INSERT INTO students (first_name, last_name, roll_number, guardian_name, guardian_email) VALUES (?, ?, ?, ?, ?)",
-        [first, last, roll, guardian, email]
-      );
+      const [s] = await conn.execute("INSERT INTO students (first_name, last_name, roll_number) VALUES (?, ?, ?)", [
+        first,
+        last,
+        roll,
+      ]);
       const studentId = s.insertId;
+      const [g] = await conn.execute(
+        "INSERT INTO guardians (full_name, email, preferred_channel, consent_email, consent_updated_at) VALUES (?, ?, 'email', ?, NOW())",
+        [guardian, email, email ? 1 : 0]
+      );
+      await conn.execute("INSERT INTO student_guardians (student_id, guardian_id, is_primary) VALUES (?, ?, 1)", [
+        studentId,
+        g.insertId,
+      ]);
       const classId = classIds[classIdx];
       await conn.execute("INSERT INTO enrollments (student_id, classroom_id, start_date) VALUES (?, ?, ?)", [
         studentId,

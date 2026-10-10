@@ -1,18 +1,28 @@
 import pool from "../../db/pool.js";
 import { schoolToday } from "../../config/env.js";
 import { createError } from "../../middleware/errorHandler.js";
+import * as guardianService from "../guardians/guardians.service.js";
+
+// The student's primary guardian, exposed as flat guardian_* fields for list views and forms.
+const PRIMARY_GUARDIAN_JOIN = `
+  LEFT JOIN (SELECT student_id, MIN(guardian_id) AS guardian_id
+             FROM student_guardians WHERE is_primary = 1 GROUP BY student_id) pg ON pg.student_id = s.id
+  LEFT JOIN guardians g ON g.id = pg.guardian_id`;
+const PRIMARY_GUARDIAN_COLUMNS =
+  "g.id AS guardian_id, g.full_name AS guardian_name, g.email AS guardian_email, g.phone AS guardian_phone";
 
 /** Active students with their current class and latest fee status (one row each). */
 export async function getAll({ classIds = null } = {}) {
   if (classIds && !classIds.length) return [];
   const [rows] = await pool.query(
-    `SELECT s.*, e.classroom_id, c.name AS class_name, c.section AS class_section,
+    `SELECT s.*, e.classroom_id, c.name AS class_name, c.section AS class_section, ${PRIMARY_GUARDIAN_COLUMNS},
             (SELECT fl.status FROM fee_ledgers fl WHERE fl.student_id = s.id
              ORDER BY fl.due_date DESC, fl.id DESC LIMIT 1) AS latest_fee_status
      FROM students s
      LEFT JOIN (SELECT student_id, MIN(classroom_id) AS classroom_id
                 FROM enrollments WHERE is_active = 1 GROUP BY student_id) e ON e.student_id = s.id
      LEFT JOIN classrooms c ON c.id = e.classroom_id
+     ${PRIMARY_GUARDIAN_JOIN}
      WHERE s.is_active = 1 ${classIds ? "AND e.classroom_id IN (?)" : ""}
      ORDER BY s.id DESC`,
     classIds ? [classIds] : []
@@ -21,8 +31,22 @@ export async function getAll({ classIds = null } = {}) {
 }
 
 export async function getById(id) {
-  const [rows] = await pool.execute("SELECT * FROM students WHERE id = ? AND is_active = 1", [id]);
+  const [rows] = await pool.execute(
+    `SELECT s.*, ${PRIMARY_GUARDIAN_COLUMNS} FROM students s ${PRIMARY_GUARDIAN_JOIN} WHERE s.id = ? AND s.is_active = 1`,
+    [id]
+  );
   return rows[0] || null;
+}
+
+export async function getGuardians(studentId) {
+  const [rows] = await pool.execute(
+    `SELECT g.id, g.full_name, g.email, g.phone, g.preferred_channel,
+            g.consent_whatsapp, g.consent_sms, g.consent_email, sg.relationship, sg.is_primary
+     FROM student_guardians sg JOIN guardians g ON g.id = sg.guardian_id
+     WHERE sg.student_id = ? ORDER BY sg.is_primary DESC, g.full_name`,
+    [studentId]
+  );
+  return rows;
 }
 
 export async function getProfile(id) {
@@ -62,6 +86,7 @@ export async function getProfile(id) {
 
   return {
     ...student,
+    guardians: await getGuardians(id),
     enrollment,
     attendance_rate: attendanceRate,
     results: resultRows,
@@ -69,16 +94,7 @@ export async function getProfile(id) {
   };
 }
 
-const STUDENT_FIELDS = [
-  "first_name",
-  "last_name",
-  "roll_number",
-  "date_of_birth",
-  "guardian_name",
-  "guardian_phone",
-  "guardian_email",
-  "status",
-];
+const STUDENT_FIELDS = ["first_name", "last_name", "roll_number", "date_of_birth", "status"];
 
 async function assertRollAvailable(conn, rollNumber, exceptId = 0) {
   if (!rollNumber) return;
@@ -126,22 +142,60 @@ async function inTransaction(work) {
 }
 
 /** Create a student and (optionally) enroll them in `classroom_id`, atomically. */
+/**
+ * Attach the guardian described by guardian_name/email/phone as the primary guardian.
+ * Matching by email, then phone, reuses an existing parent (siblings share one record);
+ * otherwise the current primary guardian's details are updated, or a new one created.
+ */
+async function syncPrimaryGuardian(conn, studentId, data) {
+  const provided = ["guardian_name", "guardian_email", "guardian_phone"].some((k) => data[k] !== undefined);
+  if (!provided) return;
+  const details = { full_name: data.guardian_name, email: data.guardian_email, phone: data.guardian_phone };
+  if (!details.full_name && !details.email && !details.phone) return;
+
+  const [[current]] = await conn.execute(
+    "SELECT guardian_id FROM student_guardians WHERE student_id = ? AND is_primary = 1 LIMIT 1",
+    [studentId]
+  );
+  const email = details.email ? String(details.email).trim().toLowerCase() : null;
+  const phone = guardianService.phoneOrThrow(details.phone);
+  let match = null;
+  if (email) [[match]] = await conn.execute("SELECT id FROM guardians WHERE email = ? LIMIT 1", [email]);
+  if (!match && phone) [[match]] = await conn.execute("SELECT id FROM guardians WHERE phone = ? LIMIT 1", [phone]);
+
+  if (match) {
+    await guardianService.link(conn, studentId, match.id, { isPrimary: true });
+  } else if (current) {
+    await conn.execute("UPDATE guardians SET full_name = COALESCE(?, full_name), email = ?, phone = ? WHERE id = ?", [
+      details.full_name || null,
+      email,
+      phone,
+      current.guardian_id,
+    ]);
+  } else {
+    const guardianId = await guardianService.create(
+      {
+        full_name: details.full_name || "Parent/Guardian",
+        email,
+        phone,
+        preferred_channel: email ? "email" : "sms",
+        consent_email: Boolean(email), // email contact as before; WhatsApp/SMS need explicit opt-in
+      },
+      conn
+    );
+    await guardianService.link(conn, studentId, guardianId, { isPrimary: true });
+  }
+}
+
 export async function create(data) {
   const id = await inTransaction(async (conn) => {
     await assertRollAvailable(conn, data.roll_number);
     const [result] = await conn.execute(
-      "INSERT INTO students (first_name, last_name, roll_number, date_of_birth, guardian_name, guardian_phone, guardian_email) VALUES (?, ?, ?, ?, ?, ?, ?)",
-      [
-        data.first_name,
-        data.last_name,
-        data.roll_number || null,
-        data.date_of_birth || null,
-        data.guardian_name || null,
-        data.guardian_phone || null,
-        data.guardian_email || null,
-      ]
+      "INSERT INTO students (first_name, last_name, roll_number, date_of_birth) VALUES (?, ?, ?, ?)",
+      [data.first_name, data.last_name, data.roll_number || null, data.date_of_birth || null]
     );
     if (data.classroom_id) await setActiveClass(conn, result.insertId, data.classroom_id);
+    await syncPrimaryGuardian(conn, result.insertId, data);
     return result.insertId;
   });
   return getById(id);
@@ -160,6 +214,7 @@ export async function update(id, data) {
       ]);
     }
     if (data.classroom_id) await setActiveClass(conn, id, data.classroom_id);
+    await syncPrimaryGuardian(conn, id, data);
   });
   return getById(id);
 }

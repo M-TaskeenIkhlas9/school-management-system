@@ -41,14 +41,10 @@ beforeAll(async () => {
   const login = await request.post("/auth/login").send({ email: "admin@school.com", password: "admin123" });
   token = login.body.token;
 
-  // Two students with overdue fees: one with a guardian email, one without.
+  // Two students with overdue fees.
   const [c] = await pool.execute("INSERT INTO classrooms (name, grade) VALUES ('Class 5', '5')");
-  const [a] = await pool.execute(
-    "INSERT INTO students (first_name, last_name, guardian_name, guardian_email) VALUES ('Ali', 'Hassan', 'Hassan Ali', 'hassan@example.com')"
-  );
-  const [b] = await pool.execute(
-    "INSERT INTO students (first_name, last_name, guardian_name) VALUES ('Zainab', 'Iqbal', 'Iqbal Shah')"
-  );
+  const [a] = await pool.execute("INSERT INTO students (first_name, last_name) VALUES ('Ali', 'Hassan')");
+  const [b] = await pool.execute("INSERT INTO students (first_name, last_name) VALUES ('Zainab', 'Iqbal')");
   for (const id of [a.insertId, b.insertId]) {
     await pool.execute("INSERT INTO enrollments (student_id, classroom_id) VALUES (?, ?)", [id, c.insertId]);
     await pool.execute(

@@ -1,7 +1,7 @@
 /**
  * Minimal SQL migration runner.
  *
- * Applies src/db/migrations/NNN_name.sql files in order, once each, recording
+ * Applies src/db/migrations/NNN_name.(sql|js) files in order, once each, recording
  * them in `schema_migrations`. Creates the database if it does not exist.
  *
  * Usage: npm run migrate            (uses DB_* from .env)
@@ -10,7 +10,7 @@
 import "dotenv/config";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import mysql from "mysql2/promise";
 
 const MIGRATIONS_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "migrations");
@@ -38,14 +38,19 @@ export async function migrate({ database = process.env.DB_NAME || "school_manage
 
     const [appliedRows] = await conn.query("SELECT name FROM schema_migrations");
     const applied = new Set(appliedRows.map((r) => r.name));
-    const files = (await fs.readdir(MIGRATIONS_DIR)).filter((f) => f.endsWith(".sql")).sort();
+    const files = (await fs.readdir(MIGRATIONS_DIR)).filter((f) => /\.(sql|js)$/.test(f)).sort();
 
     let count = 0;
     for (const file of files) {
       if (applied.has(file)) continue;
-      const sql = await fs.readFile(path.join(MIGRATIONS_DIR, file), "utf8");
       log(`[migrate] ${database}: applying ${file}`);
-      await conn.query(sql);
+      if (file.endsWith(".js")) {
+        // JS migrations export `up(conn)` for changes that need logic (e.g. data moves).
+        const migration = await import(pathToFileURL(path.join(MIGRATIONS_DIR, file)).href);
+        await migration.up(conn, { log });
+      } else {
+        await conn.query(await fs.readFile(path.join(MIGRATIONS_DIR, file), "utf8"));
+      }
       await conn.query("INSERT INTO schema_migrations (name) VALUES (?)", [file]);
       count++;
     }

@@ -115,7 +115,7 @@ describe("Students", () => {
       first_name: "Test",
       last_name: "Student",
       guardian_name: "Mr. Parent",
-      guardian_phone: "123456",
+      guardian_phone: "0300 1234567",
     });
     expect(res.status).toBe(201);
     expect(res.body.first_name).toBe("Test");

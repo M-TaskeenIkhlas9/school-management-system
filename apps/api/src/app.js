@@ -25,6 +25,7 @@ import examRoutes from "./modules/exams/exams.routes.js";
 import aiRoutes from "./modules/ai/ai.routes.js";
 import predictRoutes from "./modules/predict/predict.routes.js";
 import userRoutes from "./modules/users/users.routes.js";
+import guardianRoutes from "./modules/guardians/guardians.routes.js";
 
 const app = express();
 
@@ -69,6 +70,7 @@ app.use(auth);
 app.use("/dashboard", requirePermission("dashboard:read"), dashboardRoutes);
 app.use("/students", byMethod("students:read", "students:write"), studentRoutes);
 app.use("/enrollments", byMethod("students:read", "students:write"), enrollmentRoutes);
+app.use("/guardians", byMethod("students:read", "students:write"), guardianRoutes);
 app.use("/teachers", byMethod("teachers:read", "teachers:write"), teacherRoutes);
 app.use("/classrooms", byMethod("classes:read", "classes:write"), classroomRoutes);
 app.use("/curriculum", byMethod("classes:read", "classes:write"), curriculumRoutes);
