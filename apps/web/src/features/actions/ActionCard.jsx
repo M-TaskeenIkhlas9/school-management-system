@@ -11,13 +11,22 @@ const STATUS = {
   expired: ["Expired", "neutral"],
 };
 const TYPE_LABEL = { send_parent_messages: "Message to parents", record_fee_payment: "Fee payment" };
+const CHANNEL_LABEL = { email: "Email", sms: "SMS", whatsapp: "WhatsApp" };
 
 function MessagePreview({ preview }) {
   const [open, setOpen] = useState(0);
   return (
     <>
       <p className="muted action-card__meta">
-        {preview.recipients.length} recipient(s) · click one to read the exact message
+        {preview.recipients.length} recipient(s)
+        {preview.by_channel &&
+          ` (${Object.entries(preview.by_channel)
+            .map(
+              ([c, n]) =>
+                `${n.messages} ${CHANNEL_LABEL[c] ?? c}${n.segments > n.messages ? `, ${n.segments} SMS parts` : ""}`
+            )
+            .join(" · ")})`}
+        {preview.estimated_cost && ` · estimated cost ${preview.estimated_cost}`} · click one to read the exact message
       </p>
       <ul className="action-card__recipients">
         {preview.recipients.map((r, i) => (
@@ -26,7 +35,7 @@ function MessagePreview({ preview }) {
               <span>
                 {r.name}{" "}
                 <span className="muted">
-                  ({r.channel}: {r.to})
+                  ({CHANNEL_LABEL[r.channel] ?? r.channel}: {r.to})
                 </span>
               </span>
               <span className="muted">{r.student_names}</span>
@@ -35,6 +44,12 @@ function MessagePreview({ preview }) {
               <div className="action-card__message">
                 {r.subject && <strong>{r.subject}</strong>}
                 <pre>{r.body}</pre>
+                {r.template_name && (
+                  <p className="muted action-card__meta">
+                    Sent with the approved WhatsApp template “{r.template_name}”.
+                  </p>
+                )}
+                {r.segments > 1 && <p className="muted action-card__meta">{r.segments} SMS parts</p>}
               </div>
             )}
           </li>
@@ -46,11 +61,16 @@ function MessagePreview({ preview }) {
           {preview.skipped.map((s) => `${s.student} — ${s.reason}`).join("; ")}
         </p>
       )}
+      {preview.notes?.map((note) => (
+        <p key={note} className="action-card__note">
+          {note}
+        </p>
+      ))}
       {Object.entries(preview.channel_modes ?? {})
-        .filter(([, mode]) => mode === "simulated")
+        .filter(([channel, mode]) => mode === "simulated" && preview.by_channel?.[channel] !== undefined)
         .map(([channel]) => (
           <p key={channel} className="action-card__note">
-            {channel} is in test mode: messages are recorded in the outbox but not delivered.
+            {CHANNEL_LABEL[channel] ?? channel} is in test mode: messages are recorded in the outbox but not delivered.
           </p>
         ))}
     </>

@@ -27,12 +27,12 @@ export function reachability(guardian, channel) {
 
 /**
  * Channel for a guardian: their preferred channel first, then the school's fallback order,
- * limited to channels this school has enabled.
+ * limited to channels this school has enabled (and not already tried).
  */
-export function chooseChannel(guardian, enabled = availableChannels()) {
+export function chooseChannel(guardian, enabled = availableChannels(), exclude = []) {
   const order = [guardian.preferred_channel, ...(process.env.CHANNEL_ORDER || "whatsapp,sms,email").split(",")]
     .map((c) => c && c.trim())
-    .filter((c, i, all) => c && enabled.includes(c) && all.indexOf(c) === i);
+    .filter((c, i, all) => c && enabled.includes(c) && !exclude.includes(c) && all.indexOf(c) === i);
   const reasons = [];
   for (const channel of order) {
     const r = reachability(guardian, channel);
@@ -42,8 +42,11 @@ export function chooseChannel(guardian, enabled = availableChannels()) {
   return { reason: reasons.length ? [...new Set(reasons)].join("; ") : "no messaging channel is enabled" };
 }
 
-/** @param students [{ id, name, class_name, vars }] */
-export async function buildRecipients(students) {
+/**
+ * @param students [{ id, name, class_name, vars }]
+ * @param channel  only use this channel (e.g. "send by SMS"); otherwise preference + fallback order
+ */
+export async function buildRecipients(students, { channel } = {}) {
   if (!students.length) return { recipients: [], skipped: [] };
   const [rows] = await pool.query(
     `SELECT sg.student_id, g.id, g.full_name, g.email, g.phone, g.preferred_channel,
@@ -69,7 +72,7 @@ export async function buildRecipients(students) {
 
   const recipients = [];
   for (const { guardian, students: kids } of byGuardian.values()) {
-    const choice = chooseChannel(guardian);
+    const choice = chooseChannel(guardian, channel ? [channel] : availableChannels());
     if (!choice.channel) {
       skipped.push({
         student: kids.map((k) => k.name).join(", "),

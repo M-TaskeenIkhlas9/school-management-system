@@ -16,7 +16,8 @@ const pending = {
   preview: {
     subject_template: "Fee reminder",
     body_template: "Dear {{guardian_name}}",
-    channel_modes: { email: "simulated" },
+    channel_modes: { email: "simulated", sms: "live" },
+    by_channel: { email: { messages: 2, segments: 0, cost: 0 } },
     recipients: [
       {
         guardian_id: 1,
@@ -55,7 +56,29 @@ describe("ActionCard", () => {
     fireEvent.click(screen.getByText("Mrs Ali"));
     expect(screen.getByText(/Sara owes Rs 500/)).toBeInTheDocument();
     expect(screen.getByText(/Bilal Z — no contact details/)).toBeInTheDocument();
-    expect(screen.getByText(/email is in test mode/)).toBeInTheDocument();
+    expect(screen.getByText(/Email is in test mode/)).toBeInTheDocument();
+    expect(screen.queryByText(/SMS is in test mode/)).toBeNull();
+  });
+
+  it("shows the channel mix, cost estimate, WhatsApp template and provider notes", () => {
+    renderCard({
+      ...pending,
+      preview: {
+        ...pending.preview,
+        channel_modes: { whatsapp: "live", sms: "live" },
+        by_channel: { whatsapp: { messages: 1, segments: 0, cost: 0 }, sms: { messages: 1, segments: 2, cost: 4 } },
+        estimated_cost: "Rs 4.00",
+        notes: ["Some SMS are longer than one message and will be billed as several."],
+        recipients: [
+          { ...pending.preview.recipients[0], channel: "whatsapp", subject: null, template_name: "fee_reminder" },
+          { ...pending.preview.recipients[1], channel: "sms", subject: null, segments: 2 },
+        ],
+      },
+    });
+    expect(screen.getByText(/1 WhatsApp · 1 SMS, 2 SMS parts/)).toBeInTheDocument();
+    expect(screen.getByText(/estimated cost Rs 4.00/)).toBeInTheDocument();
+    expect(screen.getByText(/approved WhatsApp template “fee_reminder”/)).toBeInTheDocument();
+    expect(screen.getByText(/billed as several/)).toBeInTheDocument();
   });
 
   it("approves and shows the new status", async () => {

@@ -28,6 +28,7 @@ import userRoutes from "./modules/users/users.routes.js";
 import guardianRoutes from "./modules/guardians/guardians.routes.js";
 import agentRoutes from "./agent/agent.routes.js";
 import messageRoutes from "./modules/messages/messages.routes.js";
+import webhookRoutes from "./modules/webhooks/webhooks.routes.js";
 
 const app = express();
 
@@ -58,6 +59,8 @@ app.use(
     },
   })
 );
+// Provider callbacks verify signatures over the raw body, so they come before the JSON parser.
+app.use("/webhooks", webhookRoutes);
 app.use(express.json({ limit: "1mb" }));
 
 // ---------- Public routes ----------

@@ -4,6 +4,8 @@ process.env.JWT_SECRET = "test-secret-that-is-long-enough-for-config-check";
 process.env.DB_NAME = process.env.DB_NAME || "school_management_test";
 process.env.QUIET_HOURS = "off"; // individual tests turn it on
 delete process.env.SMTP_HOST; // emails are simulated
+process.env.SMS_PROVIDER = "off"; // email-only here; channels.test.js covers SMS and WhatsApp
+process.env.WHATSAPP_PROVIDER = "off";
 
 if (!process.env.DB_NAME.endsWith("_test")) {
   throw new Error(`Refusing to run destructive tests against "${process.env.DB_NAME}" — DB_NAME must end with _test`);

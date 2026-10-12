@@ -1,6 +1,8 @@
 import email from "./email.js";
+import sms from "./sms.js";
+import whatsapp from "./whatsapp.js";
 
-const CHANNELS = { email };
+const CHANNELS = { whatsapp, sms, email };
 
 /** Channels this school can send on (configured + enabled). */
 export function availableChannels() {
@@ -15,6 +17,7 @@ export function getChannel(name) {
   return channel;
 }
 
+/** live | simulated | off | misconfigured, per channel. */
 export function channelModes() {
-  return Object.fromEntries(Object.values(CHANNELS).map((c) => [c.name, c.enabled() ? c.mode() : "disabled"]));
+  return Object.fromEntries(Object.values(CHANNELS).map((c) => [c.name, c.mode()]));
 }

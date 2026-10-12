@@ -26,6 +26,10 @@ async function proposeFor(type, spec, ctx) {
     ...(action.preview?.recipients
       ? {
           recipients: action.preview.recipients.length,
+          by_channel: Object.fromEntries(
+            Object.entries(action.preview.by_channel ?? {}).map(([c, n]) => [c, n.messages])
+          ),
+          ...(action.preview.estimated_cost ? { estimated_cost: action.preview.estimated_cost } : {}),
           cannot_reach: action.preview.skipped,
           example: action.preview.recipients[0] && {
             to: action.preview.recipients[0].name,
@@ -44,7 +48,8 @@ export default [
       "Prepare a message to parents for approval (nothing is sent until a person approves it). Audiences: " +
       "fee_defaulters (overdue fees), absent_on_date (date, default today), absence_streak (days in a row, default 3), " +
       "class (class_name), students (student_ids from find_students), all_parents. Templates: fee_reminder, absence_alert, " +
-      "announcement (needs `message`). Leave subject/body empty to use the template; one message per parent, siblings combined.",
+      "announcement (needs `message`). Leave subject/body empty to use the template; one message per parent, siblings combined. " +
+      "Each parent gets it on their preferred channel (WhatsApp, SMS or email, with fallback); set `channel` only when the user asks for one.",
     permission: "messages:draft",
     input: z.object({
       audience: z.enum(AUDIENCES),
@@ -53,6 +58,10 @@ export default [
       class_name: z.string().max(100).optional(),
       student_ids: z.array(z.number().int().positive()).max(500).optional(),
       template: z.enum(["fee_reminder", "absence_alert", "announcement"]).optional(),
+      channel: z
+        .enum(["whatsapp", "sms", "email"])
+        .optional()
+        .describe("Only if the user asked for a specific channel"),
       message: z.string().max(2000).optional().describe("Text for an announcement"),
       subject: z.string().max(300).optional(),
       body: z

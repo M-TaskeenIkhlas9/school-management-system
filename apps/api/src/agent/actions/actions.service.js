@@ -11,7 +11,7 @@ import { classScope } from "../../middleware/access.js";
 import { audit } from "../../lib/audit.js";
 import { enqueue, queueNow } from "../../jobs/queue.js";
 import { nextSendTime } from "../../messaging/quietHours.js";
-import { sendMessages } from "./sendMessages.js";
+import { renderPreview, sendMessages } from "./sendMessages.js";
 import { feePayment } from "./feePayment.js";
 
 const TYPES = { [sendMessages.type]: sendMessages, [feePayment.type]: feePayment };
@@ -139,6 +139,32 @@ export async function reject(req, id, reason = null) {
   return getForUser(req.user, id);
 }
 
+/** One outbox row for a rendered recipient (see renderForChannel). */
+export async function insertDelivery(conn, actionId, r, sendAfter, fallbackFrom = null) {
+  const [res] = await conn.execute(
+    `INSERT INTO message_deliveries (action_id, guardian_id, channel, to_address, to_name, subject, body, template_name,
+       template_params, segments, est_cost, student_names, send_after, fallback_from)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      actionId,
+      r.guardian_id,
+      r.channel,
+      r.to,
+      r.name,
+      r.subject,
+      r.body,
+      r.template_name,
+      r.template_params ? JSON.stringify(r.template_params) : null,
+      r.segments,
+      r.est_cost,
+      r.student_names,
+      sendAfter,
+      fallbackFrom,
+    ]
+  );
+  return res.insertId;
+}
+
 export async function approve(req, id) {
   const action = await getForUser(req.user, id);
   if (action.status !== "pending")
@@ -151,14 +177,10 @@ export async function approve(req, id) {
     if (action.type === sendMessages.type) {
       await claim(conn, req.user, action, "executing");
       const sendAfter = queueNow(nextSendTime(new Date()));
-      const preview = sendMessages.edit(action.payload, {}).preview; // render exactly what was approved
+      const preview = renderPreview(action.payload); // render exactly what was approved
       for (const r of preview.recipients) {
-        const [res] = await conn.execute(
-          `INSERT INTO message_deliveries (action_id, guardian_id, channel, to_address, to_name, subject, body, student_names, send_after)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [action.id, r.guardian_id, r.channel, r.to, r.name, r.subject, r.body, r.student_names, sendAfter]
-        );
-        await enqueue("deliver_message", { delivery_id: res.insertId }, { runAt: sendAfter, conn });
+        const id = await insertDelivery(conn, action.id, r, sendAfter);
+        await enqueue("deliver_message", { delivery_id: id }, { runAt: sendAfter, conn });
       }
       await conn.execute("UPDATE agent_actions SET result = ? WHERE id = ?", [
         JSON.stringify({ queued: preview.recipients.length, send_after: sendAfter }),
@@ -190,8 +212,11 @@ export async function settleMessageAction(actionId) {
     [actionId]
   );
   if (Number(c.pending) > 0) return;
+  // Counts are refreshed on later receipts too (e.g. a "sent" SMS reported undelivered, then a fallback).
   await pool.execute(
-    "UPDATE agent_actions SET status = ?, result = JSON_SET(COALESCE(result, JSON_OBJECT()), '$.delivered', ?, '$.failed', ?) WHERE id = ? AND status = 'executing'",
+    `UPDATE agent_actions SET status = IF(status = 'executing', ?, status),
+       result = JSON_SET(COALESCE(result, JSON_OBJECT()), '$.delivered', ?, '$.failed', ?)
+     WHERE id = ? AND status IN ('executing', 'executed', 'failed')`,
     [Number(c.ok) > 0 ? "executed" : "failed", Number(c.ok), Number(c.failed), actionId]
   );
 }

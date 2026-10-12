@@ -79,11 +79,37 @@ live, and every answer has a **Show steps** view of what it did (tools used, tim
 
 - It only gets the tools your role allows, and every lookup is re-checked on the server: a teacher's
   assistant cannot see fees or other classes.
-- It is **read-only** for now: it reports, but cannot change records or send messages (that arrives
-  with approvals in M2).
+- It never acts on its own. Messages to parents and fee payments are **prepared** and shown as a
+  card with the exact text for every parent; nothing happens until someone with permission approves
+  (teachers draft, the principal or accountant approves). Pending items are also on **Approvals**,
+  and every message sent is on **Outbox**.
 - Model: any OpenAI-compatible service, set in `apps/api/.env` (`AI_PROVIDER=groq|openai|ollama`,
   optional `AI_MODEL`, `AI_FALLBACK_MODEL`). On Groq's free tier, expect roughly one question per
   minute (8,000 tokens/minute); rate-limit waits are retried automatically.
+
+## Messaging parents (email, SMS, WhatsApp)
+
+Each parent gets a message on their preferred channel, falling back along `CHANNEL_ORDER`
+(default WhatsApp → SMS → email) to a channel they have agreed to. If a channel fails for good
+(e.g. the number is not on WhatsApp), the same message is queued on their next channel. Messages
+wait outside `QUIET_HOURS`, consent is re-checked at send time, and a parent replying **STOP**
+withdraws consent for that channel (**START** restores it).
+
+Every channel has a mode set in `apps/api/.env` (see `.env.example`):
+
+| Channel  | Setting                                  | Real sending needs                                            |
+| -------- | ---------------------------------------- | ------------------------------------------------------------- |
+| Email    | live when `SMTP_HOST` is set             | SMTP server                                                   |
+| SMS      | `SMS_PROVIDER=off\|simulated\|twilio`    | Twilio account SID, auth token, sender number                 |
+| WhatsApp | `WHATSAPP_PROVIDER=off\|simulated\|meta` | WhatsApp Cloud API token, phone number ID, approved templates |
+
+`simulated` records messages in the Outbox without sending them, so the whole flow can be tried
+safely; `off` (the default for SMS and WhatsApp) routes nobody to that channel. WhatsApp messages the
+school starts must use templates approved in WhatsApp Manager, named `fee_reminder` and
+`absence_alert`, with body parameters in the order listed in `message_templates.whatsapp_params`.
+Delivery receipts arrive at `/webhooks/twilio/status` and `/webhooks/whatsapp` (signed; set
+`PUBLIC_BASE_URL`, `WHATSAPP_VERIFY_TOKEN` and `WHATSAPP_APP_SECRET`). For testing, `*_REDIRECT_TO`
+sends everything to one address or number.
 
 ## Continuous integration
 

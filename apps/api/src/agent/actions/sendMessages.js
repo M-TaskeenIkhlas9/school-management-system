@@ -1,32 +1,91 @@
 /** Action type: message a group of parents (approval required before anything is sent). */
 import { createError } from "../../middleware/errorHandler.js";
-import { resolveAudience } from "../../messaging/audiences.js";
+import { formatMoney, resolveAudience } from "../../messaging/audiences.js";
 import { buildRecipients } from "../../messaging/recipients.js";
 import { getTemplate, renderTemplate } from "../../messaging/templates.js";
-import { channelModes } from "../../messaging/channels/index.js";
+import { availableChannels, channelModes, getChannel } from "../../messaging/channels/index.js";
+import { toPlainText } from "../../messaging/channels/text.js";
 
 const MAX_RECIPIENTS = Number(process.env.MESSAGE_MAX_RECIPIENTS) || 500;
+const CHANNEL_LABEL = { email: "email", sms: "SMS", whatsapp: "WhatsApp" };
 
-/** Render every recipient's message from the stored subject/body templates. */
+/**
+ * Exactly what one parent receives on one channel. Email gets the subject and full text; SMS the
+ * short text when the template has one; WhatsApp an approved template with its parameters
+ * (or the plain text once the message was edited, since edits can't change an approved template).
+ */
+export function renderForChannel(payload, recipient, channel) {
+  const vars = {
+    ...recipient.vars,
+    school_name: process.env.SCHOOL_NAME || "the school",
+    message: payload.message ?? "",
+  };
+  if (channel === "email") {
+    return {
+      subject: renderTemplate(payload.subject, vars),
+      body: renderTemplate(payload.body, vars),
+      template_name: null,
+      template_params: null,
+      segments: null,
+      est_cost: 0,
+    };
+  }
+  const body = toPlainText(renderTemplate(channel === "sms" ? payload.sms_body || payload.body : payload.body, vars));
+  const template = channel === "whatsapp" && payload.whatsapp_template;
+  const { segments, cost } = getChannel(channel).estimate(body);
+  return {
+    subject: null,
+    body,
+    template_name: template || null,
+    template_params: template
+      ? String(payload.whatsapp_params || "")
+          .split(",")
+          .filter(Boolean)
+          .map((key) => String(vars[key.trim()] ?? ""))
+      : null,
+    segments,
+    est_cost: cost,
+  };
+}
+
+/** Render every recipient's message, plus the cost estimate, from the stored payload. */
 export function renderPreview(payload) {
-  const school = process.env.SCHOOL_NAME || "the school";
+  const recipients = payload.recipients.map((r) => ({
+    guardian_id: r.guardian_id,
+    name: r.name,
+    channel: r.channel,
+    to: r.to,
+    student_names: r.student_names,
+    ...renderForChannel(payload, r, r.channel),
+  }));
+
+  const byChannel = {};
+  for (const r of recipients) {
+    const c = (byChannel[r.channel] ??= { messages: 0, segments: 0, cost: 0 });
+    c.messages += 1;
+    c.segments += r.segments ?? 0;
+    c.cost += r.est_cost ?? 0;
+  }
+  const total = Object.values(byChannel).reduce((sum, c) => sum + c.cost, 0);
+  const notes = [];
+  if (byChannel.whatsapp && !payload.whatsapp_template) {
+    notes.push(
+      "WhatsApp messages go as plain text, which only reaches parents who messaged the school in the last 24 hours; others fall back to the next channel."
+    );
+  }
+  if (byChannel.sms && recipients.some((r) => r.segments > 1)) {
+    notes.push("Some SMS are longer than one message and will be billed as several.");
+  }
+
   return {
     audience: payload.audience_label,
     subject_template: payload.subject,
     body_template: payload.body,
     channel_modes: channelModes(),
-    recipients: payload.recipients.map((r) => {
-      const vars = { ...r.vars, school_name: school, message: payload.message ?? "" };
-      return {
-        guardian_id: r.guardian_id,
-        name: r.name,
-        channel: r.channel,
-        to: r.to,
-        student_names: r.student_names,
-        subject: renderTemplate(payload.subject, vars),
-        body: renderTemplate(payload.body, vars),
-      };
-    }),
+    by_channel: byChannel,
+    estimated_cost: total > 0 ? formatMoney(total) : null,
+    notes,
+    recipients,
     skipped: payload.skipped,
   };
 }
@@ -36,10 +95,19 @@ export const sendMessages = {
   approvePermission: "messages:send",
 
   /**
-   * @param spec { audience, date?, days?, class_name?, student_ids?, template?, message?, subject?, body? }
+   * @param spec { audience, date?, days?, class_name?, student_ids?, template?, message?, subject?, body?, channel? }
    * @returns {{ summary, payload, preview, approverNeeds }} or throws when nobody can be reached.
    */
   async propose(spec, req) {
+    if (spec.channel && !availableChannels().includes(spec.channel)) {
+      throw createError(
+        400,
+        `${CHANNEL_LABEL[spec.channel] ?? spec.channel} is not set up for this school (available: ${availableChannels()
+          .map((c) => CHANNEL_LABEL[c])
+          .join(", ")}).`,
+        "CHANNEL_UNAVAILABLE"
+      );
+    }
     const audience = await resolveAudience(req, spec);
     if (!audience.students.length) throw createError(400, `Nobody matches: ${audience.label}.`, "EMPTY_AUDIENCE");
 
@@ -56,11 +124,11 @@ export const sendMessages = {
       throw createError(400, "An announcement needs the message text.", "VALIDATION_ERROR");
     }
 
-    const { recipients, skipped } = await buildRecipients(audience.students);
+    const { recipients, skipped } = await buildRecipients(audience.students, { channel: spec.channel });
     if (!recipients.length) {
       throw createError(
         400,
-        `${audience.students.length} student(s) match, but no guardian can be reached: ${skipped.map((s) => `${s.student} (${s.reason})`).join("; ")}`,
+        `${audience.students.length} student(s) match, but no guardian can be reached${spec.channel ? ` by ${CHANNEL_LABEL[spec.channel]}` : ""}: ${skipped.map((s) => `${s.student} (${s.reason})`).join("; ")}`,
         "NO_REACHABLE_RECIPIENTS"
       );
     }
@@ -72,28 +140,41 @@ export const sendMessages = {
       );
     }
 
+    const custom = Boolean(spec.subject || spec.body);
     const payload = {
       audience: spec.audience,
       audience_label: audience.label,
       template: templateKey,
+      channel: spec.channel ?? null,
       subject: spec.subject || template.subject,
       body: spec.body || template.body,
+      // Custom text replaces the template, so the short SMS text and WhatsApp template no longer match it.
+      sms_body: custom ? null : template.sms_body,
+      whatsapp_template: custom ? null : template.whatsapp_template,
+      whatsapp_params: custom ? null : template.whatsapp_params,
       message: spec.message ?? null,
       recipients,
       skipped,
     };
-    const counts = recipients.reduce((acc, r) => ({ ...acc, [r.channel]: (acc[r.channel] || 0) + 1 }), {});
-    const summary = `Message ${recipients.length} ${audience.label} (${Object.entries(counts)
-      .map(([c, n]) => `${n} ${c}`)
-      .join(", ")})${skipped.length ? `; ${skipped.length} can't be reached` : ""}`;
-    return { summary, payload, preview: renderPreview(payload), approverNeeds: audience.approverNeeds };
+    const preview = renderPreview(payload);
+    const counts = Object.entries(preview.by_channel)
+      .map(([c, n]) => `${n.messages} ${CHANNEL_LABEL[c]}`)
+      .join(", ");
+    const summary = `Message ${recipients.length} ${audience.label} (${counts})${skipped.length ? `; ${skipped.length} can't be reached` : ""}`;
+    return { summary, payload, preview, approverNeeds: audience.approverNeeds };
   },
 
   /** Apply an edit (new subject/body text) to a pending action's payload. */
   edit(payload, changes) {
     const next = { ...payload };
     if (changes.subject !== undefined) next.subject = changes.subject;
-    if (changes.body !== undefined) next.body = changes.body;
+    if (changes.body !== undefined && changes.body !== payload.body) {
+      next.body = changes.body;
+      // The approved text is now the edited text on every channel.
+      next.sms_body = null;
+      next.whatsapp_template = null;
+      next.whatsapp_params = null;
+    }
     return { payload: next, preview: renderPreview(next) };
   },
 };

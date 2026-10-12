@@ -9,7 +9,8 @@ export function renderTemplate(text, vars) {
 
 export async function getTemplate(key) {
   const [[row]] = await pool.execute(
-    "SELECT template_key, name, subject, body FROM message_templates WHERE template_key = ? AND is_active = 1",
+    `SELECT template_key, name, subject, body, sms_body, whatsapp_template, whatsapp_params
+     FROM message_templates WHERE template_key = ? AND is_active = 1`,
     [key]
   );
   return row ?? null;
@@ -17,7 +18,7 @@ export async function getTemplate(key) {
 
 export async function listTemplates() {
   const [rows] = await pool.execute(
-    "SELECT template_key, name, subject, body FROM message_templates WHERE is_active = 1 ORDER BY name"
+    "SELECT template_key, name, subject, body, sms_body, whatsapp_template FROM message_templates WHERE is_active = 1 ORDER BY name"
   );
   return rows;
 }
