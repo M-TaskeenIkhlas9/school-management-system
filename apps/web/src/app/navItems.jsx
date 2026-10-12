@@ -4,9 +4,9 @@
  */
 export const navGroups = [
   {
-    label: "Daily",
+    label: "Workspace",
     items: [
-      { path: "/dashboard", permission: "dashboard:read", label: "Today", icon: "dashboard" },
+      { path: "/dashboard", permission: "dashboard:read", label: "Dashboard", icon: "dashboard" },
       { path: "/attendance", permission: "attendance:read", label: "Attendance", icon: "attendance" },
       { path: "/fees", permission: "fees:read", label: "Fees", icon: "fees" },
     ],
@@ -22,9 +22,9 @@ export const navGroups = [
     ],
   },
   {
-    label: "Assistant",
+    label: "AI & messages",
     items: [
-      { path: "/ai-center", permission: "assistant:use", label: "Ask the assistant", icon: "assistant" },
+      { path: "/ai-center", permission: "assistant:use", label: "AI assistant", icon: "sparkle" },
       { path: "/approvals", permission: "messages:draft", label: "Approvals", icon: "approvals", badge: "pending" },
       { path: "/outbox", permission: "messages:read", label: "Outbox", icon: "outbox" },
       { path: "/predict", permission: "reports:read", label: "Risk predictions", icon: "predict" },

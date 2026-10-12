@@ -8,6 +8,7 @@ import PageHeader from "../../components/PageHeader.jsx";
 import { useAuth } from "../../auth/AuthContext.jsx";
 import StudentForm from "./StudentForm.jsx";
 import StudentProfileCard from "./StudentProfileCard.jsx";
+import Avatar from "../../components/Avatar.jsx";
 
 export default function StudentsPage() {
   const { can } = useAuth();
@@ -179,10 +180,7 @@ export default function StudentsPage() {
                 >
                   <td>
                     <div className="student-cell">
-                      <div className="student-avatar">
-                        {student.first_name?.[0]}
-                        {student.last_name?.[0]}
-                      </div>
+                      <Avatar name={fullName(student)} size={38} />
                       <div>
                         <div className="student-name">{fullName(student)}</div>
                         <div className="student-meta">{student.roll_number || "No roll number"}</div>

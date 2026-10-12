@@ -3,6 +3,7 @@ import { api } from "../../api/client.js";
 import { keys, useApiMutation, useCurriculum, useTeachers } from "../../api/queries.js";
 import { fullName } from "../../lib/format.js";
 import PageHeader from "../../components/PageHeader.jsx";
+import Avatar from "../../components/Avatar.jsx";
 import { useAuth } from "../../auth/AuthContext.jsx";
 
 const emptyTeacher = { first_name: "", last_name: "", subject: "", phone: "", email: "" };
@@ -89,10 +90,7 @@ export default function TeachersPage() {
         {teachers.map((teacher) => (
           <article className="card teacher-card" key={teacher.id}>
             <div className="teacher-header">
-              <div className="teacher-avatar" aria-hidden="true">
-                {teacher.first_name?.[0]}
-                {teacher.last_name?.[0]}
-              </div>
+              <Avatar name={fullName(teacher)} size={46} />
               <div>
                 <h2>{fullName(teacher)}</h2>
                 <p className="teacher-meta">{teacher.subject || "No subject set"}</p>

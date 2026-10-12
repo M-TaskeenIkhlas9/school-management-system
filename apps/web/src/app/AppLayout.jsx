@@ -1,23 +1,67 @@
-import { useCallback, useEffect, useState } from "react";
-import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../auth/AuthContext.jsx";
 import { actionsApi } from "../features/actions/api.js";
 import { navGroups } from "./navItems.jsx";
 import Icon from "./Icon.jsx";
+import Avatar from "../components/Avatar.jsx";
 import CommandPalette, { useCommandPaletteShortcut } from "../components/CommandPalette.jsx";
 import { useTheme } from "../lib/theme.js";
 
 const ROLE_LABEL = { principal: "Principal", admin: "Admin", accountant: "Accountant", teacher: "Teacher" };
 
-function useToday(timeZone) {
-  return new Intl.DateTimeFormat("en-GB", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    timeZone: timeZone || undefined,
-  }).format(new Date());
+function UserMenu({ user, onSignOut, theme, onToggleTheme }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const close = (e) => {
+      if (e.type === "keydown" ? e.key === "Escape" : !ref.current?.contains(e.target)) setOpen(false);
+    };
+    window.addEventListener("mousedown", close);
+    window.addEventListener("keydown", close);
+    return () => {
+      window.removeEventListener("mousedown", close);
+      window.removeEventListener("keydown", close);
+    };
+  }, [open]);
+
+  return (
+    <div className="menu" ref={ref}>
+      <button
+        type="button"
+        className="topbar__user"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+      >
+        <Avatar name={user?.username} size={34} />
+        <span className="topbar__user-name">{user?.username}</span>
+        <Icon name="chevron" size={16} />
+      </button>
+      {open && (
+        <div className="menu__panel" role="menu">
+          <div className="menu__who">
+            <strong>{user?.username}</strong>
+            <span>
+              {ROLE_LABEL[user?.role]} · {user?.email}
+            </span>
+          </div>
+          <Link to="/account" role="menuitem" className="menu__item" onClick={() => setOpen(false)}>
+            <Icon name="users" size={16} /> My account
+          </Link>
+          <button type="button" role="menuitem" className="menu__item" onClick={onToggleTheme}>
+            <Icon name={theme === "dark" ? "sun" : "moon"} size={16} />
+            {theme === "dark" ? "Light mode" : "Night mode"}
+          </button>
+          <button type="button" role="menuitem" className="menu__item menu__item--danger" onClick={onSignOut}>
+            <Icon name="signout" size={16} /> Sign out
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function AppLayout() {
@@ -29,9 +73,8 @@ export default function AppLayout() {
   const openSearch = useCallback(() => setSearchOpen(true), []);
   useCommandPaletteShortcut(openSearch);
   const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
-  const today = useToday(school?.timezone);
 
-  // Waiting approvals, shown next to "Approvals" for people who draft or approve.
+  // Waiting approvals: the bell's dot and the count next to "Approvals".
   const { data: pending = [] } = useQuery({
     queryKey: ["actions", "pending"],
     queryFn: () => actionsApi.list("pending"),
@@ -51,10 +94,12 @@ export default function AppLayout() {
   return (
     <div className={`app-shell ${menuOpen ? "menu-open" : ""}`}>
       <aside className="sidebar" aria-label="Main">
-        <div className="sidebar__brand">
-          <span className="sidebar__school">{school?.name ?? "School"}</span>
-          <span className="sidebar__product">EduManage</span>
-        </div>
+        <Link to="/" className="sidebar__brand">
+          <span className="sidebar__logo" aria-hidden="true">
+            <Icon name="logo" size={20} strokeWidth={2} />
+          </span>
+          EduManage
+        </Link>
 
         <nav className="sidebar__nav">
           {navGroups.map((group) => {
@@ -65,7 +110,7 @@ export default function AppLayout() {
                 <span className="nav-group__label">{group.label}</span>
                 {items.map((item) => (
                   <NavLink key={item.path} to={item.path} className="nav-item">
-                    <Icon name={item.icon} />
+                    <Icon name={item.icon} size={19} />
                     <span className="nav-label">{item.label}</span>
                     {item.badge === "pending" && waiting > 0 && (
                       <span className="nav-count" aria-label={`${waiting} waiting`}>
@@ -80,23 +125,13 @@ export default function AppLayout() {
         </nav>
 
         <div className="sidebar__footer">
-          <NavLink to="/account" className="sidebar__user" title="My account">
-            <span className="user-badge" aria-hidden="true">
-              {user?.username?.[0] ?? "?"}
+          <div className="school-card">
+            <span className="school-card__label">School</span>
+            <strong>{school?.name ?? "—"}</strong>
+            <span className="school-card__meta">
+              {school?.currency} · {school?.timezone?.split("/").pop()?.replace("_", " ")}
             </span>
-            <span className="user-name">
-              {user?.username ?? "Signed in"}
-              <small className="user-role">{ROLE_LABEL[user?.role] ?? user?.role}</small>
-            </span>
-          </NavLink>
-          <button type="button" className="sidebar__signout" onClick={toggleTheme} aria-pressed={theme === "dark"}>
-            <Icon name={theme === "dark" ? "sun" : "moon"} size={16} />
-            {theme === "dark" ? "Day mode" : "Night mode"}
-          </button>
-          <button type="button" className="sidebar__signout" onClick={logout}>
-            <Icon name="signout" size={16} />
-            Sign out
-          </button>
+          </div>
         </div>
       </aside>
       <button
@@ -118,19 +153,25 @@ export default function AppLayout() {
           >
             <Icon name={menuOpen ? "close" : "menu"} size={20} />
           </button>
-          <span className="topbar__school">{school?.name}</span>
-          <span className="topbar__date">{today}</span>
           <button type="button" className="topbar__search" onClick={openSearch}>
-            <Icon name="search" size={16} />
-            <span>Search</span>
+            <Icon name="search" size={18} />
+            <span>Search students, pages, or ask a question…</span>
             <kbd>{isMac ? "⌘K" : "Ctrl K"}</kbd>
           </button>
-          {can("assistant:use") && location.pathname !== "/ai-center" && (
-            <NavLink to="/ai-center" className="topbar__ask">
-              <Icon name="assistant" size={16} />
-              Ask the assistant
-            </NavLink>
-          )}
+          <div className="topbar__right">
+            {can("messages:draft") && (
+              <Link
+                to="/approvals"
+                className="icon-button"
+                aria-label={waiting ? `${waiting} waiting for your approval` : "Approvals"}
+                title={waiting ? `${waiting} waiting for your approval` : "Nothing waiting"}
+              >
+                <Icon name="bell" size={20} />
+                {waiting > 0 && <span className="icon-button__dot" />}
+              </Link>
+            )}
+            <UserMenu user={user} onSignOut={logout} theme={theme} onToggleTheme={toggleTheme} />
+          </div>
         </header>
 
         <main className="content" id="main">

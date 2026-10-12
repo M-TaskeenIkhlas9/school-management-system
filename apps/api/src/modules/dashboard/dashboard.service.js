@@ -28,7 +28,29 @@ export async function getStats({ classIds = null, includeFees = true } = {}) {
     scoped ? [today(), classIds] : [today()]
   );
 
+  // Real movement over the last 30 days (no invented trends).
+  const [[recent]] = await pool.query(
+    `SELECT
+       (SELECT COUNT(*) FROM students s ${scoped ? "JOIN enrollments e ON e.student_id = s.id AND e.is_active = 1" : ""}
+        WHERE s.is_active = 1 AND s.created_at >= ? - INTERVAL 30 DAY ${scoped ? "AND e.classroom_id IN (?)" : ""}) AS students,
+       (SELECT COUNT(*) FROM teachers WHERE is_active = 1 AND created_at >= ? - INTERVAL 30 DAY) AS teachers,
+       (SELECT COUNT(*) FROM classrooms WHERE is_active = 1 AND created_at >= ? - INTERVAL 30 DAY
+        ${scoped ? "AND id IN (?)" : ""}) AS classes`,
+    scoped ? [today(), classIds, today(), today(), classIds] : [today(), today(), today()]
+  );
+  const [[att30]] = await pool.query(
+    `SELECT AVG(CASE WHEN status IN ('present','late') THEN 1 ELSE 0 END) AS rate
+     FROM attendance WHERE day > ? - INTERVAL 30 DAY AND day <= ? ${scoped ? "AND classroom_id IN (?)" : ""}`,
+    scoped ? [today(), today(), classIds] : [today(), today()]
+  );
+
   const stats = {
+    newLast30: {
+      students: Number(recent.students),
+      teachers: Number(recent.teachers),
+      classes: Number(recent.classes),
+    },
+    attendance30: att30.rate === null ? null : Number((att30.rate * 100).toFixed(1)),
     totalStudents: Number(students.count),
     totalTeachers: Number(teachers.count),
     activeClasses: Number(classes.count),

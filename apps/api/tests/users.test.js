@@ -177,6 +177,26 @@ describe("Passwords and sessions", () => {
   });
 });
 
+describe("Overview activity feed", () => {
+  it("shows the whole school to people who manage users, and only your own actions to others", async () => {
+    const school = (await request.get("/dashboard/activity").set(as("principal"))).body;
+    expect(school.scope).toBe("school");
+    expect(school.items.map((a) => a.action)).toContain("user.create");
+    expect(school.items.every((a) => !a.action.startsWith("auth."))).toBe(true);
+
+    tokens.uma = await login("uma@users.test", "another-pass1"); // signed out everywhere earlier
+    const mine = (await request.get("/dashboard/activity").set(as("uma"))).body;
+    expect(mine.scope).toBe("mine");
+    expect(mine.items.every((a) => a.username === "Uma")).toBe(true);
+  });
+
+  it("reports real 30-day movement on the overview", async () => {
+    const stats = (await request.get("/dashboard").set(as("principal"))).body;
+    expect(stats.newLast30).toMatchObject({ teachers: expect.any(Number), classes: 2 });
+    expect(stats).toHaveProperty("attendance30");
+  });
+});
+
 describe("Activity", () => {
   it("records failed sign-ins and account changes, filterable by person and kind", async () => {
     await request.post("/auth/login").send({ email: "UMA@users.test", password: "guess" });

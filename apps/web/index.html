@@ -4,11 +4,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>EduManage</title>
-    <meta name="theme-color" content="#f2f4f1" />
+    <meta name="theme-color" content="#f5f7fb" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,400;7..72,500;7..72,600&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap"
       rel="stylesheet"
     />
   </head>
@@ -17,7 +17,7 @@
       // Apply the saved or system theme before first paint (no flash).
       try {
         var t = localStorage.getItem("theme");
-        if (t !== "light" && t !== "dark") t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        if (t !== "light" && t !== "dark") t = "light"; // light unless the person chose night mode
         document.documentElement.dataset.theme = t;
       } catch (e) {}
     </script>

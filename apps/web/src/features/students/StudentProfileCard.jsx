@@ -1,6 +1,7 @@
 import { useStudent } from "../../api/queries.js";
 import { average, badgeClass } from "../../lib/format.js";
 import Drawer from "../../components/Drawer.jsx";
+import Avatar from "../../components/Avatar.jsx";
 import Skeleton from "../../components/Skeleton.jsx";
 
 const CHANNELS = [
@@ -73,10 +74,7 @@ function ProfileBody({ studentId, classLabel, risk, feeStatus, showFees }) {
     <div className="card profile-card">
       <div className="profile">
         <div className="profile-title">
-          <div className="student-avatar large">
-            {profile.first_name?.[0]}
-            {profile.last_name?.[0]}
-          </div>
+          <Avatar name={`${profile.first_name} ${profile.last_name}`} size={60} />
           <div>
             <h4>
               {profile.first_name} {profile.last_name}

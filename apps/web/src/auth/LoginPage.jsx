@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext.jsx";
 import { api } from "../api/client.js";
+import Icon from "../app/Icon.jsx";
 
 const DEV_EMAIL = "admin@school.com";
 const DEV_PASSWORD = "admin123";
@@ -48,21 +49,45 @@ export default function LoginPage() {
   return (
     <div className="login-page">
       <section className="login-cover" aria-hidden={!school}>
-        <span className="login-cover__product">EduManage</span>
-        <h1 className="login-cover__school" aria-label={school?.name}>
-          {(school?.name ?? "\u00a0").split(" ").map((word, i) => (
-            <span key={`${word}-${i}`} className="login-cover__word" style={{ "--i": i }}>
-              <span>{word}</span>{" "}
-            </span>
+        <span className="login-cover__product">
+          <span className="sidebar__logo" aria-hidden="true">
+            <Icon name="logo" size={20} strokeWidth={2} />
+          </span>
+          EduManage
+        </span>
+        <div>
+          <h1 className="login-cover__school" aria-label={school?.name}>
+            {(school?.name ?? "\u00a0").split(" ").map((word, i) => (
+              <Fragment key={`${word}-${i}`}>
+                {i > 0 && " "}
+                <span className="login-cover__word" style={{ "--i": i }}>
+                  <span>{word}</span>
+                </span>
+              </Fragment>
+            ))}
+          </h1>
+          <p className="login-cover__line">
+            Attendance, fees, results and messages to parents — with an AI assistant that prepares the work for you.
+          </p>
+        </div>
+        <ul className="login-features">
+          {[
+            ["attendance", "Daily attendance"],
+            ["fees", "Fees & reminders"],
+            ["results", "Results & report cards"],
+            ["sparkle", "AI assistant"],
+          ].map(([icon, label], i) => (
+            <li key={label} style={{ "--i": i }}>
+              <Icon name={icon} size={18} /> {label}
+            </li>
           ))}
-        </h1>
-        <p className="login-cover__line">Attendance, fees, results and messages to parents, kept in one register.</p>
+        </ul>
       </section>
 
       <section className="login-sheet">
         <form className="login-form" onSubmit={handleSubmit} noValidate>
-          <h2>Sign in</h2>
-          <p className="login-subtitle">Use the email and password the school office gave you.</p>
+          <h2>Welcome back</h2>
+          <p className="login-subtitle">Sign in with the email and password the school office gave you.</p>
           {error && (
             <div className="login-error" role="alert">
               {error}
