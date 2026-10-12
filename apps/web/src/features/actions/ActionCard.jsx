@@ -11,6 +11,25 @@ const STATUS = {
   failed: ["Failed", "danger"],
   expired: ["Expired", "neutral"],
 };
+// The office stamp a decided card carries.
+const STAMP = {
+  executing: ["Approved", "ok"],
+  executed: ["Approved", "ok"],
+  rejected: ["Rejected", "bad"],
+  failed: ["Failed", "bad"],
+  expired: ["Expired", "bad"],
+};
+
+function Stamp({ status, fresh }) {
+  const [text, tone] = STAMP[status] ?? [];
+  if (!text) return null;
+  return (
+    <span className={`stamp stamp--${tone} ${fresh ? "stamp--fresh" : ""}`} aria-hidden="true">
+      {text}
+    </span>
+  );
+}
+
 const TYPE_LABEL = { send_parent_messages: "Message to parents", record_fee_payment: "Fee payment" };
 const CHANNEL_LABEL = { email: "Email", sms: "SMS", whatsapp: "WhatsApp" };
 
@@ -120,10 +139,12 @@ export default function ActionCard({ action: initial, onChange }) {
   const toast = useToast();
   const [action, setAction] = useState(initial);
   const [busy, setBusy] = useState(false);
+  const [fresh, setFresh] = useState(false); // decided just now, in front of the person
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState({ subject: "", body: "" });
 
   const update = (next) => {
+    if (action.status === "pending" && next.status !== "pending") setFresh(true);
     setAction(next);
     onChange?.(next);
   };
@@ -146,7 +167,8 @@ export default function ActionCard({ action: initial, onChange }) {
   const preview = action.preview ?? {};
   const result = action.result ?? {};
   return (
-    <div className={`action-card action-card--${action.status}`}>
+    <div className={`action-card action-card--${action.status} ${fresh ? "action-card--thud" : ""}`}>
+      <Stamp status={action.status} fresh={fresh} />
       <div className="action-card__head">
         <span className="action-card__type">{TYPE_LABEL[action.type] ?? action.type}</span>
         <span className={`badge ${tone}`}>{label}</span>

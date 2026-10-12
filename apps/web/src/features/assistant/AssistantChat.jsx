@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { assistantApi, streamMessage } from "./api.js";
 import Markdown from "./Markdown.jsx";
 import RunTrace from "./RunTrace.jsx";
@@ -32,7 +33,8 @@ export default function AssistantChat() {
   const [activeId, setActiveId] = useState(null);
   const [messages, setMessages] = useState([]);
   const [actions, setActions] = useState([]);
-  const [input, setInput] = useState("");
+  const [params, setParams] = useSearchParams();
+  const [input, setInput] = useState(() => params.get("q") ?? "");
   const [running, setRunning] = useState(false);
   const [liveSteps, setLiveSteps] = useState([]);
   const [openTrace, setOpenTrace] = useState(null);
@@ -62,6 +64,11 @@ export default function AssistantChat() {
       .catch(() => setStatus({ model: null }));
     refreshConversations().catch((err) => setError(err.message));
   }, [refreshConversations]);
+
+  // A question passed from search (?q=) fills the box once; the person still presses Send.
+  useEffect(() => {
+    if (params.has("q")) setParams({}, { replace: true });
+  }, [params, setParams]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });

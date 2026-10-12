@@ -49,7 +49,13 @@ export default function LoginPage() {
     <div className="login-page">
       <section className="login-cover" aria-hidden={!school}>
         <span className="login-cover__product">EduManage</span>
-        <h1 className="login-cover__school">{school?.name ?? "\u00a0"}</h1>
+        <h1 className="login-cover__school" aria-label={school?.name}>
+          {(school?.name ?? "\u00a0").split(" ").map((word, i) => (
+            <span key={`${word}-${i}`} className="login-cover__word" style={{ "--i": i }}>
+              <span>{word}</span>{" "}
+            </span>
+          ))}
+        </h1>
         <p className="login-cover__line">Attendance, fees, results and messages to parents, kept in one register.</p>
       </section>
 

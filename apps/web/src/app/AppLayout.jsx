@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../auth/AuthContext.jsx";
 import { actionsApi } from "../features/actions/api.js";
 import { navGroups } from "./navItems.jsx";
 import Icon from "./Icon.jsx";
+import CommandPalette, { useCommandPaletteShortcut } from "../components/CommandPalette.jsx";
+import { useTheme } from "../lib/theme.js";
 
 const ROLE_LABEL = { principal: "Principal", admin: "Admin", accountant: "Accountant", teacher: "Teacher" };
 
@@ -22,6 +24,11 @@ export default function AppLayout() {
   const { user, logout, can, school } = useAuth();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [theme, toggleTheme] = useTheme();
+  const openSearch = useCallback(() => setSearchOpen(true), []);
+  useCommandPaletteShortcut(openSearch);
+  const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
   const today = useToday(school?.timezone);
 
   // Waiting approvals, shown next to "Approvals" for people who draft or approve.
@@ -82,6 +89,10 @@ export default function AppLayout() {
               <small className="user-role">{ROLE_LABEL[user?.role] ?? user?.role}</small>
             </span>
           </NavLink>
+          <button type="button" className="sidebar__signout" onClick={toggleTheme} aria-pressed={theme === "dark"}>
+            <Icon name={theme === "dark" ? "sun" : "moon"} size={16} />
+            {theme === "dark" ? "Day mode" : "Night mode"}
+          </button>
           <button type="button" className="sidebar__signout" onClick={logout}>
             <Icon name="signout" size={16} />
             Sign out
@@ -109,6 +120,11 @@ export default function AppLayout() {
           </button>
           <span className="topbar__school">{school?.name}</span>
           <span className="topbar__date">{today}</span>
+          <button type="button" className="topbar__search" onClick={openSearch}>
+            <Icon name="search" size={16} />
+            <span>Search</span>
+            <kbd>{isMac ? "⌘K" : "Ctrl K"}</kbd>
+          </button>
           {can("assistant:use") && location.pathname !== "/ai-center" && (
             <NavLink to="/ai-center" className="topbar__ask">
               <Icon name="assistant" size={16} />
@@ -120,6 +136,7 @@ export default function AppLayout() {
         <main className="content" id="main">
           <Outlet />
         </main>
+        {searchOpen && <CommandPalette onClose={() => setSearchOpen(false)} />}
       </div>
     </div>
   );

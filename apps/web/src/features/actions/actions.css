@@ -146,3 +146,85 @@
   width: auto;
   min-width: 180px;
 }
+
+/* The office rubber stamp on a decided card. */
+.action-card {
+  position: relative;
+}
+
+.stamp {
+  position: absolute;
+  right: 22px;
+  bottom: 14px;
+  z-index: 1;
+  padding: 4px 12px;
+  border: 2px solid currentColor;
+  border-radius: 6px;
+  box-shadow:
+    inset 0 0 0 2px var(--sheet),
+    inset 0 0 0 3px currentColor;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  transform: rotate(-8deg);
+  opacity: 0.82;
+  pointer-events: none;
+  /* Ink never covers paper evenly. */
+  -webkit-mask-image: radial-gradient(circle at 30% 40%, #000 55%, rgba(0, 0, 0, 0.75) 75%, #000 100%);
+  mask-image: radial-gradient(circle at 30% 40%, #000 55%, rgba(0, 0, 0, 0.75) 75%, #000 100%);
+}
+
+.stamp--ok {
+  color: var(--stamp-ok);
+}
+
+.stamp--bad {
+  color: var(--stamp-bad);
+}
+
+.stamp--fresh {
+  animation: stamp 520ms cubic-bezier(0.3, 1.4, 0.5, 1) both;
+}
+
+@keyframes stamp {
+  0% {
+    opacity: 0;
+    transform: rotate(-16deg) scale(2.2);
+  }
+  55% {
+    opacity: 0.95;
+    transform: rotate(-7deg) scale(0.94);
+  }
+  100% {
+    opacity: 0.82;
+    transform: rotate(-8deg) scale(1);
+  }
+}
+
+/* The card takes the blow. */
+.action-card--thud {
+  animation: thud 360ms 260ms var(--ease) both;
+}
+
+@keyframes thud {
+  30% {
+    transform: translateY(2px);
+  }
+}
+
+@media (max-width: 560px) {
+  .stamp {
+    font-size: 12px;
+  }
+}
+
+/* Room for the stamp under a decided card's last line. */
+.action-card--executing,
+.action-card--executed,
+.action-card--rejected,
+.action-card--failed,
+.action-card--expired {
+  padding-bottom: 26px;
+}

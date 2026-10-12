@@ -24,7 +24,11 @@ export function ToastProvider({ children }) {
       {children}
       <div className="toast-stack" role="status" aria-live="polite">
         {toasts.map((t) => (
-          <div key={t.id} className={`toast toast--${t.kind}`}>
+          <div
+            key={t.id}
+            className={`toast toast--${t.kind}`}
+            style={{ "--toast-ms": `${t.kind === "error" ? 7000 : 3500}ms` }}
+          >
             <span>{t.message}</span>
             <button type="button" onClick={() => dismiss(t.id)} aria-label="Dismiss">
               ×

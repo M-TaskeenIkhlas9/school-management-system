@@ -1,5 +1,7 @@
 import { useStudent } from "../../api/queries.js";
 import { average, badgeClass } from "../../lib/format.js";
+import Drawer from "../../components/Drawer.jsx";
+import Skeleton from "../../components/Skeleton.jsx";
 
 const CHANNELS = [
   ["consent_whatsapp", "WhatsApp"],
@@ -28,7 +30,17 @@ function Guardians({ guardians }) {
 }
 
 /** Shows only what the API returned for this user's role (e.g. no fees for teachers). */
-export default function StudentProfileCard({ studentId, classLabel, risk, feeStatus, showFees }) {
+/** In a drawer when `onClose` is given (the Students page); inline otherwise. */
+export default function StudentProfileCard({ onClose, ...props }) {
+  if (!onClose) return <ProfileBody {...props} />;
+  return (
+    <Drawer title="Student profile" onClose={onClose}>
+      <ProfileBody {...props} />
+    </Drawer>
+  );
+}
+
+function ProfileBody({ studentId, classLabel, risk, feeStatus, showFees }) {
   const { data: profile, isLoading } = useStudent(studentId);
 
   if (!studentId)
@@ -39,8 +51,19 @@ export default function StudentProfileCard({ studentId, classLabel, risk, feeSta
     );
   if (isLoading || !profile)
     return (
-      <div className="card profile-card">
-        <div className="empty-card">Loading profile…</div>
+      <div className="card profile-card" aria-busy="true">
+        <div className="profile-title">
+          <Skeleton width={52} height={52} style={{ borderRadius: "50%" }} />
+          <div style={{ flex: 1, display: "grid", gap: 8 }}>
+            <Skeleton width="55%" height={20} />
+            <Skeleton width="30%" />
+          </div>
+        </div>
+        <div style={{ display: "grid", gap: 10 }}>
+          <Skeleton />
+          <Skeleton width="80%" />
+          <Skeleton width="65%" />
+        </div>
       </div>
     );
 

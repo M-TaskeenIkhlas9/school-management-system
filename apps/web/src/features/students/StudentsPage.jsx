@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { api } from "../../api/client.js";
 import { keys, useApiMutation, useAttention } from "../../api/queries.js";
 import { useLookups } from "../../lib/useLookups.js";
@@ -16,7 +17,17 @@ export default function StudentsPage() {
   const { students, classrooms, classIdOf, classLabelOf } = useLookups();
   const { data: attention } = useAttention({ enabled: canSeeRisk });
 
-  const [selectedId, setSelectedId] = useState(null);
+  const [params, setParams] = useSearchParams();
+  const [selectedId, setSelectedId] = useState(() => Number(params.get("id")) || null);
+
+  // Opened from search (?id=): show that student, then tidy the address.
+  useEffect(() => {
+    const id = Number(params.get("id"));
+    if (id) {
+      setSelectedId(id);
+      setParams({}, { replace: true });
+    }
+  }, [params, setParams]);
   const [editing, setEditing] = useState(null); // student being edited
   const [adding, setAdding] = useState(false);
   const [search, setSearch] = useState("");
@@ -219,13 +230,16 @@ export default function StudentsPage() {
         </table>
       </div>
 
-      <StudentProfileCard
-        studentId={selectedId}
-        classLabel={selectedId ? classLabelOf(selectedId) : ""}
-        risk={canSeeRisk && selectedId ? riskOf(selectedId) : null}
-        feeStatus={canSeeFees && selectedId ? feeStatusOf(selectedId) : null}
-        showFees={canSeeFees}
-      />
+      {selectedId && (
+        <StudentProfileCard
+          studentId={selectedId}
+          classLabel={classLabelOf(selectedId)}
+          risk={canSeeRisk ? riskOf(selectedId) : null}
+          feeStatus={canSeeFees ? feeStatusOf(selectedId) : null}
+          showFees={canSeeFees}
+          onClose={() => setSelectedId(null)}
+        />
+      )}
     </section>
   );
 }
