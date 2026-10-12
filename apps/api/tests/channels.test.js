@@ -2,6 +2,8 @@
 process.env.NODE_ENV = "test";
 process.env.JWT_SECRET = "test-secret-that-is-long-enough-for-config-check";
 process.env.DB_NAME = process.env.DB_NAME || "school_management_test";
+process.env.CURRENCY = "USD"; // independent of the developer's .env
+process.env.SCHOOL_NAME = "";
 process.env.QUIET_HOURS = "off";
 delete process.env.SMTP_HOST;
 process.env.SMS_PROVIDER = "simulated";
@@ -325,7 +327,8 @@ describe("Delivery and fallback", () => {
       ]);
       expect(wasim[0].error).toMatch(/trying sms instead/);
       expect(wasim[1].fallback_from).toBe(wasim[0].id);
-      expect(wasim[1].body).toMatch(/^the school: Ali Test has/); // the SMS text, not the WhatsApp one
+      // The short SMS text (not the WhatsApp one), with the real balance.
+      expect(wasim[1].body).toMatch(/^the school: Ali Test has \$250\.00 in unpaid fees \(due 2020-01-01\)/);
 
       // Owais only allows WhatsApp: nothing to fall back to.
       const owais = byGuardian(rows, ids.omarParent);

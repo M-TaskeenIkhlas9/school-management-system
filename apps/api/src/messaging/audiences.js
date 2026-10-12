@@ -38,6 +38,40 @@ async function studentsByIds(req, ids) {
   return rows;
 }
 
+/** Unpaid balance and oldest due date per student (overdue fees only). */
+async function owedByStudent() {
+  const owed = new Map();
+  for (const f of await feeService.getDefaulters()) {
+    const row = owed.get(f.student_id) ?? { amount: 0, oldest: f.due_date };
+    row.amount += f.remaining_amount;
+    if (f.due_date < row.oldest) row.oldest = f.due_date;
+    owed.set(f.student_id, row);
+  }
+  return owed;
+}
+
+const feeVars = (o) => ({
+  amount_owed: o.amount,
+  oldest_due_date: o.oldest instanceof Date ? o.oldest.toISOString().slice(0, 10) : String(o.oldest).slice(0, 10),
+});
+
+/**
+ * Add each student's overdue balance (for a fee reminder sent to a class or chosen students).
+ * @returns {{ students, skipped }} students who owe nothing are skipped, never sent an empty reminder.
+ */
+export async function withFeeVars(req, students) {
+  requirePermission(req, "fees:read", "fee information");
+  const owed = await owedByStudent();
+  const kept = [];
+  const skipped = [];
+  for (const s of students) {
+    const o = owed.get(s.id);
+    if (o) kept.push({ ...s, vars: { ...s.vars, ...feeVars(o) } });
+    else skipped.push({ student: s.name, reason: "has no overdue fees" });
+  }
+  return { students: kept, skipped };
+}
+
 /**
  * @returns {{ label: string, students: Array<{ id, name, class_name, vars }>, approverNeeds: string[] }}
  * `vars` are template variables specific to that student (amount owed, absence detail, …).
@@ -47,22 +81,12 @@ export async function resolveAudience(req, spec) {
   switch (spec.audience) {
     case "fee_defaulters": {
       requirePermission(req, "fees:read", "fee information");
-      const owed = new Map();
-      for (const f of await feeService.getDefaulters()) {
-        const row = owed.get(f.student_id) ?? { amount: 0, oldest: f.due_date };
-        row.amount += f.remaining_amount;
-        if (f.due_date < row.oldest) row.oldest = f.due_date;
-        owed.set(f.student_id, row);
-      }
+      const owed = await owedByStudent();
       const students = await studentsByIds(req, [...owed.keys()]);
       return {
         label: "parents of students with overdue fees",
         approverNeeds: ["fees:read"],
-        students: students.map((s) => {
-          const o = owed.get(s.id);
-          const oldest = o.oldest instanceof Date ? o.oldest.toISOString().slice(0, 10) : String(o.oldest).slice(0, 10);
-          return { ...s, vars: { amount_owed: o.amount, oldest_due_date: oldest } };
-        }),
+        students: students.map((s) => ({ ...s, vars: feeVars(owed.get(s.id)) })),
       };
     }
     case "absent_on_date": {

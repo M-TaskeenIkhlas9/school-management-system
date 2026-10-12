@@ -1,6 +1,6 @@
 /** Action type: message a group of parents (approval required before anything is sent). */
 import { createError } from "../../middleware/errorHandler.js";
-import { formatMoney, resolveAudience } from "../../messaging/audiences.js";
+import { formatMoney, resolveAudience, withFeeVars } from "../../messaging/audiences.js";
 import { buildRecipients } from "../../messaging/recipients.js";
 import { getTemplate, renderTemplate } from "../../messaging/templates.js";
 import { availableChannels, channelModes, getChannel } from "../../messaging/channels/index.js";
@@ -123,8 +123,30 @@ export const sendMessages = {
     if (templateKey === "announcement" && !spec.message && !spec.body) {
       throw createError(400, "An announcement needs the message text.", "VALIDATION_ERROR");
     }
+    if (templateKey === "absence_alert" && !spec.audience.startsWith("absen")) {
+      throw createError(
+        400,
+        "An absence alert needs an absence audience (absent_on_date or absence_streak) so it can say when.",
+        "VALIDATION_ERROR"
+      );
+    }
 
-    const { recipients, skipped } = await buildRecipients(audience.students, { channel: spec.channel });
+    // A fee reminder to a class or chosen students: use each student's real balance; skip those who owe nothing.
+    let students = audience.students;
+    const notOwing = [];
+    if (templateKey === "fee_reminder" && spec.audience !== "fee_defaulters") {
+      const fees = await withFeeVars(req, students);
+      students = fees.students;
+      notOwing.push(...fees.skipped);
+      audience.approverNeeds = [...new Set([...audience.approverNeeds, "fees:read"])];
+      if (!students.length) {
+        throw createError(400, `None of ${audience.label} have overdue fees.`, "EMPTY_AUDIENCE");
+      }
+    }
+
+    const built = await buildRecipients(students, { channel: spec.channel });
+    const recipients = built.recipients;
+    const skipped = [...notOwing, ...built.skipped];
     if (!recipients.length) {
       throw createError(
         400,

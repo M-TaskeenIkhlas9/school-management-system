@@ -2,6 +2,8 @@
 process.env.NODE_ENV = "test";
 process.env.JWT_SECRET = "test-secret-that-is-long-enough-for-config-check";
 process.env.DB_NAME = process.env.DB_NAME || "school_management_test";
+process.env.CURRENCY = "USD"; // independent of the developer's .env
+process.env.SCHOOL_NAME = "";
 process.env.QUIET_HOURS = "off"; // individual tests turn it on
 delete process.env.SMTP_HOST; // emails are simulated
 process.env.SMS_PROVIDER = "off"; // email-only here; channels.test.js covers SMS and WhatsApp
@@ -204,6 +206,27 @@ describe("Fee reminders (accountant)", () => {
     expect(khan.body).toContain("$200.00");
     expect(action.can_approve).toBe(true);
     ids.feeReminder = action.id;
+  });
+
+  it("uses real balances for a fee reminder to chosen students, skipping those who owe nothing", async () => {
+    const action = await propose("principal", "send_parent_messages", {
+      audience: "students",
+      student_ids: [ids.ali, ids.omar],
+      template: "fee_reminder",
+    });
+    expect(action.preview.recipients).toHaveLength(1);
+    expect(action.preview.recipients[0].body).toContain("$100.00 (oldest due date: 2020-01-01)");
+    expect(action.preview.skipped).toEqual([{ student: "Omar Khan", reason: "has no overdue fees" }]);
+  });
+
+  it("refuses an absence alert without an absence audience", async () => {
+    await expect(
+      propose("principal", "send_parent_messages", {
+        audience: "class",
+        class_name: "Class A",
+        template: "absence_alert",
+      })
+    ).rejects.toMatchObject({ status: 400, message: expect.stringMatching(/absence audience/) });
   });
 
   it("holds messages during quiet hours", async () => {
