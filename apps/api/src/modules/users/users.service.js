@@ -45,8 +45,10 @@ export async function activity({ user_id, action, ...paging }) {
   const [[{ total }]] = await pool.query(`SELECT COUNT(*) AS total FROM audit_log a ${sql}`, params);
   const [rows] = await pool.query(
     `SELECT a.id, a.action, a.entity_type, a.entity_id, a.details, a.ip, a.created_at,
-            a.user_id, u.username, u.role
-     FROM audit_log a LEFT JOIN users u ON u.id = a.user_id
+            a.user_id, u.username, u.role, target.username AS target_name
+     FROM audit_log a
+     LEFT JOIN users u ON u.id = a.user_id
+     LEFT JOIN users target ON a.entity_type = 'user' AND target.id = a.entity_id
      ${sql} ORDER BY a.id DESC LIMIT ? OFFSET ?`,
     [...params, ...Object.values(pageWindow(paging))]
   );

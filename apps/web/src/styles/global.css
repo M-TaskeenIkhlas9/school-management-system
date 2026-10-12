@@ -1565,6 +1565,9 @@ textarea:focus,
 
 /* ---- Sidebar User ---- */
 .sidebar__user {
+  color: inherit;
+  text-decoration: none;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   gap: 10px;

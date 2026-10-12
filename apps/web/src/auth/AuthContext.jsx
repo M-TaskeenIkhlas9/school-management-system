@@ -59,6 +59,14 @@ export function AuthProvider({ children }) {
     setAccess({ permissions: data.permissions, classIds: data.classIds });
   }, []);
 
+  /** Keep this browser signed in after a password change (the server issued a new token). */
+  const replaceToken = useCallback((token) => {
+    setCurrent((prev) => {
+      session.save(token, prev?.user ?? null);
+      return { token, user: prev?.user ?? null };
+    });
+  }, []);
+
   const value = useMemo(() => {
     const permissions = new Set(access?.permissions ?? []);
     return {
@@ -69,8 +77,9 @@ export function AuthProvider({ children }) {
       can: (permission) => permissions.has(permission),
       login,
       logout,
+      replaceToken,
     };
-  }, [current, access, login, logout]);
+  }, [current, access, login, logout, replaceToken]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

@@ -122,6 +122,17 @@ export const navItems = [
     ),
   },
   {
+    path: "/users",
+    permission: "users:manage",
+    label: "Users & Access",
+    colorClass: "nav-icon--indigo",
+    icon: (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-3.3 0-8 1.7-8 5v1h10.3a6 6 0 0 1-.3-1.8c0-1.6.6-3 1.6-4.1-1.2-.1-2.4-.1-3.6-.1Zm7.5 1.2v-1.2h-1.5v1.2a2.6 2.6 0 0 0-.9.5l-1-.6-.8 1.3 1 .6a2.6 2.6 0 0 0 0 1l-1 .6.8 1.3 1-.6c.3.2.6.4.9.5V21h1.5v-1.2c.3-.1.6-.3.9-.5l1 .6.8-1.3-1-.6a2.6 2.6 0 0 0 0-1l1-.6-.8-1.3-1 .6a2.6 2.6 0 0 0-.9-.5Zm-.8 3.6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z" />
+      </svg>
+    ),
+  },
+  {
     path: "/predict",
     permission: "reports:read",
     label: "Predict & XAI",

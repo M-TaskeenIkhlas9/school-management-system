@@ -192,7 +192,7 @@ describe("Activity", () => {
       expect(actions).toContain(action);
     }
     const reset = uma.items.find((a) => a.action === "user.update" && a.details.password_changed);
-    expect(reset.username).toBe("Principal");
+    expect(reset).toMatchObject({ username: "Principal", target_name: "Uma" });
     expect(JSON.stringify(uma.items)).not.toMatch(/newpassword1|another-pass1/);
     expect(uma).toMatchObject({ page: 1, pageSize: 50 });
   });

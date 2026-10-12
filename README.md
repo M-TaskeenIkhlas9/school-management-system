@@ -56,9 +56,16 @@ Log in with `DEFAULT_PRINCIPAL_EMAIL` / `DEFAULT_PRINCIPAL_PASSWORD`
 | Accountant | Fees and payments; student and class details needed to identify payers      |
 | Teacher    | Only their assigned classes: students, attendance, results, exams (no fees) |
 
-The API enforces every permission; the web app only shows what a role may use. Accounts are
-managed through `/users` (a management screen comes in M4), and teachers are assigned to classes
-with `PUT /teachers/:id/classes`.
+The API enforces every permission; the web app only shows what a role may use.
+
+**Users & Access** (principal and admin) is where accounts are managed: create an account with a
+generated temporary password (shown once), link a teacher account to its teacher record and pick
+the classes they see, change roles, deactivate, reset a password or sign someone out everywhere.
+Only a principal can create or change a principal, nobody can demote or deactivate themselves, and
+the school always keeps one active principal. A reset password or "sign out everywhere" ends that
+person's sessions immediately. The **Activity** tab shows sign-ins (including failed attempts),
+account and class changes, and approvals. Everyone can change their own password under
+**My account** (click your name in the sidebar).
 
 `npm run seed` also creates **development-only** demo accounts (password `password123`, or
 `DEMO_USER_PASSWORD`): `accountant@school.test`, `office@school.test` (admin) and

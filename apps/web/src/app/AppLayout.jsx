@@ -35,13 +35,13 @@ export default function AppLayout() {
             ))}
         </nav>
         <div className="sidebar__footer">
-          <div className="sidebar__user">
+          <NavLink to="/account" className="sidebar__user" title="My account: change password">
             <span className="user-badge">{user?.username?.[0] || "P"}</span>
             <span className="user-name">
               {user?.username || "User"}
               <small className="user-role">{user?.role}</small>
             </span>
-          </div>
+          </NavLink>
           <button className="collapse-btn" onClick={logout}>
             Logout
           </button>

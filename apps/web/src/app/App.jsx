@@ -16,6 +16,8 @@ import PredictPage from "../features/predict/PredictPage.jsx";
 import SettingsPage from "../features/settings/SettingsPage.jsx";
 import ApprovalsPage from "../features/actions/ApprovalsPage.jsx";
 import OutboxPage from "../features/actions/OutboxPage.jsx";
+import UsersPage from "../features/users/UsersPage.jsx";
+import AccountPage from "../features/account/AccountPage.jsx";
 
 // Every page with the permission required to open it.
 const pages = [
@@ -31,7 +33,9 @@ const pages = [
   { path: "predict", element: <PredictPage />, permission: "reports:read" },
   { path: "approvals", element: <ApprovalsPage />, permission: "messages:draft" },
   { path: "outbox", element: <OutboxPage />, permission: "messages:read" },
+  { path: "users", element: <UsersPage />, permission: "users:manage" },
   { path: "settings", element: <SettingsPage />, permission: "users:manage" },
+  { path: "account", element: <AccountPage />, permission: null }, // everyone signed in
 ];
 
 /** First page this user may open (used as home and as the redirect for forbidden pages). */
@@ -49,7 +53,7 @@ function RequireAuth({ children }) {
 
 function RequirePermission({ permission, children }) {
   const { can } = useAuth();
-  return can(permission) ? children : <Navigate to={homePath(can)} replace />;
+  return !permission || can(permission) ? children : <Navigate to={homePath(can)} replace />;
 }
 
 function NoAccess() {
