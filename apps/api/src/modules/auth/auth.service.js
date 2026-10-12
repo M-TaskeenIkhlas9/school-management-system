@@ -48,8 +48,32 @@ export async function login(email, password) {
     throw createError(401, "Invalid email or password", "INVALID_CREDENTIALS");
   }
   await pool.execute("UPDATE users SET last_login_at = NOW() WHERE id = ?", [user.id]);
-  const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: "24h" });
-  return { token, ...(await describeSession(user)) };
+  return { token: issueToken(user), ...(await describeSession(user)) };
+}
+
+/** Tokens carry the user's session version; bumping it (see revokeSessions) signs them out everywhere. */
+export const issueToken = (user) =>
+  jwt.sign({ id: user.id, sv: user.session_version ?? 0 }, process.env.JWT_SECRET, { expiresIn: "24h" });
+
+/** End every session of this user (their next request gets 401 SESSION_REVOKED). */
+export async function revokeSessions(userId, conn = pool) {
+  await conn.execute("UPDATE users SET session_version = session_version + 1 WHERE id = ?", [userId]);
+}
+
+/** A signed-in user changes their own password; other devices are signed out, this one gets a new token. */
+export async function changeOwnPassword(userId, currentPassword, newPassword) {
+  const [[user]] = await pool.execute("SELECT * FROM users WHERE id = ? AND is_active = 1", [userId]);
+  if (!user || !(await bcrypt.compare(currentPassword, user.password_hash))) {
+    throw createError(400, "Your current password is not correct", "WRONG_PASSWORD");
+  }
+  if (currentPassword === newPassword) {
+    throw createError(400, "Choose a password different from the current one", "SAME_PASSWORD");
+  }
+  await pool.execute("UPDATE users SET password_hash = ?, session_version = session_version + 1 WHERE id = ?", [
+    await hashPassword(newPassword),
+    userId,
+  ]);
+  return { token: issueToken({ id: userId, session_version: user.session_version + 1 }) };
 }
 
 export async function ensureDefaultPrincipal() {

@@ -2,6 +2,8 @@
 process.env.NODE_ENV = "test";
 process.env.JWT_SECRET = "test-secret-that-is-long-enough-for-config-check";
 process.env.DB_NAME = process.env.DB_NAME || "school_management_test";
+process.env.CURRENCY = "USD"; // independent of the developer's .env
+process.env.SCHOOL_NAME = "";
 
 if (!process.env.DB_NAME.endsWith("_test")) {
   throw new Error(`Refusing to run destructive tests against "${process.env.DB_NAME}" — DB_NAME must end with _test`);

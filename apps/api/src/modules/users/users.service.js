@@ -1,16 +1,63 @@
 import pool from "../../db/pool.js";
 import { createError } from "../../middleware/errorHandler.js";
-import { canAssignRole } from "../auth/permissions.js";
-import { createUser, getUser, hashPassword } from "../auth/auth.service.js";
+import { ROLES, canAssignRole, permissionsFor } from "../auth/permissions.js";
+import { createUser, getUser, hashPassword, revokeSessions } from "../auth/auth.service.js";
+import { setClasses } from "../teachers/teachers.service.js";
+import { pageResult, pageWindow } from "../../lib/pagination.js";
 
 export async function list() {
   const [rows] = await pool.execute(
     `SELECT u.id, u.username, u.email, u.role, u.teacher_id, u.is_active, u.last_login_at, u.created_at,
-            CONCAT(t.first_name, ' ', t.last_name) AS teacher_name
+            CONCAT(t.first_name, ' ', t.last_name) AS teacher_name,
+            (SELECT GROUP_CONCAT(tc.classroom_id ORDER BY tc.classroom_id)
+             FROM teacher_classes tc WHERE tc.teacher_id = u.teacher_id) AS class_ids
      FROM users u LEFT JOIN teachers t ON t.id = u.teacher_id
-     ORDER BY u.role, u.username`
+     ORDER BY FIELD(u.role, 'principal', 'admin', 'accountant', 'teacher'), u.username`
   );
-  return rows;
+  return rows.map((r) => ({
+    ...r,
+    class_ids: r.role === "teacher" && r.class_ids ? String(r.class_ids).split(",").map(Number) : [],
+  }));
+}
+
+/** Each role, what it may do, and whether this actor may give it out. */
+export function roles(actor) {
+  return ROLES.map((role) => ({
+    role,
+    permissions: permissionsFor(role),
+    assignable: canAssignRole(actor.role, role),
+  }));
+}
+
+/** Recent audit entries, newest first. Filters: user_id, action prefix (e.g. "auth."). */
+export async function activity({ user_id, action, ...paging }) {
+  const where = [];
+  const params = [];
+  if (user_id) {
+    where.push("(a.user_id = ? OR (a.entity_type = 'user' AND a.entity_id = ?))");
+    params.push(user_id, user_id);
+  }
+  if (action) {
+    where.push("a.action LIKE ?");
+    params.push(`${action.replace(/[%_]/g, "")}%`);
+  }
+  const sql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+  const [[{ total }]] = await pool.query(`SELECT COUNT(*) AS total FROM audit_log a ${sql}`, params);
+  const [rows] = await pool.query(
+    `SELECT a.id, a.action, a.entity_type, a.entity_id, a.details, a.ip, a.created_at,
+            a.user_id, u.username, u.role
+     FROM audit_log a LEFT JOIN users u ON u.id = a.user_id
+     ${sql} ORDER BY a.id DESC LIMIT ? OFFSET ?`,
+    [...params, ...Object.values(pageWindow(paging))]
+  );
+  const items = rows.map((r) => ({ ...r, details: typeof r.details === "string" ? JSON.parse(r.details) : r.details }));
+  return pageResult(items, Number(total), paging);
+}
+
+async function assertClassesExist(classroomIds) {
+  if (!classroomIds?.length) return;
+  const [rows] = await pool.query("SELECT id FROM classrooms WHERE id IN (?)", [classroomIds]);
+  if (rows.length !== new Set(classroomIds).size) throw createError(400, "Unknown class", "CLASS_NOT_FOUND");
 }
 
 async function assertTeacherLink(role, teacherId) {
@@ -30,7 +77,26 @@ export async function create(actor, data) {
     throw createError(403, `You cannot create a ${data.role} account`, "FORBIDDEN");
   }
   await assertTeacherLink(data.role, data.teacher_id);
-  return createUser({ ...data, teacher_id: data.role === "teacher" ? data.teacher_id : null });
+  if (data.role === "teacher") await assertClassesExist(data.classroom_ids);
+  let user;
+  try {
+    user = await createUser({ ...data, teacher_id: data.role === "teacher" ? data.teacher_id : null });
+  } catch (err) {
+    if (err.code === "ER_DUP_ENTRY") throw createError(409, "That teacher already has an account", "TEACHER_TAKEN");
+    throw err;
+  }
+  if (data.role === "teacher" && data.classroom_ids) await setClasses(data.teacher_id, data.classroom_ids);
+  return user;
+}
+
+/** Sign a user out everywhere (e.g. a lost phone). */
+export async function signOutEverywhere(actor, id) {
+  const target = await getUser(id);
+  if (!target) throw createError(404, "User not found", "NOT_FOUND");
+  if (target.role === "principal" && actor.role !== "principal") {
+    throw createError(403, "Only a principal can change a principal's account", "FORBIDDEN");
+  }
+  await revokeSessions(id);
 }
 
 /** Change role / active flag / teacher link / password, with safety rules. */
@@ -58,6 +124,7 @@ export async function update(actor, id, changes) {
 
   const teacherId = role === "teacher" ? (changes.teacher_id ?? target.teacher_id) : null;
   await assertTeacherLink(role, teacherId);
+  if (role === "teacher") await assertClassesExist(changes.classroom_ids);
 
   const sets = ["role = ?", "teacher_id = ?"];
   const values = [role, teacherId];
@@ -70,7 +137,8 @@ export async function update(actor, id, changes) {
     values.push(changes.username);
   }
   if (changes.password) {
-    sets.push("password_hash = ?");
+    // A reset password ends the user's current sessions.
+    sets.push("password_hash = ?", "session_version = session_version + 1");
     values.push(await hashPassword(changes.password));
   }
   try {
@@ -79,5 +147,6 @@ export async function update(actor, id, changes) {
     if (err.code === "ER_DUP_ENTRY") throw createError(409, "That teacher already has an account", "TEACHER_TAKEN");
     throw err;
   }
+  if (role === "teacher" && changes.classroom_ids) await setClasses(teacherId, changes.classroom_ids);
   return getUser(id);
 }

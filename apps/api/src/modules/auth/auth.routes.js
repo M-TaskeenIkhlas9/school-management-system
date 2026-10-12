@@ -11,12 +11,32 @@ const loginSchema = z.object({
   password: requiredText(255),
 });
 
+const passwordSchema = z.object({
+  current_password: requiredText(255),
+  new_password: z.string().min(8, "must be at least 8 characters").max(255),
+});
+
 const router = Router();
 
 router.post("/login", loginLimiter, validate(loginSchema), async (req, res) => {
-  const session = await authService.login(req.body.email, req.body.password);
+  let session;
+  try {
+    session = await authService.login(req.body.email, req.body.password);
+  } catch (err) {
+    if (err.code === "INVALID_CREDENTIALS") {
+      await audit(req, "auth.login_failed", { details: { email: String(req.body.email).toLowerCase() } });
+    }
+    throw err;
+  }
   await audit(req, "auth.login", { userId: session.user.id });
   res.json(session);
+});
+
+// Change your own password. Other devices are signed out; the response carries a fresh token.
+router.post("/password", auth, loginLimiter, validate(passwordSchema), async (req, res) => {
+  const result = await authService.changeOwnPassword(req.user.id, req.body.current_password, req.body.new_password);
+  await audit(req, "auth.password_change", { entityType: "user", entityId: req.user.id });
+  res.json(result);
 });
 
 // The signed-in user's identity, permissions and (for teachers) assigned classes.

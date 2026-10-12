@@ -25,11 +25,14 @@ export default async function auth(req, _res, next) {
   }
 
   const [[user]] = await pool.execute(
-    "SELECT id, username, email, role, teacher_id, is_active FROM users WHERE id = ?",
+    "SELECT id, username, email, role, teacher_id, is_active, session_version FROM users WHERE id = ?",
     [payload.id]
   );
   if (!user || !user.is_active)
     return next(createError(401, "Account is disabled or no longer exists", "ACCOUNT_DISABLED"));
+  if ((payload.sv ?? 0) !== user.session_version) {
+    return next(createError(401, "You were signed out. Please sign in again.", "SESSION_REVOKED"));
+  }
 
   let classIds = null;
   if (CLASS_SCOPED_ROLES.has(user.role)) {
