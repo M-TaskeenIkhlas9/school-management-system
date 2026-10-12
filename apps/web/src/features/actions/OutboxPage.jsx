@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import PageHeader from "../../components/PageHeader.jsx";
 import Pagination from "../../components/Pagination.jsx";
 import { actionsApi } from "./api.js";
+import { displayDateTime } from "../../lib/format.js";
 
 const STATUS_TONE = {
   queued: "warning",
@@ -13,7 +14,7 @@ const STATUS_TONE = {
   failed: "danger",
   cancelled: "neutral",
 };
-const when = (value) => (value ? new Date(value).toLocaleString() : "—");
+const when = (value) => displayDateTime(value);
 
 export default function OutboxPage() {
   const [filters, setFilters] = useState({ status: "", channel: "", page: 1 });
@@ -32,7 +33,7 @@ export default function OutboxPage() {
   const setFilter = (name) => (e) => setFilters((f) => ({ ...f, [name]: e.target.value, page: 1 }));
 
   return (
-    <section className="section active">
+    <section className="section">
       <PageHeader title="Outbox" subtitle="Every message to parents: waiting, sent or failed." />
       <div className="card table-card">
         <div className="filters">

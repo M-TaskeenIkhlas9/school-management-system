@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext.jsx";
+import { api } from "../api/client.js";
 
 const DEV_EMAIL = "admin@school.com";
 const DEV_PASSWORD = "admin123";
@@ -13,6 +14,14 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [school, setSchool] = useState(null);
+
+  useEffect(() => {
+    api
+      .get("/auth/school")
+      .then(setSchool)
+      .catch(() => setSchool(null));
+  }, []);
 
   const signIn = async (emailValue, passwordValue) => {
     setError("");
@@ -30,7 +39,7 @@ export default function LoginPage() {
   const handleSubmit = (event) => {
     event.preventDefault();
     if (!email || !password) {
-      setError("Please enter both email and password.");
+      setError("Enter your email and password.");
       return;
     }
     signIn(email, password);
@@ -38,47 +47,48 @@ export default function LoginPage() {
 
   return (
     <div className="login-page">
-      <div className="login-card">
-        <div className="login-brand">
-          <span className="brand-dot" />
-          <div>
-            <h1>EduManage AI</h1>
-            <p>Smart School Control Center</p>
-          </div>
-        </div>
-        <form className="login-form" onSubmit={handleSubmit}>
-          <h2>Sign In</h2>
-          <p className="login-subtitle">Principal, admin, accountant or teacher account</p>
-          {error && <div className="login-error">{error}</div>}
+      <section className="login-cover" aria-hidden={!school}>
+        <span className="login-cover__product">EduManage</span>
+        <h1 className="login-cover__school">{school?.name ?? "\u00a0"}</h1>
+        <p className="login-cover__line">Attendance, fees, results and messages to parents, kept in one register.</p>
+      </section>
+
+      <section className="login-sheet">
+        <form className="login-form" onSubmit={handleSubmit} noValidate>
+          <h2>Sign in</h2>
+          <p className="login-subtitle">Use the email and password the school office gave you.</p>
+          {error && (
+            <div className="login-error" role="alert">
+              {error}
+            </div>
+          )}
           <label>
             Email
             <input
               type="email"
-              placeholder="admin@school.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               autoComplete="email"
+              autoFocus
             />
           </label>
           <label>
             Password
             <input
               type="password"
-              placeholder="Enter password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
             />
           </label>
           <button type="submit" className="btn primary login-btn" disabled={loading}>
-            {loading ? "Signing in..." : "Sign In"}
+            {loading ? "Signing in…" : "Sign in"}
           </button>
           {import.meta.env.DEV && (
-            <>
+            <div className="login-dev">
               <button
                 type="button"
-                className="btn ghost login-btn"
-                style={{ marginTop: 8 }}
+                className="btn link"
                 disabled={loading}
                 onClick={() => {
                   setEmail(DEV_EMAIL);
@@ -88,13 +98,13 @@ export default function LoginPage() {
               >
                 Quick login (dev)
               </button>
-              <p className="login-hint">
-                Dev default: {DEV_EMAIL} / {DEV_PASSWORD}
-              </p>
-            </>
+              <span>
+                {DEV_EMAIL} / {DEV_PASSWORD}
+              </span>
+            </div>
           )}
         </form>
-      </div>
+      </section>
     </div>
   );
 }

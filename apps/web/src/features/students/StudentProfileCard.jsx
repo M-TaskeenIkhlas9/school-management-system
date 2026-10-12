@@ -1,5 +1,5 @@
 import { useStudent } from "../../api/queries.js";
-import { average } from "../../lib/format.js";
+import { average, badgeClass } from "../../lib/format.js";
 
 const CHANNELS = [
   ["consent_whatsapp", "WhatsApp"],
@@ -34,7 +34,7 @@ export default function StudentProfileCard({ studentId, classLabel, risk, feeSta
   if (!studentId)
     return (
       <div className="card profile-card">
-        <div className="empty-card">Select a student to see their profile.</div>
+        <div className="empty-card">Choose a student in the list to see their parents, attendance and results.</div>
       </div>
     );
   if (isLoading || !profile)
@@ -60,8 +60,12 @@ export default function StudentProfileCard({ studentId, classLabel, risk, feeSta
             </h4>
             <p>{classLabel}</p>
             <div className="profile-tags">
-              {risk && <span className="badge info pill">{risk === "High" ? "High Risk" : "Low Risk"}</span>}
-              {showFees && <span className="badge warning pill">{feeStatus || "No Fees"}</span>}
+              {risk && (
+                <span className={`badge ${risk === "High" ? "danger" : "success"}`}>
+                  {risk === "High" ? "High risk" : "Low risk"}
+                </span>
+              )}
+              {showFees && <span className={`badge ${badgeClass(feeStatus)}`}>{feeStatus || "no fees"}</span>}
             </div>
           </div>
         </div>
@@ -90,7 +94,7 @@ export default function StudentProfileCard({ studentId, classLabel, risk, feeSta
             <h5>Insight</h5>
             <p>
               {risk === "High"
-                ? "Recommend parent meeting and support plan."
+                ? "Low attendance or marks. Consider meeting the parents."
                 : "Student performing within expected range."}
             </p>
           </div>

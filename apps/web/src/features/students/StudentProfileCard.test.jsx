@@ -39,7 +39,7 @@ describe("StudentProfileCard", () => {
       attendance_rate: 90,
     };
     render(<StudentProfileCard studentId={1} classLabel="Class 5" risk={null} feeStatus={null} showFees={false} />);
-    expect(screen.queryByText(/No Fees/)).toBeNull();
+    expect(screen.queryByText(/no fees/i)).toBeNull();
     expect(screen.getByText(/90% overall/)).toBeInTheDocument();
     expect(screen.getByText("No guardian on file.")).toBeInTheDocument();
   });
@@ -50,6 +50,6 @@ describe("StudentProfileCard", () => {
     expect(screen.getByText("Hassan Ali")).toBeInTheDocument();
     expect(screen.getByText("+923001234567 · hassan@example.com")).toBeInTheDocument();
     expect(screen.getByText("Agreed to: WhatsApp, Email")).toBeInTheDocument();
-    expect(screen.getByText("High Risk")).toBeInTheDocument();
+    expect(screen.getByText("High risk")).toBeInTheDocument();
   });
 });

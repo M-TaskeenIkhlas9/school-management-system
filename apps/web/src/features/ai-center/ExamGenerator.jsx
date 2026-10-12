@@ -26,56 +26,57 @@ export default function ExamGenerator() {
     <>
       <div className="card ai-panel span-2">
         <div className="card__title">
-          <h4>Exam Generator</h4>
-          <span className="ai-pill">Saves directly</span>
+          <h2>Exam generator</h2>
+          <span>Drafts a test and saves it under Exams</span>
         </div>
         <form className="ai-form" onSubmit={submit}>
           <div className="form-row">
-            <select required {...field("classroom_id")}>
-              <option value="">Select class</option>
-              {classrooms.map((room) => (
-                <option key={room.id} value={room.id}>
-                  {room.name}
-                </option>
-              ))}
-            </select>
-            <input type="text" placeholder="Subject (e.g., Mathematics)" required {...field("subject")} />
-            <input type="number" min="1" max="30" placeholder="Questions" {...field("num_questions")} />
+            <label>
+              Class
+              <select required {...field("classroom_id")}>
+                <option value="">Choose a class…</option>
+                {classrooms.map((room) => (
+                  <option key={room.id} value={room.id}>
+                    {room.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Subject
+              <input type="text" placeholder="Mathematics" required {...field("subject")} />
+            </label>
+            <label>
+              Questions
+              <input type="number" min="1" max="30" {...field("num_questions")} />
+            </label>
           </div>
-          <textarea
-            rows="6"
-            placeholder="Topics or instructions, e.g. Chapter 3-5: fractions and decimals"
-            required
-            {...field("prompt")}
-          />
+          <label className="field-label">
+            What it should cover
+            <textarea rows="5" placeholder="Chapters 3–5: fractions and decimals" required {...field("prompt")} />
+          </label>
           <div className="ai-actions">
             <button type="submit" className="btn primary" disabled={generate.isPending}>
-              {generate.isPending ? "Generating…" : "Generate & Save Test"}
+              {generate.isPending ? "Writing the exam…" : "Write and save exam"}
             </button>
           </div>
         </form>
       </div>
-      <div className="card ai-preview span-2">
-        <div className="card__title">
-          <h4>Last Generated</h4>
+      {preview && (
+        <div className="card ai-preview span-2">
+          <div className="card__title">
+            <h2>{preview.title}</h2>
+            <span>{preview.total_marks} marks</span>
+          </div>
+          <ol className="exam-questions">
+            {preview.questions?.map((q, index) => (
+              <li key={q.id || index}>
+                {q.question} <span className="muted">({q.marks} marks)</span>
+              </li>
+            ))}
+          </ol>
         </div>
-        <div className="preview">
-          {preview ? (
-            <>
-              <p>
-                <strong>{preview.title}</strong> · {preview.total_marks} marks
-              </p>
-              {preview.questions?.map((q, index) => (
-                <p key={q.id || index}>
-                  {index + 1}. {q.question} <span className="muted">({q.marks} marks)</span>
-                </p>
-              ))}
-            </>
-          ) : (
-            <p className="muted">Generate a test to preview its questions here.</p>
-          )}
-        </div>
-      </div>
+      )}
     </>
   );
 }

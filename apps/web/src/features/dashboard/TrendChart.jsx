@@ -1,35 +1,43 @@
-const WIDTH = 520;
-const HEIGHT = 220;
-const PADDING = 24;
+const WIDTH = 560;
+const HEIGHT = 200;
+const PAD_X = 8;
+const PAD_Y = 18;
 
-function linePoints(data) {
-  const values = data.map((d) => d.value);
+function scale(data) {
+  const values = data.map((d) => Number(d.value) || 0);
   const min = Math.min(...values);
   const range = Math.max(...values) - min || 1;
-  const step = (WIDTH - PADDING * 2) / (data.length - 1 || 1);
-  return data
-    .map(
-      (point, i) => `${PADDING + i * step},${HEIGHT - PADDING - ((point.value - min) / range) * (HEIGHT - PADDING * 2)}`
-    )
-    .join(" ");
+  const step = (WIDTH - PAD_X * 2) / (data.length - 1 || 1);
+  return data.map((d, i) => ({
+    x: PAD_X + i * step,
+    y: HEIGHT - PAD_Y - (((Number(d.value) || 0) - min) / range) * (HEIGHT - PAD_Y * 2),
+    label: d.label ?? d.term ?? d.day ?? "",
+    value: d.value,
+  }));
 }
 
+/** A ruled line chart: hairline guides like exercise-book lines, one ink line, the last value marked. */
 export default function TrendChart({ series }) {
-  if (!series.length) return <div className="chart-empty">Add results or attendance to see trends.</div>;
-  const points = linePoints(series);
+  if (!series.length)
+    return <p className="chart-empty">Figures appear here once results or attendance are recorded.</p>;
+  const pts = scale(series);
+  const last = pts[pts.length - 1];
+  const guides = [0, 1, 2, 3].map((i) => PAD_Y + (i * (HEIGHT - PAD_Y * 2)) / 3);
   return (
-    <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} aria-hidden="true">
-      <defs>
-        <linearGradient id="trend" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%" stopColor="#6d7df6" stopOpacity="0.25" />
-          <stop offset="100%" stopColor="#6d7df6" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <polyline fill="none" stroke="#5166f0" strokeWidth="3" strokeLinecap="round" points={points} />
-      <polygon
-        fill="url(#trend)"
-        points={`${points} ${WIDTH - PADDING},${HEIGHT - PADDING} ${PADDING},${HEIGHT - PADDING}`}
-      />
-    </svg>
+    <figure className="trend">
+      <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label={`Trend over ${series.length} points`}>
+        {guides.map((y) => (
+          <line key={y} x1="0" x2={WIDTH} y1={y} y2={y} className="trend__guide" />
+        ))}
+        <polyline className="trend__line" points={pts.map((p) => `${p.x},${p.y}`).join(" ")} />
+        <circle className="trend__dot" cx={last.x} cy={last.y} r="4" />
+      </svg>
+      <figcaption>
+        <span>{pts[0].label}</span>
+        <span>
+          {last.label} · <strong>{last.value}%</strong>
+        </span>
+      </figcaption>
+    </figure>
   );
 }

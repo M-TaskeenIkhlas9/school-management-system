@@ -30,34 +30,56 @@ export default function StudentForm({ classrooms, initial, saving, onSubmit, onC
   return (
     <div className="card form-card">
       <div className="card__title">
-        <h4>{initial ? "Edit Student" : "Quick Add Student"}</h4>
-        <span className="ai-pill">Basic Info</span>
+        <h2>{initial ? `Edit ${initial.first_name} ${initial.last_name}` : "Add a student"}</h2>
       </div>
       <form className="form-row" onSubmit={submit}>
-        <input type="text" placeholder="First name" required {...field("first_name")} />
-        <input type="text" placeholder="Last name" required {...field("last_name")} />
-        <input type="text" placeholder="Roll number" {...field("roll_number")} />
-        <input type="date" placeholder="Date of birth" {...field("date_of_birth")} />
-        <select required {...field("classroom_id")}>
-          <option value="">Select class</option>
-          {classrooms.map((room) => (
-            <option key={room.id} value={room.id}>
-              {room.name} {room.section ? `• ${room.section}` : ""}
-            </option>
-          ))}
-        </select>
-        <input type="text" placeholder="Guardian name" {...field("guardian_name")} />
-        <input type="text" placeholder="Guardian phone" {...field("guardian_phone")} />
-        <input type="email" placeholder="Guardian email (for reminders)" {...field("guardian_email")} />
+        <label>
+          First name
+          <input type="text" required autoFocus {...field("first_name")} />
+        </label>
+        <label>
+          Last name
+          <input type="text" required {...field("last_name")} />
+        </label>
+        <label>
+          Roll number <span className="label-hint">optional</span>
+          <input type="text" {...field("roll_number")} />
+        </label>
+        <label>
+          Date of birth <span className="label-hint">optional</span>
+          <input type="date" {...field("date_of_birth")} />
+        </label>
+        <label>
+          Class
+          <select required {...field("classroom_id")}>
+            <option value="">Choose a class…</option>
+            {classrooms.map((room) => (
+              <option key={room.id} value={room.id}>
+                {room.name}
+                {room.section ? ` • ${room.section}` : ""}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Parent or guardian
+          <input type="text" {...field("guardian_name")} />
+        </label>
+        <label>
+          Their phone
+          <input type="tel" placeholder="0300 1234567" {...field("guardian_phone")} />
+        </label>
+        <label>
+          Their email
+          <input type="email" {...field("guardian_email")} />
+        </label>
         <div className="form-actions">
           <button type="submit" className="btn primary" disabled={saving}>
-            {saving ? "Saving…" : initial ? "Update Student" : "Save Student"}
+            {saving ? "Saving…" : initial ? "Save changes" : "Add student"}
           </button>
-          {initial && (
-            <button type="button" className="btn ghost" onClick={onCancel}>
-              Cancel
-            </button>
-          )}
+          <button type="button" className="btn ghost" onClick={onCancel}>
+            Cancel
+          </button>
         </div>
       </form>
     </div>

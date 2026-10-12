@@ -13,9 +13,16 @@ const TABS = [
 
 export default function UsersPage() {
   const [tab, setTab] = useState("people");
+  const [adding, setAdding] = useState(false);
   return (
-    <section className="section active">
-      <PageHeader title="Users & Access" subtitle="Staff accounts, roles, teachers' classes and sign-in activity." />
+    <section className="section">
+      <PageHeader title="Users & access" subtitle="Staff accounts, what each role can do, and who signed in when.">
+        {tab === "people" && !adding && (
+          <button type="button" className="btn primary" onClick={() => setAdding(true)}>
+            Add an account
+          </button>
+        )}
+      </PageHeader>
       <div className="users-tabs" role="tablist">
         {TABS.map(([key, label]) => (
           <button
@@ -30,7 +37,7 @@ export default function UsersPage() {
           </button>
         ))}
       </div>
-      {tab === "people" && <PeopleTab />}
+      {tab === "people" && <PeopleTab adding={adding} onAddingChange={setAdding} />}
       {tab === "roles" && <RolesTab />}
       {tab === "activity" && <ActivityTab />}
     </section>

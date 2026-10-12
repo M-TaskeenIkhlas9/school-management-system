@@ -134,7 +134,7 @@ export default function AssistantChat() {
     <div className="assistant">
       <aside className="assistant__sidebar">
         <button type="button" className="btn primary" onClick={startNew} disabled={running}>
-          + New chat
+          New conversation
         </button>
         <ul className="assistant__conversations">
           {conversations.map((c) => (
@@ -152,17 +152,14 @@ export default function AssistantChat() {
               </button>
             </li>
           ))}
-          {!conversations.length && <li className="muted">No conversations yet</li>}
+          {!conversations.length && <li className="assistant__none">Your conversations will be listed here.</li>}
         </ul>
       </aside>
 
       <section className="assistant__main">
         <header className="assistant__header">
-          <div>
-            <h4>School Assistant</h4>
-            <p className="muted">Looks things up and prepares messages or payments — nothing happens until approved.</p>
-          </div>
-          {status?.model && <span className="badge success">{status.model.model}</span>}
+          <h2>{conversations.find((c) => c.id === activeId)?.title ?? "New conversation"}</h2>
+          {status?.model && <span className="assistant__model">{status.model.model}</span>}
         </header>
 
         <div className="assistant__thread">
@@ -173,7 +170,8 @@ export default function AssistantChat() {
           )}
           {!messages.length && !notConfigured && (
             <div className="assistant__empty">
-              <p className="muted">Ask about your school. For example:</p>
+              <p className="assistant__empty-title">What would you like to know?</p>
+              <p className="muted">For example:</p>
               <div className="assistant__suggestions">
                 {SUGGESTIONS.map((s) => (
                   <button key={s} type="button" onClick={() => send(s)} disabled={running}>
@@ -225,7 +223,8 @@ export default function AssistantChat() {
         >
           <textarea
             rows={2}
-            placeholder="Ask a question (Enter to send, Shift+Enter for a new line)"
+            placeholder="Ask about the school…"
+            aria-label="Message to the assistant"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {

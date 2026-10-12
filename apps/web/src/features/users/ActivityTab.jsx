@@ -2,6 +2,7 @@ import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { useState } from "react";
 import Pagination from "../../components/Pagination.jsx";
 import { usersApi, usersKey } from "./api.js";
+import { displayDateTime } from "../../lib/format.js";
 import { ACTIVITY_KINDS, ROLE_LABEL, describeActivity, displayIp } from "./labels.js";
 
 export default function ActivityTab() {
@@ -52,7 +53,7 @@ export default function ActivityTab() {
           )}
           {data?.items.map((a) => (
             <tr key={a.id} className={a.action === "auth.login_failed" ? "row-warning" : ""}>
-              <td>{new Date(a.created_at).toLocaleString()}</td>
+              <td>{displayDateTime(a.created_at)}</td>
               <td>{a.username ?? <span className="muted">—</span>}</td>
               <td>{describeActivity(a)}</td>
               <td className="muted">{displayIp(a.ip)}</td>

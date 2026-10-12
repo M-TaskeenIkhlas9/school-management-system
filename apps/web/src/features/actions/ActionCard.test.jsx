@@ -56,8 +56,7 @@ describe("ActionCard", () => {
     fireEvent.click(screen.getByText("Mrs Ali"));
     expect(screen.getByText(/Sara owes Rs 500/)).toBeInTheDocument();
     expect(screen.getByText(/Bilal Z — no contact details/)).toBeInTheDocument();
-    expect(screen.getByText(/Email is in test mode/)).toBeInTheDocument();
-    expect(screen.queryByText(/SMS is in test mode/)).toBeNull();
+    expect(screen.getByText("Test mode: email messages are recorded in the Outbox, not sent.")).toBeInTheDocument();
   });
 
   it("shows the channel mix, cost estimate, WhatsApp template and provider notes", () => {

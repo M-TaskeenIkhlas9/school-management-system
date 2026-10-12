@@ -39,6 +39,11 @@ router.post("/password", auth, loginLimiter, validate(passwordSchema), async (re
   res.json(result);
 });
 
+// Shown before sign-in: the school's name (nothing private).
+router.get("/school", (_req, res) => {
+  res.json(authService.schoolInfo());
+});
+
 // The signed-in user's identity, permissions and (for teachers) assigned classes.
 router.get("/me", auth, async (req, res) => {
   res.json(await authService.describeSession(await authService.getUser(req.user.id)));

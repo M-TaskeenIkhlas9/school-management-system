@@ -25,6 +25,15 @@ export async function createUser({ username, email, password, role, teacher_id =
   return getUser(result.insertId);
 }
 
+/** Public facts about the school the web app shows (name on the sign-in page, currency for amounts). */
+export function schoolInfo() {
+  return {
+    name: process.env.SCHOOL_NAME || "School",
+    currency: process.env.CURRENCY || "USD",
+    timezone: process.env.SCHOOL_TIMEZONE || "Asia/Karachi",
+  };
+}
+
 /** What the web app needs to know about the signed-in user. */
 export async function describeSession(userRow) {
   let classIds = null;
@@ -38,6 +47,7 @@ export async function describeSession(userRow) {
     user: { id: userRow.id, username: userRow.username, email: userRow.email, role: userRow.role },
     permissions: permissionsFor(userRow.role),
     classIds,
+    school: schoolInfo(),
   };
 }
 

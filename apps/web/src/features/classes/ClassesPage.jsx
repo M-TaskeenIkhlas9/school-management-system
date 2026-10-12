@@ -12,6 +12,7 @@ export default function ClassesPage() {
   const { data: curriculum = [] } = useCurriculum();
   const { data: students = [] } = useStudents();
   const [form, setForm] = useState(emptyClass);
+  const [open, setOpen] = useState(false);
 
   const create = useApiMutation((values) => api.post("/classrooms", values), {
     invalidate: [keys.classrooms],
@@ -22,50 +23,83 @@ export default function ClassesPage() {
 
   const submit = (event) => {
     event.preventDefault();
-    create.mutate(form, { onSuccess: () => setForm(emptyClass) });
+    create.mutate(form, {
+      onSuccess: () => {
+        setForm(emptyClass);
+        setOpen(false);
+      },
+    });
   };
 
   return (
-    <section className="section active">
-      <PageHeader title="Classes & Curriculum" subtitle="Map subjects, books, and AI-ready curriculum tags." />
-      {can("classes:write") && (
+    <section className="section">
+      <PageHeader title="Classes" subtitle="Each class with its subjects and how many students are in it.">
+        {can("classes:write") && !open && (
+          <button type="button" className="btn primary" onClick={() => setOpen(true)}>
+            Add a class
+          </button>
+        )}
+      </PageHeader>
+      {can("classes:write") && open && (
         <div className="card form-card">
           <div className="card__title">
-            <h4>Quick Add Class</h4>
-            <span className="ai-pill">Structure</span>
+            <h2>Add a class</h2>
           </div>
           <form className="form-row" onSubmit={submit}>
-            <input type="text" placeholder="Class name (e.g., Grade 7B)" required {...field("name")} />
-            <input type="text" placeholder="Grade" required {...field("grade")} />
-            <input type="text" placeholder="Section" {...field("section")} />
+            <label>
+              Name
+              <input type="text" placeholder="Class 7" required autoFocus {...field("name")} />
+            </label>
+            <label>
+              Grade
+              <input type="text" placeholder="7" required {...field("grade")} />
+            </label>
+            <label>
+              Section <span className="label-hint">optional</span>
+              <input type="text" placeholder="B" {...field("section")} />
+            </label>
             <div className="form-actions">
               <button type="submit" className="btn primary" disabled={create.isPending}>
-                {create.isPending ? "Saving…" : "Save Class"}
+                {create.isPending ? "Saving…" : "Save class"}
+              </button>
+              <button type="button" className="btn ghost" onClick={() => setOpen(false)}>
+                Cancel
               </button>
             </div>
           </form>
         </div>
       )}
       <div className="class-grid">
-        {classrooms.length === 0 && <div className="card empty-card">Add classes to see them here.</div>}
+        {classrooms.length === 0 && <div className="card empty-card">No classes yet.</div>}
         {classrooms.map((room) => {
           const subjects = curriculum.filter((c) => c.classroom_id === room.id).map((c) => c.subject);
           const studentCount = students.filter((st) => st.classroom_id === room.id).length;
           return (
-            <div className="class-card" key={room.id}>
+            <article className="class-card" key={room.id}>
               <div className="class-header">
                 <div>
-                  <h4>{room.name}</h4>
-                  <p>Subjects: {subjects.length ? subjects.join(", ") : "No curriculum yet"}</p>
+                  <h2>{room.name}</h2>
+                  <p>
+                    Grade {room.grade}
+                    {room.section ? ` · Section ${room.section}` : ""}
+                  </p>
                 </div>
-                <span className="class-count">{studentCount} students</span>
+                <span className="class-count">
+                  <strong>{studentCount}</strong> {studentCount === 1 ? "student" : "students"}
+                </span>
               </div>
-              <div className="tag-row">
-                <span className="badge primary">{subjects.length ? "Curriculum Tagged" : "Needs Curriculum"}</span>
-                <span className="badge info">Grade {room.grade}</span>
-                {room.section && <span className="badge warning">Section {room.section}</span>}
-              </div>
-            </div>
+              {subjects.length ? (
+                <div className="tag-row">
+                  {subjects.map((s) => (
+                    <span key={s} className="badge neutral">
+                      {s}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="muted">No subjects added yet.</p>
+              )}
+            </article>
           );
         })}
       </div>

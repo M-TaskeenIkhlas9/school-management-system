@@ -18,6 +18,7 @@ export default function StudentsPage() {
 
   const [selectedId, setSelectedId] = useState(null);
   const [editing, setEditing] = useState(null); // student being edited
+  const [adding, setAdding] = useState(false);
   const [search, setSearch] = useState("");
   const [classFilter, setClassFilter] = useState("");
   const [feeFilter, setFeeFilter] = useState("");
@@ -50,6 +51,7 @@ export default function StudentsPage() {
       const student = await save.mutateAsync({ id: editing?.id, values });
       setSelectedId(student.id);
       setEditing(null);
+      setAdding(false);
       return true;
     } catch {
       return false; // error already shown as a toast
@@ -72,24 +74,39 @@ export default function StudentsPage() {
   );
 
   return (
-    <section className="section active">
-      <PageHeader title="Students" subtitle="Search, filter, and review student profiles." />
+    <section className="section">
+      <PageHeader title="Students" subtitle="Find a student, see their class, parents and progress.">
+        {canEdit && !adding && !editing && (
+          <button type="button" className="btn primary" onClick={() => setAdding(true)}>
+            Add student
+          </button>
+        )}
+      </PageHeader>
 
-      {canEdit && (
+      {canEdit && (adding || editing) && (
         <StudentForm
           classrooms={classrooms}
           initial={editInitial}
           saving={save.isPending}
           onSubmit={handleSubmit}
-          onCancel={() => setEditing(null)}
+          onCancel={() => {
+            setEditing(null);
+            setAdding(false);
+          }}
         />
       )}
 
       <div className="card table-card">
         <div className="filters">
-          <input type="text" placeholder="Search students" value={search} onChange={(e) => setSearch(e.target.value)} />
-          <select value={classFilter} onChange={(e) => setClassFilter(e.target.value)}>
-            <option value="">All Classes</option>
+          <input
+            type="search"
+            placeholder="Search by name"
+            aria-label="Search students"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <select value={classFilter} onChange={(e) => setClassFilter(e.target.value)} aria-label="Class">
+            <option value="">All classes</option>
             {classrooms.map((room) => (
               <option key={room.id} value={room.id}>
                 {room.name} {room.section ? `• ${room.section}` : ""}
@@ -97,18 +114,18 @@ export default function StudentsPage() {
             ))}
           </select>
           {canSeeFees && (
-            <select value={feeFilter} onChange={(e) => setFeeFilter(e.target.value)}>
-              <option value="">Fee Status</option>
+            <select value={feeFilter} onChange={(e) => setFeeFilter(e.target.value)} aria-label="Fee status">
+              <option value="">Any fee status</option>
               <option value="paid">Paid</option>
               <option value="pending">Pending</option>
               <option value="partial">Partial</option>
             </select>
           )}
           {canSeeRisk && (
-            <select value={riskFilter} onChange={(e) => setRiskFilter(e.target.value)}>
-              <option value="">Performance Risk</option>
-              <option value="High">High</option>
-              <option value="Low">Low</option>
+            <select value={riskFilter} onChange={(e) => setRiskFilter(e.target.value)} aria-label="Risk">
+              <option value="">Any risk</option>
+              <option value="High">High risk</option>
+              <option value="Low">Low risk</option>
             </select>
           )}
         </div>
@@ -117,10 +134,10 @@ export default function StudentsPage() {
             <tr>
               <th>Student</th>
               <th>Class</th>
-              <th>Guardian email</th>
-              {canSeeFees && <th>Fee Status</th>}
-              {canSeeRisk && <th>AI Risk</th>}
-              {canEdit && <th>Actions</th>}
+              <th>Parent email</th>
+              {canSeeFees && <th>Fees</th>}
+              {canSeeRisk && <th>Risk</th>}
+              {canEdit && <th aria-label="Actions" />}
             </tr>
           </thead>
           <tbody>
@@ -135,7 +152,7 @@ export default function StudentsPage() {
                         {students.length
                           ? "Try clearing a filter."
                           : canEdit
-                            ? "Add your first student with the form above."
+                            ? "Use Add student to enter the first one."
                             : "No students are assigned to you yet."}
                       </p>
                     </div>
@@ -186,6 +203,7 @@ export default function StudentsPage() {
                         onClick={(event) => {
                           event.stopPropagation();
                           setEditing(student);
+                          setAdding(false);
                           setSelectedId(student.id);
                           window.scrollTo({ top: 0, behavior: "smooth" });
                         }}

@@ -1,6 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { api, session, SESSION_EXPIRED_EVENT } from "../api/client.js";
+import { setCurrency } from "../lib/format.js";
+
+/** Permissions, classes and school facts from a login or /auth/me response. */
+function accessFrom(data) {
+  setCurrency(data.school?.currency);
+  return { permissions: data.permissions, classIds: data.classIds, school: data.school ?? null };
+}
 
 const AuthContext = createContext(null);
 
@@ -41,7 +48,7 @@ export function AuthProvider({ children }) {
         if (cancelled) return;
         session.save(current.token, me.user);
         setCurrent({ token: current.token, user: me.user });
-        setAccess({ permissions: me.permissions, classIds: me.classIds });
+        setAccess(accessFrom(me));
       })
       .catch(() => {
         // 401 is handled by the session-expired event; anything else: sign out safely.
@@ -56,7 +63,7 @@ export function AuthProvider({ children }) {
     const data = await api.post("/auth/login", { email, password });
     session.save(data.token, data.user);
     setCurrent({ token: data.token, user: data.user });
-    setAccess({ permissions: data.permissions, classIds: data.classIds });
+    setAccess(accessFrom(data));
   }, []);
 
   /** Keep this browser signed in after a password change (the server issued a new token). */
@@ -74,6 +81,7 @@ export function AuthProvider({ children }) {
       isAuthenticated: Boolean(current?.token),
       isReady: Boolean(current?.token && access),
       classIds: access?.classIds ?? null,
+      school: access?.school ?? null,
       can: (permission) => permissions.has(permission),
       login,
       logout,

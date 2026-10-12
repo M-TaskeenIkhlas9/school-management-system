@@ -2,7 +2,7 @@ import { useState } from "react";
 import { api } from "../../api/client.js";
 import { keys, useApiMutation, useDashboard, useDefaulters, useFeesPage } from "../../api/queries.js";
 import { useLookups } from "../../lib/useLookups.js";
-import { badgeClass, formatCurrency, formatDate, fullName } from "../../lib/format.js";
+import { badgeClass, formatCurrency, displayDate, fullName } from "../../lib/format.js";
 import PageHeader from "../../components/PageHeader.jsx";
 import { useAuth } from "../../auth/AuthContext.jsx";
 import Pagination from "../../components/Pagination.jsx";
@@ -17,6 +17,7 @@ export default function FeesPage() {
   const [filters, setFilters] = useState({ status: "", page: 1 });
   const { data: fees } = useFeesPage({ ...filters, pageSize: 20 });
   const [form, setForm] = useState(emptyForm);
+  const [open, setOpen] = useState(false);
 
   const create = useApiMutation((values) => api.post("/fees", values), {
     invalidate: [keys.fees, keys.attention],
@@ -28,33 +29,62 @@ export default function FeesPage() {
   const submit = (event) => {
     event.preventDefault();
     // Status is derived on the server from the amounts.
-    create.mutate({ ...form, student_id: Number(form.student_id) }, { onSuccess: () => setForm(emptyForm) });
+    create.mutate(
+      { ...form, student_id: Number(form.student_id) },
+      {
+        onSuccess: () => {
+          setForm(emptyForm);
+          setOpen(false);
+        },
+      }
+    );
   };
 
   return (
-    <section className="section active">
-      <PageHeader title="Accounts & Fees" subtitle="Track paid, unpaid, and partial fees." />
-      {can("fees:write") && (
+    <section className="section">
+      <PageHeader title="Fees" subtitle="What has been billed, what has come in, and who is behind.">
+        {can("fees:write") && !open && (
+          <button type="button" className="btn primary" onClick={() => setOpen(true)}>
+            Record a fee
+          </button>
+        )}
+      </PageHeader>
+      {can("fees:write") && open && (
         <div className="card form-card">
           <div className="card__title">
-            <h4>Add Fee Record</h4>
-            <span className="ai-pill">Ledger</span>
+            <h2>Record a fee</h2>
+            <span>The status (paid, partial or pending) follows from the amounts.</span>
           </div>
           <form className="form-row" onSubmit={submit}>
-            <select required {...field("student_id")}>
-              <option value="">Select student</option>
-              {students.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {fullName(s)}
-                </option>
-              ))}
-            </select>
-            <input type="date" required title="Due date" {...field("due_date")} />
-            <input type="number" min="0" step="0.01" placeholder="Amount due" required {...field("amount_due")} />
-            <input type="number" min="0" step="0.01" placeholder="Amount paid" {...field("amount_paid")} />
+            <label>
+              Student
+              <select required autoFocus {...field("student_id")}>
+                <option value="">Choose a student…</option>
+                {students.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {fullName(s)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Due date
+              <input type="date" required {...field("due_date")} />
+            </label>
+            <label>
+              Amount due
+              <input type="number" min="0" step="0.01" required {...field("amount_due")} />
+            </label>
+            <label>
+              Paid so far <span className="label-hint">optional</span>
+              <input type="number" min="0" step="0.01" {...field("amount_paid")} />
+            </label>
             <div className="form-actions">
               <button type="submit" className="btn primary" disabled={create.isPending}>
-                {create.isPending ? "Saving…" : "Save Fee"}
+                {create.isPending ? "Saving…" : "Save fee"}
+              </button>
+              <button type="button" className="btn ghost" onClick={() => setOpen(false)}>
+                Cancel
               </button>
             </div>
           </form>
@@ -63,12 +93,12 @@ export default function FeesPage() {
       <div className="grid-2">
         <div className="card fee-card">
           <div className="card__title">
-            <h4>Fee Summary</h4>
-            <span className="ai-pill">All time</span>
+            <h2>Totals</h2>
+            <span>All time</span>
           </div>
           <div className="fee-metrics">
             <div>
-              <span>Total billed</span>
+              <span>Billed</span>
               <strong>{formatCurrency(stats?.feeDue)}</strong>
             </div>
             <div>
@@ -83,17 +113,17 @@ export default function FeesPage() {
         </div>
         <div className="card">
           <div className="card__title">
-            <h4>Overdue (most overdue first)</h4>
-            <span className="ai-pill success">{defaulters.length} records</span>
+            <h2>Overdue</h2>
+            <span>{defaulters.length ? `${defaulters.length} records, most overdue first` : "None"}</span>
           </div>
           <ul className="alert-list">
-            {defaulters.length === 0 && <li className="alert-item">No overdue fees. 🎉</li>}
+            {defaulters.length === 0 && <li className="alert-item muted">Every fee is paid or not yet due.</li>}
             {defaulters.slice(0, 6).map((d) => (
               <li key={d.id} className="alert-item">
-                <span className={`badge ${badgeClass(d.risk)} pill`}>{d.risk}</span>
+                <span className={`badge ${badgeClass(d.risk)}`}>{d.risk}</span>
                 <div>
                   <div className="alert-text">
-                    {d.student_name} — {formatCurrency(d.remaining_amount)}
+                    {d.student_name} · {formatCurrency(d.remaining_amount)}
                   </div>
                   <div className="alert-meta">{d.days_overdue} days overdue</div>
                 </div>
@@ -104,14 +134,18 @@ export default function FeesPage() {
       </div>
       <div className="card table-card">
         <div className="card__title">
-          <h5>Fee Records</h5>
+          <h2>Fee records</h2>
           <span>Latest due date first</span>
         </div>
         <div className="filters">
-          <select value={filters.status} onChange={(e) => setFilters({ status: e.target.value, page: 1 })}>
+          <select
+            value={filters.status}
+            onChange={(e) => setFilters({ status: e.target.value, page: 1 })}
+            aria-label="Status"
+          >
             <option value="">Any status</option>
             <option value="pending">Pending</option>
-            <option value="partial">Partial</option>
+            <option value="partial">Partly paid</option>
             <option value="paid">Paid</option>
           </select>
         </div>
@@ -119,8 +153,8 @@ export default function FeesPage() {
           <thead>
             <tr>
               <th>Student</th>
-              <th>Due Date</th>
-              <th>Amount Due</th>
+              <th>Due</th>
+              <th>Amount</th>
               <th>Paid</th>
               <th>Status</th>
             </tr>
@@ -128,13 +162,15 @@ export default function FeesPage() {
           <tbody>
             {fees?.items.length === 0 && (
               <tr>
-                <td colSpan="5">No fee records match.</td>
+                <td colSpan="5" className="muted">
+                  No fee records match.
+                </td>
               </tr>
             )}
             {fees?.items.map((fee) => (
               <tr key={fee.id}>
                 <td>{fee.student_name}</td>
-                <td>{formatDate(fee.due_date)}</td>
+                <td>{displayDate(fee.due_date)}</td>
                 <td>{formatCurrency(fee.amount_due)}</td>
                 <td>{formatCurrency(fee.amount_paid)}</td>
                 <td>

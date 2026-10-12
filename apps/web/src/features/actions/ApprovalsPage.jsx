@@ -29,7 +29,7 @@ export default function ApprovalsPage() {
   useEffect(load, [load]);
 
   return (
-    <section className="section active">
+    <section className="section">
       <PageHeader title="Approvals" subtitle="Messages and payments the assistant prepared wait here until approved.">
         <select value={status} onChange={(e) => setStatus(e.target.value)} className="approvals__filter">
           {FILTERS.map(([value, label]) => (

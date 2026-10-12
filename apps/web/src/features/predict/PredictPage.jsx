@@ -9,7 +9,7 @@ function Contributions({ result }) {
   return (
     <div className="xai-waterfall">
       <p className="xai-summary">
-        {result.student_name} — Risk: {(result.risk_score * 100).toFixed(1)}% ({result.prediction})
+        {result.student_name}: {(result.risk_score * 100).toFixed(0)}% risk, <em>{result.prediction}</em>
       </p>
       <div className="xai-bars">
         {(result.contributions || []).map((c) => {
@@ -56,38 +56,44 @@ export default function PredictPage() {
   };
 
   return (
-    <section className="section active">
+    <section className="section">
       <PageHeader
-        title="Predict & XAI"
-        subtitle="Risk prediction with explainable feature contributions. Pick a student or try custom values."
+        title="Risk predictions"
+        subtitle="How likely a student is to fall behind, and which factors push the estimate up or down."
       />
       <div className="grid-2 predict-xai-grid">
         <div className="card">
           <div className="card__title">
-            <h4>Existing Student</h4>
+            <h2>A student</h2>
           </div>
           <div className="form-row">
-            <select value={studentId} onChange={(e) => setStudentId(e.target.value)}>
-              <option value="">Select a student...</option>
-              {students.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {fullName(s)}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              className="btn primary"
-              disabled={!studentId || loading}
-              onClick={() => run(() => api.get(`/predict/explain/${studentId}`))}
-            >
-              {loading ? "Loading..." : "Explain"}
-            </button>
+            <label>
+              Student
+              <select value={studentId} onChange={(e) => setStudentId(e.target.value)}>
+                <option value="">Choose a student…</option>
+                {students.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {fullName(s)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="form-actions">
+              <button
+                type="button"
+                className="btn primary"
+                disabled={!studentId || loading}
+                onClick={() => run(() => api.get(`/predict/explain/${studentId}`))}
+              >
+                {loading ? "Working…" : "Explain"}
+              </button>
+            </div>
           </div>
         </div>
         <div className="card">
           <div className="card__title">
-            <h4>What-if (custom values)</h4>
+            <h2>What if…</h2>
+            <span>Try made-up figures</span>
           </div>
           <form
             className="form-row"
@@ -96,43 +102,52 @@ export default function PredictPage() {
               run(() => api.post("/predict/explain/custom", custom));
             }}
           >
-            <input
-              type="number"
-              placeholder="Attendance % (0-100)"
-              min="0"
-              max="100"
-              value={custom.attendance_rate}
-              onChange={(e) => setCustom((p) => ({ ...p, attendance_rate: e.target.value }))}
-            />
-            <input
-              type="number"
-              placeholder="Average score % (0-100)"
-              min="0"
-              max="100"
-              value={custom.average_score}
-              onChange={(e) => setCustom((p) => ({ ...p, average_score: e.target.value }))}
-            />
-            <select
-              value={custom.fee_status}
-              onChange={(e) => setCustom((p) => ({ ...p, fee_status: e.target.value }))}
-            >
-              <option value="Clear">Fee Clear</option>
-              <option value="Pending">Fee Pending</option>
-            </select>
-            <button type="submit" className="btn primary" disabled={loading}>
-              {loading ? "Predicting..." : "Predict"}
-            </button>
+            <label>
+              Attendance %
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={custom.attendance_rate}
+                onChange={(e) => setCustom((p) => ({ ...p, attendance_rate: e.target.value }))}
+              />
+            </label>
+            <label>
+              Average mark %
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={custom.average_score}
+                onChange={(e) => setCustom((p) => ({ ...p, average_score: e.target.value }))}
+              />
+            </label>
+            <label>
+              Fees
+              <select
+                value={custom.fee_status}
+                onChange={(e) => setCustom((p) => ({ ...p, fee_status: e.target.value }))}
+              >
+                <option value="Clear">Paid up</option>
+                <option value="Pending">Behind</option>
+              </select>
+            </label>
+            <div className="form-actions">
+              <button type="submit" className="btn primary" disabled={loading}>
+                {loading ? "Working…" : "Estimate"}
+              </button>
+            </div>
           </form>
         </div>
         <div className="card span-2 xai-chart-card">
           <div className="card__title">
-            <h4>Feature Contributions</h4>
-            <span className="ai-pill success">{result?.prediction || "—"}</span>
+            <h2>What drives the estimate</h2>
+            <span>Red pushes the risk up, green brings it down</span>
           </div>
           {result ? (
             <Contributions result={result} />
           ) : (
-            !loading && <p className="muted">Select a student and click Explain, or enter custom values and Predict.</p>
+            !loading && <p className="muted">Choose a student and press Explain, or try figures under What if….</p>
           )}
         </div>
       </div>

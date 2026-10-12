@@ -125,6 +125,10 @@ describe("/auth/me", () => {
     const principal = await request.get("/auth/me").set(as("principal"));
     expect(principal.body.permissions).toContain("users:manage");
     expect(principal.body.classIds).toBeNull();
+    expect(principal.body.school).toMatchObject({ currency: "USD", timezone: expect.any(String) });
+    const pub = await request.get("/auth/school");
+    expect(pub.status).toBe(200);
+    expect(Object.keys(pub.body).sort()).toEqual(["currency", "name", "timezone"]);
 
     const teacher = await request.get("/auth/me").set(as("teacher"));
     expect(teacher.body.user.role).toBe("teacher");

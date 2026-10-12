@@ -2,7 +2,7 @@ import { Fragment, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useApiMutation, useClassrooms, useTeachers } from "../../api/queries.js";
 import { useAuth } from "../../auth/AuthContext.jsx";
-import { fullName } from "../../lib/format.js";
+import { displayDateTime, fullName } from "../../lib/format.js";
 import ClassPicker from "./ClassPicker.jsx";
 import TempPassword from "./TempPassword.jsx";
 import AccountEditor from "./AccountEditor.jsx";
@@ -10,9 +10,9 @@ import { usersApi, usersKey } from "./api.js";
 import { ROLE_LABEL, generatePassword } from "./labels.js";
 
 const emptyForm = () => ({ username: "", email: "", role: "teacher", teacher_id: "", classroom_ids: [] });
-const when = (value) => (value ? new Date(value).toLocaleString() : "Never");
+const when = (value) => displayDateTime(value, "Never");
 
-export default function PeopleTab() {
+export default function PeopleTab({ adding, onAddingChange }) {
   const { user: me } = useAuth();
   const { data: users = [], isLoading } = useQuery({ queryKey: usersKey, queryFn: usersApi.list });
   const { data: roles = [] } = useQuery({ queryKey: [...usersKey, "roles"], queryFn: usersApi.roles });
@@ -49,6 +49,7 @@ export default function PeopleTab() {
         onSuccess: () => {
           setIssued({ email: form.email.trim().toLowerCase(), password });
           setForm(emptyForm());
+          onAddingChange(false);
         },
       }
     );
@@ -72,68 +73,73 @@ export default function PeopleTab() {
 
   return (
     <>
-      <div className="card form-card">
-        <div className="card__title">
-          <h4>Add an account</h4>
-          <span className="ai-pill">A temporary password is generated</span>
-        </div>
-        {issued ? (
-          <TempPassword {...issued} onDone={() => setIssued(null)} />
-        ) : (
-          <form className="account-form" onSubmit={submit}>
-            <label>
-              Role
-              <select value={form.role} onChange={set("role")}>
-                {assignable.map((r) => (
-                  <option key={r} value={r}>
-                    {ROLE_LABEL[r]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {form.role === "teacher" && (
+      {(adding || issued) && (
+        <div className="card form-card">
+          <div className="card__title">
+            <h2>{issued ? "Account created" : "Add an account"}</h2>
+            {!issued && <span>A temporary password is made for them</span>}
+          </div>
+          {issued ? (
+            <TempPassword {...issued} onDone={() => setIssued(null)} />
+          ) : (
+            <form className="account-form" onSubmit={submit}>
               <label>
-                Teacher record
-                <select value={form.teacher_id} onChange={pickTeacher} required>
-                  <option value="">Choose a teacher…</option>
-                  {freeTeachers.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {fullName(t)}
-                      {t.subject ? ` (${t.subject})` : ""}
+                Role
+                <select value={form.role} onChange={set("role")}>
+                  {assignable.map((r) => (
+                    <option key={r} value={r}>
+                      {ROLE_LABEL[r]}
                     </option>
                   ))}
                 </select>
-                {!freeTeachers.length && (
-                  <small className="muted">Every teacher already has an account. Add the teacher first.</small>
-                )}
               </label>
-            )}
-            <label>
-              Name
-              <input value={form.username} onChange={set("username")} required maxLength={100} />
-            </label>
-            <label>
-              Email (used to sign in)
-              <input type="email" value={form.email} onChange={set("email")} required />
-            </label>
-            {form.role === "teacher" && (
-              <div className="account-form__wide">
-                <span className="field-label">Classes they can see</span>
-                <ClassPicker
-                  classrooms={classrooms}
-                  value={form.classroom_ids}
-                  onChange={(ids) => setForm((f) => ({ ...f, classroom_ids: ids }))}
-                />
+              {form.role === "teacher" && (
+                <label>
+                  Teacher record
+                  <select value={form.teacher_id} onChange={pickTeacher} required>
+                    <option value="">Choose a teacher…</option>
+                    {freeTeachers.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {fullName(t)}
+                        {t.subject ? ` (${t.subject})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  {!freeTeachers.length && (
+                    <small className="muted">Every teacher already has an account. Add the teacher first.</small>
+                  )}
+                </label>
+              )}
+              <label>
+                Name
+                <input value={form.username} onChange={set("username")} required maxLength={100} />
+              </label>
+              <label>
+                Email (used to sign in)
+                <input type="email" value={form.email} onChange={set("email")} required />
+              </label>
+              {form.role === "teacher" && (
+                <div className="account-form__wide">
+                  <span className="field-label">Classes they can see</span>
+                  <ClassPicker
+                    classrooms={classrooms}
+                    value={form.classroom_ids}
+                    onChange={(ids) => setForm((f) => ({ ...f, classroom_ids: ids }))}
+                  />
+                </div>
+              )}
+              <div className="form-actions account-form__wide">
+                <button type="submit" className="btn primary" disabled={create.isPending}>
+                  {create.isPending ? "Creating…" : "Create account"}
+                </button>
+                <button type="button" className="btn ghost" onClick={() => onAddingChange(false)}>
+                  Cancel
+                </button>
               </div>
-            )}
-            <div className="form-actions account-form__wide">
-              <button type="submit" className="btn primary" disabled={create.isPending}>
-                {create.isPending ? "Creating…" : "Create account"}
-              </button>
-            </div>
-          </form>
-        )}
-      </div>
+            </form>
+          )}
+        </div>
+      )}
 
       <div className="card table-card">
         <div className="filters">

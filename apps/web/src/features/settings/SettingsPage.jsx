@@ -1,26 +1,32 @@
 import PageHeader from "../../components/PageHeader.jsx";
+import { useAuth } from "../../auth/AuthContext.jsx";
 
-// Placeholder: these values are not stored yet. School name, timezone and currency
-// are currently configured on the server (SCHOOL_NAME, SCHOOL_TIMEZONE, CURRENCY in apps/api/.env).
+/** The school's details as the server knows them. They are set in the server's configuration, not here. */
 export default function SettingsPage() {
+  const { school } = useAuth();
+  const rows = [
+    ["School name", school?.name, "SCHOOL_NAME"],
+    ["Currency", school?.currency, "CURRENCY"],
+    ["Time zone", school?.timezone, "SCHOOL_TIMEZONE"],
+  ];
   return (
-    <section className="section active">
-      <PageHeader title="Settings" subtitle="School profile and preferences." />
+    <section className="section">
+      <PageHeader title="Settings" subtitle="The school's details, as used in messages to parents and on every page." />
       <div className="card">
-        <p className="muted" style={{ marginBottom: 12 }}>
-          Settings can&apos;t be saved from here yet. The school name, timezone and currency are set on the server in
-          <code> apps/api/.env</code>.
+        <dl className="settings-list">
+          {rows.map(([label, value, key]) => (
+            <div key={key}>
+              <dt>{label}</dt>
+              <dd>{value || <span className="muted">Not set</span>}</dd>
+              <dd className="muted">
+                <code>{key}</code>
+              </dd>
+            </div>
+          ))}
+        </dl>
+        <p className="muted settings-note">
+          These are set in <code>apps/api/.env</code> on the server. Change them there and restart the server.
         </p>
-        <div className="form-grid">
-          <label>
-            School Name
-            <input type="text" defaultValue="Cambridge Public School" disabled />
-          </label>
-          <label>
-            Academic Session
-            <input type="text" defaultValue="2025-2026" disabled />
-          </label>
-        </div>
       </div>
     </section>
   );

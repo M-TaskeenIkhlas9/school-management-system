@@ -1,11 +1,13 @@
-export default function PageHeader({ title, subtitle, children }) {
+/** Page title on the ruled header line; `eyebrow` names the context, `children` hold page actions. */
+export default function PageHeader({ eyebrow, title, subtitle, children }) {
   return (
-    <div className="section__header">
+    <header className="section__header">
       <div>
-        <h3>{title}</h3>
-        {subtitle && <p>{subtitle}</p>}
+        {eyebrow && <p className="section__eyebrow">{eyebrow}</p>}
+        <h1>{title}</h1>
+        {subtitle && <p className="section__subtitle">{subtitle}</p>}
       </div>
-      {children}
-    </div>
+      {children && <div className="section__actions">{children}</div>}
+    </header>
   );
 }

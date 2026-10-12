@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { actionsApi } from "./api.js";
 import { useToast } from "../../components/Toast.jsx";
+import { displayDateTime } from "../../lib/format.js";
 
 const STATUS = {
   pending: ["Waiting for approval", "warning"],
@@ -13,7 +14,7 @@ const STATUS = {
 const TYPE_LABEL = { send_parent_messages: "Message to parents", record_fee_payment: "Fee payment" };
 const CHANNEL_LABEL = { email: "Email", sms: "SMS", whatsapp: "WhatsApp" };
 
-function MessagePreview({ preview }) {
+function MessagePreview({ preview, pending }) {
   const [open, setOpen] = useState(0);
   return (
     <>
@@ -66,15 +67,20 @@ function MessagePreview({ preview }) {
           {note}
         </p>
       ))}
-      {Object.entries(preview.channel_modes ?? {})
-        .filter(([channel, mode]) => mode === "simulated" && preview.by_channel?.[channel] !== undefined)
-        .map(([channel]) => (
-          <p key={channel} className="action-card__note">
-            {CHANNEL_LABEL[channel] ?? channel} is in test mode: messages are recorded in the outbox but not delivered.
-          </p>
-        ))}
+      {pending && <TestModeNote preview={preview} />}
     </>
   );
+}
+
+/** One line naming the channels in this message that only record to the Outbox (test mode). */
+function TestModeNote({ preview }) {
+  const used = preview.by_channel ? Object.keys(preview.by_channel) : Object.keys(preview.channel_modes ?? {});
+  const simulated = used
+    .filter((c) => preview.channel_modes?.[c] === "simulated")
+    .map((c) => (c === "email" ? "email" : (CHANNEL_LABEL[c] ?? c)));
+  if (!simulated.length) return null;
+  const list = simulated.length > 1 ? `${simulated.slice(0, -1).join(", ")} and ${simulated.at(-1)}` : simulated[0];
+  return <p className="action-card__note">Test mode: {list} messages are recorded in the Outbox, not sent.</p>;
 }
 
 function PaymentPreview({ preview }) {
@@ -180,7 +186,7 @@ export default function ActionCard({ action: initial, onChange }) {
       ) : action.type === "record_fee_payment" ? (
         <PaymentPreview preview={preview} />
       ) : preview.recipients ? (
-        <MessagePreview preview={preview} />
+        <MessagePreview preview={preview} pending={action.status === "pending"} />
       ) : null}
 
       {result.queued !== undefined && (
@@ -188,7 +194,7 @@ export default function ActionCard({ action: initial, onChange }) {
           {result.queued} queued
           {result.delivered !== undefined ? ` · ${result.delivered} sent · ${result.failed} failed` : ""}
           {result.send_after && new Date(result.send_after) > new Date()
-            ? ` · held until ${new Date(result.send_after).toLocaleString()} (quiet hours)`
+            ? ` · held until ${displayDateTime(result.send_after)} (quiet hours)`
             : ""}
         </p>
       )}

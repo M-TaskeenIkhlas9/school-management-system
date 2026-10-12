@@ -39,7 +39,7 @@ export default function AccountPage() {
   };
 
   return (
-    <section className="section active">
+    <section className="section">
       <PageHeader title="My account" subtitle={`${user?.username ?? ""} · ${ROLE_LABEL[user?.role] ?? ""}`} />
       <div className="card account-page">
         <div className="card__title">
