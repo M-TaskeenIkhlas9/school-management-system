@@ -1,12 +1,21 @@
 import { useState } from "react";
 import { api } from "../../api/client.js";
-import { keys, useApiMutation, useResultsPage } from "../../api/queries.js";
+import { keys, useApiMutation, useResultsPage, useTrends } from "../../api/queries.js";
 import { useLookups } from "../../lib/useLookups.js";
 import { fullName } from "../../lib/format.js";
 import { useToast } from "../../components/Toast.jsx";
 import PageHeader from "../../components/PageHeader.jsx";
 import { useAuth } from "../../auth/AuthContext.jsx";
 import Pagination from "../../components/Pagination.jsx";
+import StatCard, { StatRow } from "../../components/StatCard.jsx";
+import EmptyState from "../../components/EmptyState.jsx";
+import CountUp from "../../components/CountUp.jsx";
+import Avatar from "../../components/Avatar.jsx";
+
+const gradeTone = (g) => {
+  const first = String(g || "").toUpperCase()[0];
+  return first === "A" ? "good" : first === "B" ? "ok" : first === "C" ? "mid" : "low";
+};
 
 const emptyForm = { student_id: "", term: "", total_score: "", percentage: "", remarks: "" };
 
@@ -18,6 +27,11 @@ export default function ResultsPage() {
   const [open, setOpen] = useState(false);
   const [filters, setFilters] = useState({ classroom_id: "", page: 1 });
   const { data: results } = useResultsPage({ ...filters, pageSize: 20 });
+  const { data: trends } = useTrends();
+  const terms = trends?.results_by_term ?? [];
+  const latest = terms.at(-1);
+  const previous = terms.at(-2);
+  const best = terms.reduce((top, t) => (!top || t.value > top.value ? t : top), null);
 
   const create = useApiMutation((values) => api.post("/results", values), {
     invalidate: [keys.results, keys.attention],
@@ -47,13 +61,42 @@ export default function ResultsPage() {
 
   return (
     <section className="section">
-      <PageHeader title="Results" subtitle="Term results for each student. Grades are worked out from the percentage.">
+      <PageHeader
+        icon="results"
+        tone="violet"
+        title="Results"
+        subtitle="Term results for each student. Grades are worked out from the percentage."
+      >
         {can("results:write") && !open && (
           <button type="button" className="btn primary" onClick={() => setOpen(true)}>
             Enter a result
           </button>
         )}
       </PageHeader>
+      <StatRow>
+        <StatCard
+          tone="violet"
+          icon="results"
+          label={latest ? `Average, ${latest.label}` : "Latest term average"}
+          delta={
+            latest && previous
+              ? {
+                  dir: latest.value > previous.value ? "up" : latest.value < previous.value ? "down" : "flat",
+                  text: `${latest.value - previous.value > 0 ? "+" : ""}${latest.value - previous.value} pts vs ${previous.label}`,
+                }
+              : undefined
+          }
+        >
+          {latest ? <CountUp value={latest.value} format={(n) => `${Math.round(n)}%`} /> : "—"}
+        </StatCard>
+        <StatCard tone="green" icon="trendUp" label="Best term" note={best ? best.label : "No terms yet"}>
+          {best ? `${best.value}%` : "—"}
+        </StatCard>
+        <StatCard tone="blue" icon="exams" label="Results recorded" note={`${terms.length} terms`}>
+          <CountUp value={results?.total ?? 0} />
+        </StatCard>
+      </StatRow>
+
       {can("results:write") && open && (
         <div className="card form-card">
           <div className="card__title">
@@ -127,19 +170,38 @@ export default function ResultsPage() {
           <tbody>
             {results?.items.length === 0 && (
               <tr>
-                <td colSpan="6" className="muted">
-                  No results match.
+                <td colSpan="6">
+                  <EmptyState icon="results" title="No results match">
+                    Try another class, or enter the first result.
+                  </EmptyState>
                 </td>
               </tr>
             )}
             {results?.items.map((row) => (
               <tr key={row.id}>
-                <td>{row.student_name}</td>
-                <td>{row.class_name}</td>
-                <td>{row.term}</td>
-                <td>{row.percentage}%</td>
                 <td>
-                  <span className="grade">{row.grade}</span>
+                  <div className="student-cell">
+                    <Avatar name={row.student_name} size={34} />
+                    <span className="student-name">{row.student_name}</span>
+                  </div>
+                </td>
+                <td>
+                  <span className="badge neutral">{row.class_name}</span>
+                </td>
+                <td>{row.term}</td>
+                <td>
+                  <div className="meter">
+                    <span className="meter__track">
+                      <span
+                        className={`meter__fill is-${row.percentage >= 75 ? "good" : row.percentage >= 50 ? "mid" : "low"}`}
+                        style={{ width: `${row.percentage}%` }}
+                      />
+                    </span>
+                    <strong>{row.percentage}%</strong>
+                  </div>
+                </td>
+                <td>
+                  <span className={`grade grade--${gradeTone(row.grade)}`}>{row.grade}</span>
                 </td>
                 <td>{row.remarks || <span className="muted">—</span>}</td>
               </tr>

@@ -8,15 +8,19 @@ import PageHeader from "../../components/PageHeader.jsx";
 function Contributions({ result }) {
   return (
     <div className="xai-waterfall">
-      <p className="xai-summary">
-        {result.student_name}: {(result.risk_score * 100).toFixed(0)}% risk, <em>{result.prediction}</em>
-      </p>
+      <div className="xai-head">
+        <Gauge value={Math.round(result.risk_score * 100)} />
+        <div>
+          <p className="xai-summary">{result.student_name || "These figures"}</p>
+          <span className={`badge ${result.risk_score >= 0.5 ? "danger" : "success"}`}>{result.prediction}</span>
+        </div>
+      </div>
       <div className="xai-bars">
         {(result.contributions || []).map((c) => {
           const tone = c.shap_value >= 0 ? "positive" : "negative";
           return (
             <div key={c.feature} className="xai-bar-row">
-              <span className="xai-bar-label">{c.feature}</span>
+              <span className="xai-bar-label">{factorLabel(c.feature)}</span>
               <div className="xai-bar-track">
                 <div
                   className={`xai-bar-fill ${tone}`}
@@ -31,6 +35,26 @@ function Contributions({ result }) {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+// "fee_status = Pending" → "Fees: Pending"
+const FACTOR = { fee_status: "Fees", average_score: "Average mark", attendance_rate: "Attendance" };
+const factorLabel = (feature) =>
+  String(feature).replace(/^(\w+)\s*=\s*/, (_, key) => `${FACTOR[key] ?? key.replace(/_/g, " ")}: `);
+
+/** A half-dial from 0 to 100% risk; the needle swings into place. */
+function Gauge({ value }) {
+  const tone = value >= 60 ? "high" : value >= 35 ? "mid" : "low";
+  return (
+    <div className={`gauge gauge--${tone}`} style={{ "--v": value }} role="img" aria-label={`${value}% risk`}>
+      <svg viewBox="0 0 120 70" aria-hidden="true">
+        <path d="M10 62a50 50 0 0 1 100 0" className="gauge__track" pathLength="100" />
+        <path d="M10 62a50 50 0 0 1 100 0" className="gauge__value" pathLength="100" />
+      </svg>
+      <strong>{value}%</strong>
+      <span>risk</span>
     </div>
   );
 }
@@ -58,6 +82,8 @@ export default function PredictPage() {
   return (
     <section className="section">
       <PageHeader
+        icon="predict"
+        tone="rose"
         title="Risk predictions"
         subtitle="How likely a student is to fall behind, and which factors push the estimate up or down."
       />

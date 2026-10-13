@@ -4,6 +4,9 @@ import { keys, useApiMutation, useCurriculum, useTeachers } from "../../api/quer
 import { fullName } from "../../lib/format.js";
 import PageHeader from "../../components/PageHeader.jsx";
 import Avatar from "../../components/Avatar.jsx";
+import StatCard, { StatRow } from "../../components/StatCard.jsx";
+import EmptyState from "../../components/EmptyState.jsx";
+import CountUp from "../../components/CountUp.jsx";
 import { useAuth } from "../../auth/AuthContext.jsx";
 
 const emptyTeacher = { first_name: "", last_name: "", subject: "", phone: "", email: "" };
@@ -35,13 +38,30 @@ export default function TeachersPage() {
 
   return (
     <section className="section">
-      <PageHeader title="Teachers" subtitle="The staff list, with each teacher's subject and how to reach them.">
+      <PageHeader
+        icon="teachers"
+        tone="violet"
+        title="Teachers"
+        subtitle="The staff list, with each teacher's subject and how to reach them."
+      >
         {can("teachers:write") && !open && (
           <button type="button" className="btn primary" onClick={() => setOpen(true)}>
             Add a teacher
           </button>
         )}
       </PageHeader>
+      <StatRow>
+        <StatCard tone="violet" icon="teachers" label="Teachers">
+          <CountUp value={teachers.length} />
+        </StatCard>
+        <StatCard tone="blue" icon="book" label="Subjects taught">
+          <CountUp value={new Set(teachers.map((t) => t.subject).filter(Boolean)).size} />
+        </StatCard>
+        <StatCard tone="green" icon="message" label="Reachable" note="with a phone or email">
+          <CountUp value={teachers.filter((t) => t.phone || t.email).length} />
+        </StatCard>
+      </StatRow>
+
       {can("teachers:write") && open && (
         <div className="card form-card">
           <div className="card__title">
@@ -86,14 +106,24 @@ export default function TeachersPage() {
         </div>
       )}
       <div className="class-grid">
-        {teachers.length === 0 && <div className="card empty-card">No teachers yet.</div>}
+        {teachers.length === 0 && (
+          <div className="card span-all">
+            <EmptyState icon="teachers" title="No teachers yet">
+              Add the staff list to assign classes and create their accounts.
+            </EmptyState>
+          </div>
+        )}
         {teachers.map((teacher) => (
           <article className="card teacher-card" key={teacher.id}>
             <div className="teacher-header">
               <Avatar name={fullName(teacher)} size={46} />
               <div>
                 <h2>{fullName(teacher)}</h2>
-                <p className="teacher-meta">{teacher.subject || "No subject set"}</p>
+                {teacher.subject ? (
+                  <span className="badge info">{teacher.subject}</span>
+                ) : (
+                  <p className="teacher-meta">No subject set</p>
+                )}
               </div>
             </div>
             <dl className="teacher-contact">

@@ -8,7 +8,9 @@ export default function AiCenterPage() {
   return (
     <section className="section">
       <PageHeader
-        title="Assistant"
+        icon="sparkle"
+        tone="blue"
+        title="AI assistant"
         subtitle="Ask about the school in plain words. Messages and payments it prepares wait for someone to approve them."
       />
       <div className="grid-2 ai-center-grid">

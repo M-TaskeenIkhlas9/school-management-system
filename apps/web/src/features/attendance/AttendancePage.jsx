@@ -1,12 +1,30 @@
 import { useState } from "react";
 import { api } from "../../api/client.js";
-import { keys, useApiMutation, useAttendancePage, useAttendanceSummary, useAttention } from "../../api/queries.js";
+import {
+  keys,
+  useApiMutation,
+  useAttendancePage,
+  useAttendanceSummary,
+  useAttention,
+  useDashboard,
+} from "../../api/queries.js";
 import { useLookups } from "../../lib/useLookups.js";
 import { badgeClass, displayDate, fullName } from "../../lib/format.js";
 import { useToast } from "../../components/Toast.jsx";
 import PageHeader from "../../components/PageHeader.jsx";
 import { useAuth } from "../../auth/AuthContext.jsx";
 import Pagination from "../../components/Pagination.jsx";
+import StatCard, { StatRow } from "../../components/StatCard.jsx";
+import EmptyState from "../../components/EmptyState.jsx";
+import Segmented from "../../components/Segmented.jsx";
+import CountUp from "../../components/CountUp.jsx";
+import Avatar from "../../components/Avatar.jsx";
+
+const STATUSES = [
+  ["present", "Present"],
+  ["late", "Late"],
+  ["absent", "Absent"],
+];
 
 const emptyForm = { student_id: "", day: "", status: "present" };
 
@@ -14,6 +32,7 @@ export default function AttendancePage() {
   const { can } = useAuth();
   const toast = useToast();
   const { data: summary } = useAttendanceSummary();
+  const { data: stats = {} } = useDashboard();
   const { data: attention } = useAttention({ enabled: can("reports:read") });
   const { students, classrooms, classIdOf } = useLookups();
   const [form, setForm] = useState(emptyForm);
@@ -43,136 +62,174 @@ export default function AttendancePage() {
 
   const field = (name) => ({ value: form[name], onChange: (e) => setForm((p) => ({ ...p, [name]: e.target.value })) });
 
+  const today = summary?.today;
   return (
     <section className="section">
-      <PageHeader title="Attendance" subtitle="Mark who is present, late or absent, and see how each class is doing." />
-      {can("attendance:write") && (
-        <div className="card form-card">
-          <div className="card__title">
-            <h2>Mark attendance</h2>
-            <span>Leave the date empty for today.</span>
-          </div>
-          <form className="form-row" onSubmit={submit}>
-            <label>
-              Student
-              <select required {...field("student_id")}>
-                <option value="">Choose a student…</option>
-                {students.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {fullName(s)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Date
-              <input type="date" {...field("day")} />
-            </label>
-            <label>
-              Status
-              <select {...field("status")}>
-                <option value="present">Present</option>
-                <option value="late">Late</option>
-                <option value="absent">Absent</option>
-              </select>
-            </label>
-            <div className="form-actions">
-              <button type="submit" className="btn primary" disabled={create.isPending}>
-                {create.isPending ? "Saving…" : "Save"}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
+      <PageHeader
+        icon="attendance"
+        tone="green"
+        title="Attendance"
+        subtitle="Mark who is present, late or absent, and see how each class is doing."
+      />
+
+      <StatRow>
+        <StatCard
+          tone="green"
+          icon="attendance"
+          label="Present today"
+          note={today?.marked ? `${today.marked} marks so far` : "Not marked yet"}
+        >
+          {today?.rate === null || today?.rate === undefined ? (
+            "—"
+          ) : (
+            <CountUp value={today.rate} format={(n) => `${Math.round(n)}%`} />
+          )}
+        </StatCard>
+        <StatCard tone="blue" icon="chart" label="Last 30 days" note="average share present">
+          {stats.attendance30 === null || stats.attendance30 === undefined ? (
+            "—"
+          ) : (
+            <CountUp value={stats.attendance30} format={(n) => `${n.toFixed(1)}%`} />
+          )}
+        </StatCard>
+        <StatCard tone="violet" icon="classes" label="Classes recorded" note="with any attendance">
+          <CountUp value={summary?.by_class?.length ?? 0} />
+        </StatCard>
+        {can("reports:read") && (
+          <StatCard tone="rose" icon="predict" label="Flagged students" note="low attendance or marks">
+            <CountUp value={attention?.students?.length ?? 0} />
+          </StatCard>
+        )}
+      </StatRow>
+
       <div className="grid-2">
-        <div className="card">
-          <div className="card__title">
-            <h2>Today</h2>
-          </div>
-          <div className="fee-metrics">
-            <div>
-              <span>Present</span>
-              <strong>{summary?.today.rate === null || !summary ? "—" : `${summary.today.rate}%`}</strong>
-            </div>
-            <div>
-              <span>Marked</span>
-              <strong>{summary?.today.marked ?? 0}</strong>
-            </div>
-            {can("reports:read") && (
+        {can("attendance:write") && (
+          <div className="card form-card">
+            <div className="card__head">
               <div>
-                <span>Flagged</span>
-                <strong>{attention?.students?.length ?? 0}</strong>
+                <h2>Mark attendance</h2>
+                <p>Leave the date empty for today.</p>
               </div>
-            )}
+            </div>
+            <form className="form-row" onSubmit={submit}>
+              <label>
+                Student
+                <select required {...field("student_id")}>
+                  <option value="">Choose a student…</option>
+                  {students.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {fullName(s)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Date
+                <input type="date" {...field("day")} />
+              </label>
+              <div className="field-label">
+                Status
+                <div className={`status-pick status-pick--${form.status}`}>
+                  <Segmented
+                    label="Status"
+                    options={STATUSES}
+                    value={form.status}
+                    onChange={(status) => setForm((p) => ({ ...p, status }))}
+                  />
+                </div>
+              </div>
+              <div className="form-actions">
+                <button type="submit" className="btn primary" disabled={create.isPending}>
+                  {create.isPending ? "Saving…" : "Save attendance"}
+                </button>
+              </div>
+            </form>
           </div>
-        </div>
+        )}
         <div className="card">
-          <div className="card__title">
-            <h2>By class</h2>
-            <span>All recorded days</span>
+          <div className="card__head">
+            <div>
+              <h2>By class</h2>
+              <p>Share present across all recorded days</p>
+            </div>
           </div>
-          {!summary?.by_class.length && <p className="muted">No attendance recorded yet.</p>}
-          <ul className="alert-list">
-            {summary?.by_class.map((c) => (
-              <li key={c.classroom_id} className="alert-item">
-                <div className="alert-text">{c.class_name}</div>
-                <span className="alert-meta">{c.records} marks</span>
-                <strong className="class-rate">{c.rate}%</strong>
-              </li>
-            ))}
-          </ul>
+          {summary?.by_class.length ? (
+            <ul className="bars">
+              {summary.by_class.map((c, i) => (
+                <li key={c.classroom_id} style={{ "--i": i }}>
+                  <span className="bars__label">{c.class_name}</span>
+                  <span className="bars__track">
+                    <span className={`bars__fill ${c.rate < 75 ? "is-low" : ""}`} style={{ width: `${c.rate}%` }} />
+                  </span>
+                  <span className="bars__value">{c.rate}%</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <EmptyState icon="attendance" title="No attendance yet">
+              Marks appear here once attendance is recorded.
+            </EmptyState>
+          )}
         </div>
       </div>
+
       <div className="card table-card">
-        <div className="card__title">
-          <h2>Records</h2>
-          <span>{isFetching ? "Loading…" : "Newest first"}</span>
+        <div className="toolbar">
+          <div className="card__head" style={{ margin: 0 }}>
+            <h2>Records</h2>
+          </div>
+          <div className="filters">
+            <select value={filters.classroom_id} onChange={setFilter("classroom_id")} aria-label="Class">
+              <option value="">All classes</option>
+              {classrooms.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <Segmented
+            label="Status"
+            options={[["", "All"], ...STATUSES]}
+            value={filters.status}
+            onChange={(status) => setFilters((f) => ({ ...f, status, page: 1 }))}
+          />
         </div>
-        <div className="filters">
-          <select value={filters.classroom_id} onChange={setFilter("classroom_id")} aria-label="Class">
-            <option value="">All classes</option>
-            {classrooms.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          <select value={filters.status} onChange={setFilter("status")} aria-label="Status">
-            <option value="">Any status</option>
-            <option value="present">Present</option>
-            <option value="late">Late</option>
-            <option value="absent">Absent</option>
-          </select>
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th>Student</th>
-              <th>Class</th>
-              <th>Date</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {records?.items.length === 0 && (
+        {records?.items.length === 0 ? (
+          <EmptyState icon="attendance" title="No records match">
+            {isFetching ? "Loading…" : "Try another class or status."}
+          </EmptyState>
+        ) : (
+          <table>
+            <thead>
               <tr>
-                <td colSpan="4" className="muted">
-                  No attendance records match.
-                </td>
+                <th>Student</th>
+                <th>Class</th>
+                <th>Date</th>
+                <th>Status</th>
               </tr>
-            )}
-            {records?.items.map((row) => (
-              <tr key={row.id}>
-                <td>{row.student_name}</td>
-                <td>{row.class_name}</td>
-                <td>{displayDate(row.day)}</td>
-                <td>
-                  <span className={`badge ${badgeClass(row.status)}`}>{row.status}</span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {records?.items.map((row) => (
+                <tr key={row.id}>
+                  <td>
+                    <div className="student-cell">
+                      <Avatar name={row.student_name} size={34} />
+                      <span className="student-name">{row.student_name}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <span className="badge neutral">{row.class_name}</span>
+                  </td>
+                  <td>{displayDate(row.day)}</td>
+                  <td>
+                    <span className={`badge ${badgeClass(row.status)}`}>{row.status}</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
         <Pagination data={records} onPageChange={(page) => setFilters((f) => ({ ...f, page }))} />
       </div>
     </section>

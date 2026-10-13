@@ -1,7 +1,19 @@
 import { useState } from "react";
 import { api } from "../../api/client.js";
-import { keys, useApiMutation, useClassrooms, useCurriculum, useStudents } from "../../api/queries.js";
+import {
+  keys,
+  useApiMutation,
+  useAttendanceSummary,
+  useClassrooms,
+  useCurriculum,
+  useStudents,
+} from "../../api/queries.js";
 import PageHeader from "../../components/PageHeader.jsx";
+import StatCard, { StatRow } from "../../components/StatCard.jsx";
+import EmptyState from "../../components/EmptyState.jsx";
+import CountUp from "../../components/CountUp.jsx";
+
+const TONES = ["blue", "violet", "green", "amber", "rose"];
 import { useAuth } from "../../auth/AuthContext.jsx";
 
 const emptyClass = { name: "", grade: "", section: "" };
@@ -11,6 +23,9 @@ export default function ClassesPage() {
   const { data: classrooms = [] } = useClassrooms();
   const { data: curriculum = [] } = useCurriculum();
   const { data: students = [] } = useStudents();
+  const { data: attendance } = useAttendanceSummary({ enabled: can("attendance:read") });
+  const rateOf = new Map((attendance?.by_class ?? []).map((c) => [c.classroom_id, c.rate]));
+  const subjectCount = new Set(curriculum.map((c) => c.subject)).size;
   const [form, setForm] = useState(emptyClass);
   const [open, setOpen] = useState(false);
 
@@ -33,13 +48,33 @@ export default function ClassesPage() {
 
   return (
     <section className="section">
-      <PageHeader title="Classes" subtitle="Each class with its subjects and how many students are in it.">
+      <PageHeader
+        icon="classes"
+        tone="green"
+        title="Classes"
+        subtitle="Each class with its subjects, students and attendance."
+      >
         {can("classes:write") && !open && (
           <button type="button" className="btn primary" onClick={() => setOpen(true)}>
             Add a class
           </button>
         )}
       </PageHeader>
+      <StatRow>
+        <StatCard tone="green" icon="classes" label="Classes">
+          <CountUp value={classrooms.length} />
+        </StatCard>
+        <StatCard tone="blue" icon="students" label="Students" note="enrolled across classes">
+          <CountUp value={students.length} />
+        </StatCard>
+        <StatCard tone="violet" icon="students" label="Average class size">
+          {classrooms.length ? (students.length / classrooms.length).toFixed(1) : "—"}
+        </StatCard>
+        <StatCard tone="amber" icon="book" label="Subjects" note="in the curriculum">
+          <CountUp value={subjectCount} />
+        </StatCard>
+      </StatRow>
+
       {can("classes:write") && open && (
         <div className="card form-card">
           <div className="card__title">
@@ -70,12 +105,18 @@ export default function ClassesPage() {
         </div>
       )}
       <div className="class-grid">
-        {classrooms.length === 0 && <div className="card empty-card">No classes yet.</div>}
-        {classrooms.map((room) => {
+        {classrooms.length === 0 && (
+          <div className="card span-all">
+            <EmptyState icon="classes" title="No classes yet">
+              Add a class to start enrolling students.
+            </EmptyState>
+          </div>
+        )}
+        {classrooms.map((room, index) => {
           const subjects = curriculum.filter((c) => c.classroom_id === room.id).map((c) => c.subject);
           const studentCount = students.filter((st) => st.classroom_id === room.id).length;
           return (
-            <article className="class-card" key={room.id}>
+            <article className={`class-card class-card--${TONES[index % TONES.length]}`} key={room.id}>
               <div className="class-header">
                 <div>
                   <h2>{room.name}</h2>
@@ -88,6 +129,20 @@ export default function ClassesPage() {
                   <strong>{studentCount}</strong> {studentCount === 1 ? "student" : "students"}
                 </span>
               </div>
+              {rateOf.has(room.id) && (
+                <div className="class-card__rate">
+                  <span>Attendance</span>
+                  <div className="meter">
+                    <span className="meter__track">
+                      <span
+                        className={`meter__fill is-${rateOf.get(room.id) >= 85 ? "good" : rateOf.get(room.id) >= 75 ? "mid" : "low"}`}
+                        style={{ width: `${rateOf.get(room.id)}%` }}
+                      />
+                    </span>
+                    <strong>{rateOf.get(room.id)}%</strong>
+                  </div>
+                </div>
+              )}
               {subjects.length ? (
                 <div className="tag-row">
                   {subjects.map((s) => (

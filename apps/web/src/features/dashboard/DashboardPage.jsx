@@ -6,7 +6,7 @@ import { useAttendanceSummary, useAttention, useDashboard, useDefaulters, useTre
 import { actionsApi } from "../actions/api.js";
 import { formatCurrency, timeAgo } from "../../lib/format.js";
 import CountUp from "../../components/CountUp.jsx";
-import Skeleton from "../../components/Skeleton.jsx";
+import StatCard from "../../components/StatCard.jsx";
 import Avatar from "../../components/Avatar.jsx";
 import Icon from "../../app/Icon.jsx";
 import TrendChart from "./TrendChart.jsx";
@@ -60,32 +60,6 @@ function QuickActionMenu({ actions }) {
           ))}
         </div>
       )}
-    </div>
-  );
-}
-
-function Kpi({ tone, icon, label, loading, children, delta }) {
-  return (
-    <div className="kpi">
-      <div className="kpi__top">
-        <span className={`tile tile--${tone}`}>
-          <Icon name={icon} size={22} />
-        </span>
-        {delta && (
-          <span className={`delta delta--${delta.dir}`}>
-            {delta.dir !== "none" && (
-              <Icon
-                name={delta.dir === "up" ? "trendUp" : delta.dir === "down" ? "trendDown" : "flat"}
-                size={16}
-                strokeWidth={2}
-              />
-            )}
-            {delta.text}
-          </span>
-        )}
-      </div>
-      <span className="kpi__label">{label}</span>
-      <strong className="kpi__value">{loading ? <Skeleton width="55%" height={30} /> : children}</strong>
     </div>
   );
 }
@@ -163,7 +137,7 @@ export default function DashboardPage() {
       </header>
 
       <div className="kpis">
-        <Kpi
+        <StatCard
           tone="blue"
           icon="students"
           label="Total students"
@@ -171,8 +145,8 @@ export default function DashboardPage() {
           delta={growth(s.newLast30?.students ?? 0)}
         >
           <CountUp value={s.totalStudents} />
-        </Kpi>
-        <Kpi
+        </StatCard>
+        <StatCard
           tone="violet"
           icon="teachers"
           label="Total teachers"
@@ -180,8 +154,8 @@ export default function DashboardPage() {
           delta={growth(s.newLast30?.teachers ?? 0)}
         >
           <CountUp value={s.totalTeachers} />
-        </Kpi>
-        <Kpi
+        </StatCard>
+        <StatCard
           tone="green"
           icon="book"
           label="Active classes"
@@ -189,9 +163,9 @@ export default function DashboardPage() {
           delta={growth(s.newLast30?.classes ?? 0)}
         >
           <CountUp value={s.activeClasses} />
-        </Kpi>
+        </StatCard>
         {canFees && (
-          <Kpi
+          <StatCard
             tone="amber"
             icon="money"
             label="Fees collected"
@@ -199,15 +173,15 @@ export default function DashboardPage() {
             delta={{ dir: "none", text: clearance === null ? "Nothing billed" : `${clearance}% of billed` }}
           >
             <CountUp value={s.feeCollected} format={formatCurrency} />
-          </Kpi>
+          </StatCard>
         )}
-        <Kpi tone="rose" icon="attendance" label="Attendance" loading={isLoading} delta={attendanceDelta}>
+        <StatCard tone="rose" icon="attendance" label="Attendance" loading={isLoading} delta={attendanceDelta}>
           {attendanceNow === null || attendanceNow === undefined ? (
             "—"
           ) : (
             <CountUp value={attendanceNow} format={(n) => `${n.toFixed(1)}%`} />
           )}
-        </Kpi>
+        </StatCard>
       </div>
 
       <div className="overview">

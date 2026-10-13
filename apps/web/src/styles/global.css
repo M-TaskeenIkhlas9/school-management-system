@@ -2763,3 +2763,467 @@ kbd {
 .fee-metrics div:nth-child(3) {
   background: var(--rose-tint);
 }
+
+/* ───────────────────────────── Shared page pieces ───────────────────────────── */
+
+.section__title {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+.section__icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  animation: pop-in 520ms 80ms cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6) rotate(-12deg);
+  }
+}
+
+.kpi__note {
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+
+.segmented__count {
+  display: inline-block;
+  min-width: 20px;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--paper-deep);
+  color: var(--ink-2);
+  font-size: 11.5px;
+  line-height: 18px;
+}
+
+.segmented button.is-active .segmented__count {
+  background: var(--brand-tint);
+  color: var(--brand);
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 44px 16px;
+  color: var(--ink-3);
+  text-align: center;
+}
+
+.empty strong {
+  font-family: var(--font-display);
+  font-size: 16px;
+  color: var(--ink);
+}
+
+.empty p {
+  max-width: 44ch;
+}
+
+.empty .btn {
+  margin-top: 8px;
+}
+
+.empty__icon {
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  margin-bottom: 6px;
+  border-radius: 50%;
+  background: var(--brand-tint);
+  color: var(--brand);
+  animation: pop-in 520ms cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+
+/* A toolbar row above a table: filters on the left, tabs or counts on the right. */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.toolbar .filters {
+  padding: 0;
+  border: 0;
+}
+
+/* Small inline percentage bar inside table cells. */
+.meter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 140px;
+}
+
+.meter__track {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--paper-deep);
+  overflow: hidden;
+}
+
+.meter__fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--brand);
+  transform-origin: left;
+  animation: fill 800ms 200ms var(--ease) both;
+}
+
+.meter__fill.is-good {
+  background: var(--ok);
+}
+
+.meter__fill.is-mid {
+  background: var(--amber);
+}
+
+.meter__fill.is-low {
+  background: var(--bad);
+}
+
+.meter strong {
+  min-width: 42px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Channel chip (Outbox, approvals). */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px 3px 6px;
+  border-radius: 999px;
+  background: var(--paper);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.chip svg {
+  padding: 3px;
+  border-radius: 50%;
+  box-sizing: content-box;
+}
+
+.chip--whatsapp svg {
+  background: var(--green-tint);
+  color: var(--green);
+}
+
+.chip--sms svg {
+  background: var(--violet-tint);
+  color: var(--violet);
+}
+
+.chip--email svg {
+  background: var(--blue-tint);
+  color: var(--blue);
+}
+
+@media (max-width: 960px) {
+  .section__icon {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+/* Attendance status picker takes the colour of the choice. */
+.status-pick .segmented {
+  display: flex;
+}
+
+.status-pick .segmented button {
+  flex: 1;
+  padding: 9px 10px;
+}
+
+.status-pick--present .segmented button.is-active {
+  background: var(--ok-tint);
+  color: var(--ok);
+}
+
+.status-pick--late .segmented button.is-active {
+  background: var(--warn-tint);
+  color: var(--warn);
+}
+
+.status-pick--absent .segmented button.is-active {
+  background: var(--bad-tint);
+  color: var(--bad);
+}
+
+.bars__label {
+  color: var(--ink-2);
+  font-weight: 500;
+}
+
+/* Fee collection ring. */
+.collection {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  flex-wrap: wrap;
+}
+
+@property --p-anim {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+
+.collection__ring {
+  --p-anim: var(--p);
+  display: grid;
+  place-items: center;
+  width: 150px;
+  height: 150px;
+  flex: none;
+  border-radius: 50%;
+  background: conic-gradient(var(--ok) calc(var(--p-anim) * 1%), var(--amber-tint) 0);
+  animation: ring 1200ms 200ms var(--ease) both;
+}
+
+@keyframes ring {
+  from {
+    --p-anim: 0;
+  }
+}
+
+.collection__ring span {
+  display: grid;
+  place-items: center;
+  width: 112px;
+  height: 112px;
+  border-radius: 50%;
+  background: var(--sheet);
+  font-size: 12.5px;
+  color: var(--ink-3);
+  text-align: center;
+}
+
+.collection__ring strong {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--ink);
+  line-height: 1.1;
+}
+
+.collection__legend {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 180px;
+}
+
+.collection__legend div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.collection__legend dt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink-2);
+}
+
+.collection__legend dd {
+  font-weight: 700;
+}
+
+.dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.dot--green {
+  background: var(--ok);
+}
+
+.dot--amber {
+  background: var(--amber);
+}
+
+.dot--rose {
+  background: var(--rose);
+}
+
+.alert-amount {
+  margin-left: auto;
+  font-weight: 700;
+}
+
+.alert-item > div {
+  min-width: 0;
+}
+
+.grade--good {
+  background: var(--ok-tint);
+  color: var(--ok);
+}
+
+.grade--ok {
+  background: var(--blue-tint);
+  color: var(--blue);
+}
+
+.grade--mid {
+  background: var(--amber-tint);
+  color: var(--amber);
+}
+
+.grade--low {
+  background: var(--bad-tint);
+  color: var(--bad);
+}
+
+.span-all {
+  grid-column: 1 / -1;
+}
+
+/* Each class card carries its own colour along the top. */
+.class-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.class-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 4px;
+  background: var(--tone, var(--brand));
+}
+
+.class-card--blue {
+  --tone: var(--blue);
+}
+
+.class-card--violet {
+  --tone: var(--violet);
+}
+
+.class-card--green {
+  --tone: var(--green);
+}
+
+.class-card--amber {
+  --tone: var(--amber);
+}
+
+.class-card--rose {
+  --tone: var(--rose);
+}
+
+.class-card__rate {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+
+.exam-tile {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+}
+
+.teacher-header .badge {
+  margin-top: 4px;
+}
+
+/* Risk gauge */
+.xai-head {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+
+.xai-head .xai-summary {
+  margin-bottom: 6px;
+}
+
+.gauge {
+  position: relative;
+  width: 170px;
+  flex: none;
+  text-align: center;
+}
+
+.gauge svg {
+  display: block;
+  width: 100%;
+}
+
+.gauge path {
+  fill: none;
+  stroke-width: 12;
+  stroke-linecap: round;
+}
+
+.gauge__track {
+  stroke: var(--paper-deep);
+}
+
+.gauge__value {
+  stroke: var(--ok);
+  stroke-dasharray: var(--v) 100;
+  animation: gauge 1200ms 150ms var(--ease) both;
+}
+
+.gauge--mid .gauge__value {
+  stroke: var(--amber);
+}
+
+.gauge--high .gauge__value {
+  stroke: var(--bad);
+}
+
+@keyframes gauge {
+  from {
+    stroke-dasharray: 0 100;
+  }
+}
+
+.gauge strong {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 14px;
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.gauge span {
+  font-size: 12px;
+  color: var(--ink-3);
+}

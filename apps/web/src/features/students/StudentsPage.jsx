@@ -9,6 +9,9 @@ import { useAuth } from "../../auth/AuthContext.jsx";
 import StudentForm from "./StudentForm.jsx";
 import StudentProfileCard from "./StudentProfileCard.jsx";
 import Avatar from "../../components/Avatar.jsx";
+import StatCard, { StatRow } from "../../components/StatCard.jsx";
+import EmptyState from "../../components/EmptyState.jsx";
+import CountUp from "../../components/CountUp.jsx";
 
 export default function StudentsPage() {
   const { can } = useAuth();
@@ -87,13 +90,37 @@ export default function StudentsPage() {
 
   return (
     <section className="section">
-      <PageHeader title="Students" subtitle="Find a student, see their class, parents and progress.">
+      <PageHeader
+        icon="students"
+        tone="blue"
+        title="Students"
+        subtitle="Find a student, see their class, parents and progress."
+      >
         {canEdit && !adding && !editing && (
           <button type="button" className="btn primary" onClick={() => setAdding(true)}>
             Add student
           </button>
         )}
       </PageHeader>
+
+      <StatRow>
+        <StatCard tone="blue" icon="students" label="Students" note={`in ${classrooms.length} classes`}>
+          <CountUp value={students.length} />
+        </StatCard>
+        <StatCard tone="green" icon="message" label="Parents reachable" note="with an email or phone on file">
+          <CountUp value={students.filter((s) => s.guardian_email || s.guardian_phone).length} />
+        </StatCard>
+        {canSeeFees && (
+          <StatCard tone="amber" icon="fees" label="Behind on fees" note="pending or partly paid">
+            <CountUp value={students.filter((s) => ["pending", "partial"].includes(s.latest_fee_status)).length} />
+          </StatCard>
+        )}
+        {canSeeRisk && (
+          <StatCard tone="rose" icon="predict" label="Flagged" note="low attendance or marks">
+            <CountUp value={attention?.students?.length ?? 0} />
+          </StatCard>
+        )}
+      </StatRow>
 
       {canEdit && (adding || editing) && (
         <StudentForm
@@ -156,19 +183,23 @@ export default function StudentsPage() {
             {visible.length === 0 ? (
               <tr>
                 <td colSpan={3 + canSeeFees + canSeeRisk + canEdit}>
-                  <div className="empty-state">
-                    <div className="empty-icon">👩‍🎓</div>
-                    <div>
-                      <h5>{students.length ? "No students match these filters" : "No students yet"}</h5>
-                      <p>
-                        {students.length
-                          ? "Try clearing a filter."
-                          : canEdit
-                            ? "Use Add student to enter the first one."
-                            : "No students are assigned to you yet."}
-                      </p>
-                    </div>
-                  </div>
+                  <EmptyState
+                    icon="students"
+                    title={students.length ? "No students match these filters" : "No students yet"}
+                    action={
+                      !students.length && canEdit ? (
+                        <button type="button" className="btn primary small" onClick={() => setAdding(true)}>
+                          Add student
+                        </button>
+                      ) : null
+                    }
+                  >
+                    {students.length
+                      ? "Try clearing a filter or searching another name."
+                      : canEdit
+                        ? "Add the first student to start their record."
+                        : "No students are assigned to you yet."}
+                  </EmptyState>
                 </td>
               </tr>
             ) : (
@@ -187,7 +218,9 @@ export default function StudentsPage() {
                       </div>
                     </div>
                   </td>
-                  <td>{classLabelOf(student.id)}</td>
+                  <td>
+                    <span className="badge neutral">{classLabelOf(student.id)}</span>
+                  </td>
                   <td>{student.guardian_email || <span className="muted">—</span>}</td>
                   {canSeeFees && (
                     <td>

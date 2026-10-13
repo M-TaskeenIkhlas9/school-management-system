@@ -11,7 +11,12 @@ export default function SettingsPage() {
   ];
   return (
     <section className="section">
-      <PageHeader title="Settings" subtitle="The school's details, as used in messages to parents and on every page." />
+      <PageHeader
+        icon="settings"
+        tone="violet"
+        title="Settings"
+        subtitle="The school's details, as used in messages to parents and on every page."
+      />
       <div className="card">
         <dl className="settings-list">
           {rows.map(([label, value, key]) => (
