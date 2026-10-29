@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import * as authService from "./auth.service.js";
+import { refreshSchool } from "../settings/school.js";
 import validate, { requiredText } from "../../middleware/validate.js";
 import auth from "../../middleware/auth.js";
 import { loginLimiter } from "../../middleware/rateLimit.js";
@@ -40,7 +41,8 @@ router.post("/password", auth, loginLimiter, validate(passwordSchema), async (re
 });
 
 // Shown before sign-in: the school's name (nothing private).
-router.get("/school", (_req, res) => {
+router.get("/school", async (_req, res) => {
+  await refreshSchool();
   res.json(authService.schoolInfo());
 });
 

@@ -7,6 +7,7 @@ import { assertConfig } from "./config/env.js";
 import { ensureDefaultPrincipal } from "./modules/auth/auth.service.js";
 import { startWorker } from "./jobs/queue.js";
 import { startAutomationClock } from "./modules/automations/automations.service.js";
+import { refreshSchool } from "./modules/settings/school.js";
 import "./jobs/handlers.js";
 
 const PORT = Number(process.env.PORT) || 4000;
@@ -18,6 +19,7 @@ async function start() {
   const stopWorker = process.env.JOBS_WORKER === "off" ? () => {} : startWorker();
   const stopAutomations = process.env.JOBS_WORKER === "off" ? () => {} : startAutomationClock();
 
+  await refreshSchool(); // school name and details the principal saved
   const server = app.listen(PORT, () => {
     logger.info(`Server running on http://localhost:${PORT}`);
   });

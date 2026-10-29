@@ -318,3 +318,31 @@ describe("Fee challans", () => {
     expect((await request.get("/fees/challans").set(as("principal"))).status).toBe(400);
   });
 });
+
+describe("School details set by the principal", () => {
+  it("saves details on Settings and shows them to staff straight away", async () => {
+    const before = (await request.get("/settings/school").set(as("principal"))).body;
+    expect(before.bank_details).toMatch(/SAMPLE/); // sample until the principal replaces it
+
+    const res = await request.put("/settings/school").set(as("principal")).send({
+      address: "12 Canal Road, Lahore",
+      phone: "042 1234567",
+      bank_details: "HBL · Ops School · 1234-5678",
+      late_fine: 300,
+    });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ address: "12 Canal Road, Lahore", late_fine: 300 });
+
+    const me = (await request.get("/auth/me").set(as("teacher"))).body;
+    expect(me.school).toMatchObject({ bank_details: "HBL · Ops School · 1234-5678", phone: "042 1234567" });
+
+    // Clearing a value falls back to the server setting.
+    const cleared = await request.put("/settings/school").set(as("principal")).send({ address: "" });
+    expect(cleared.body.address).toBe(process.env.SCHOOL_ADDRESS || "");
+  });
+
+  it("only lets people who manage the school change them", async () => {
+    const res = await request.put("/settings/school").set(as("teacher")).send({ name: "Hacked" });
+    expect(res.status).toBe(403);
+  });
+});

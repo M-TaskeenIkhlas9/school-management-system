@@ -66,6 +66,12 @@ export function AuthProvider({ children }) {
     setAccess(accessFrom(data));
   }, []);
 
+  /** Re-read who I am and the school's details (e.g. after the principal edits Settings). */
+  const refreshSession = useCallback(async () => {
+    const me = await api.get("/auth/me");
+    setAccess(accessFrom(me));
+  }, []);
+
   /** Keep this browser signed in after a password change (the server issued a new token). */
   const replaceToken = useCallback((token) => {
     setCurrent((prev) => {
@@ -86,8 +92,9 @@ export function AuthProvider({ children }) {
       login,
       logout,
       replaceToken,
+      refreshSession,
     };
-  }, [current, access, login, logout, replaceToken]);
+  }, [current, access, login, logout, replaceToken, refreshSession]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

@@ -1,3 +1,4 @@
+import { school as currentSchool } from "../../modules/settings/school.js";
 import { schoolToday } from "../../config/env.js";
 
 const ROLE_SCOPE = {
@@ -9,7 +10,7 @@ const ROLE_SCOPE = {
 
 /** System prompt: who is asking, what they may see, and how to behave. */
 export function systemPrompt({ user, tools, classNames }) {
-  const school = process.env.SCHOOL_NAME || "the school";
+  const school = currentSchool().name || "the school";
   const currency = process.env.CURRENCY || "USD";
   const scope =
     user.role === "teacher"

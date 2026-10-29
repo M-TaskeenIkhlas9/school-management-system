@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { api } from "../../api/client.js";
 import Drawer from "../../components/Drawer.jsx";
 import EmptyState from "../../components/EmptyState.jsx";
@@ -25,7 +26,7 @@ function Challan({ c, school }) {
             <strong>{school?.name}</strong>
             <span>{copy}</span>
           </div>
-          {school?.bank_details && <p className="challan__bank">{school.bank_details}</p>}
+          <p className="challan__bank">{school?.bank_details || "Pay at the school office"}</p>
           <dl>
             <div>
               <dt>Challan no.</dt>
@@ -109,10 +110,12 @@ export default function Challans({ classrooms, feeId, onClose }) {
             </label>
           </div>
         )}
-        {!school?.bank_details && (
+        {(!school?.bank_details || /sample/i.test(school.bank_details)) && (
           <p className="register-card__note">
-            Tip: add the school&apos;s bank account (SCHOOL_BANK_DETAILS) in the server settings so it prints on every
-            challan.
+            {school?.bank_details
+              ? "These challans show sample bank details. "
+              : "No bank account is set, so challans say to pay at the school office. "}
+            The principal can change this on <Link to="/settings">Settings</Link>.
           </p>
         )}
         {challans?.length === 0 && (

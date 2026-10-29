@@ -1,42 +1,120 @@
+import { useEffect, useState } from "react";
+import { api } from "../../api/client.js";
 import PageHeader from "../../components/PageHeader.jsx";
 import { useAuth } from "../../auth/AuthContext.jsx";
+import { useToast } from "../../components/Toast.jsx";
+import { formatCurrency } from "../../lib/format.js";
 
-/** The school's details as the server knows them. They are set in the server's configuration, not here. */
+const FIELDS = ["name", "address", "phone", "bank_details", "late_fine"];
+
+/**
+ * The school's details, set by the principal. They print on fee challans, receipts and report
+ * cards, and are used in messages to parents.
+ */
 export default function SettingsPage() {
-  const { school } = useAuth();
-  const rows = [
-    ["School name", school?.name, "SCHOOL_NAME"],
-    ["Currency", school?.currency, "CURRENCY"],
-    ["Time zone", school?.timezone, "SCHOOL_TIMEZONE"],
-    ["Address", school?.address, "SCHOOL_ADDRESS"],
-    ["Phone", school?.phone, "SCHOOL_PHONE"],
-    ["Bank account (on challans)", school?.bank_details, "SCHOOL_BANK_DETAILS"],
-    ["Late fee fine", school?.late_fine ? String(school.late_fine) : "", "FEE_LATE_FINE"],
-  ];
+  const { school, refreshSession } = useAuth();
+  const toast = useToast();
+  const [form, setForm] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    api
+      .get("/settings/school")
+      .then((s) => setForm(Object.fromEntries(FIELDS.map((k) => [k, s[k] ?? ""]))))
+      .catch((err) => toast.error(err.message));
+  }, [toast]);
+
+  const set = (name) => (e) => setForm((f) => ({ ...f, [name]: e.target.value }));
+  const isSample = /sample/i.test(form?.bank_details ?? "");
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      await api.put("/settings/school", { ...form, late_fine: Number(form.late_fine) || 0 });
+      await refreshSession();
+      toast.success("School details saved");
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <section className="section">
       <PageHeader
         icon="settings"
         tone="violet"
         title="Settings"
-        subtitle="The school's details, as used in messages to parents and on every page."
+        subtitle="Your school's details. They print on fee challans, receipts and report cards, and appear in messages to parents."
       />
-      <div className="card">
-        <dl className="settings-list">
-          {rows.map(([label, value, key]) => (
-            <div key={key}>
-              <dt>{label}</dt>
-              <dd>{value || <span className="muted">Not set</span>}</dd>
-              <dd className="muted">
-                <code>{key}</code>
-              </dd>
-            </div>
-          ))}
-        </dl>
-        <p className="muted settings-note">
-          These are set in <code>apps/api/.env</code> on the server. Change them there and restart the server.
-        </p>
-      </div>
+      {!form ? (
+        <div className="card">
+          <p className="muted">Loading…</p>
+        </div>
+      ) : (
+        <form className="card settings-form" onSubmit={submit}>
+          <div className="card__head">
+            <h2>School details</h2>
+          </div>
+          <div className="form-grid">
+            <label>
+              School name
+              <input value={form.name} onChange={set("name")} maxLength={150} placeholder="Cambridge Public School" />
+            </label>
+            <label>
+              Phone
+              <input type="tel" value={form.phone} onChange={set("phone")} maxLength={50} placeholder="042 1234567" />
+            </label>
+            <label className="span-all">
+              Address
+              <input
+                value={form.address}
+                onChange={set("address")}
+                maxLength={255}
+                placeholder="12 Canal Road, Lahore"
+              />
+            </label>
+            <label className="span-all">
+              Bank account for fee challans
+              <input
+                value={form.bank_details}
+                onChange={set("bank_details")}
+                maxLength={255}
+                placeholder="Bank name · Account title · Account number"
+              />
+              <span className="label-hint">
+                Printed on every challan so parents can pay at the bank. Leave empty if fees are paid only at the school
+                office.
+              </span>
+              {isSample && (
+                <span className="settings-form__warn">
+                  These are sample bank details. Replace them with the school&apos;s real account before printing
+                  challans.
+                </span>
+              )}
+            </label>
+            <label>
+              Late fee fine
+              <input type="number" min="0" step="1" value={form.late_fine} onChange={set("late_fine")} />
+              <span className="label-hint">
+                Added after the due date on challans
+                {Number(form.late_fine) ? ` (${formatCurrency(form.late_fine)})` : ""}. 0 = no fine.
+              </span>
+            </label>
+          </div>
+          <div className="form-actions">
+            <button type="submit" className="btn primary" disabled={busy}>
+              {busy ? "Saving…" : "Save details"}
+            </button>
+          </div>
+          <p className="muted settings-note">
+            Currency ({school?.currency}) and time zone ({school?.timezone}) are set when the school is installed, so
+            old records stay consistent.
+          </p>
+        </form>
+      )}
     </section>
   );
 }

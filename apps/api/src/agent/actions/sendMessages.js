@@ -5,6 +5,7 @@ import { buildRecipients } from "../../messaging/recipients.js";
 import { getTemplate, renderTemplate } from "../../messaging/templates.js";
 import { availableChannels, channelModes, getChannel } from "../../messaging/channels/index.js";
 import { toPlainText } from "../../messaging/channels/text.js";
+import { school } from "../../modules/settings/school.js";
 
 const MAX_RECIPIENTS = Number(process.env.MESSAGE_MAX_RECIPIENTS) || 500;
 const CHANNEL_LABEL = { email: "email", sms: "SMS", whatsapp: "WhatsApp" };
@@ -17,7 +18,7 @@ const CHANNEL_LABEL = { email: "email", sms: "SMS", whatsapp: "WhatsApp" };
 export function renderForChannel(payload, recipient, channel) {
   const vars = {
     ...recipient.vars,
-    school_name: process.env.SCHOOL_NAME || "the school",
+    school_name: school().name || "the school",
     message: payload.message ?? "",
   };
   if (channel === "email") {

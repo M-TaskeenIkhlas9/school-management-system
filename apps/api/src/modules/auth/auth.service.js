@@ -4,6 +4,7 @@ import pool from "../../db/pool.js";
 import logger from "../../lib/logger.js";
 import { createError } from "../../middleware/errorHandler.js";
 import { CLASS_SCOPED_ROLES, permissionsFor } from "./permissions.js";
+import { refreshSchool, school } from "../settings/school.js";
 
 const SALT_ROUNDS = 10;
 export const hashPassword = (password) => bcrypt.hash(password, SALT_ROUNDS);
@@ -27,26 +28,18 @@ export async function createUser({ username, email, password, role, teacher_id =
 
 /** Public facts about the school the web app shows (name on the sign-in page, currency for amounts). */
 export function schoolInfo() {
-  return {
-    name: process.env.SCHOOL_NAME || "School",
-    currency: process.env.CURRENCY || "USD",
-    timezone: process.env.SCHOOL_TIMEZONE || "Asia/Karachi",
-  };
+  const { name, currency, timezone } = school();
+  return { name: name || "School", currency, timezone };
 }
 
 /** School details for signed-in staff: what fee challans and report cards print. */
 export function schoolDetails() {
-  return {
-    ...schoolInfo(),
-    address: process.env.SCHOOL_ADDRESS || "",
-    phone: process.env.SCHOOL_PHONE || "",
-    bank_details: process.env.SCHOOL_BANK_DETAILS || "",
-    late_fine: Number(process.env.FEE_LATE_FINE) || 0,
-  };
+  return { ...school(), name: school().name || "School" };
 }
 
 /** What the web app needs to know about the signed-in user. */
 export async function describeSession(userRow) {
+  await refreshSchool();
   let classIds = null;
   if (CLASS_SCOPED_ROLES.has(userRow.role)) {
     const [rows] = userRow.teacher_id

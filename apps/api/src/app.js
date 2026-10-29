@@ -29,6 +29,7 @@ import agentRoutes from "./agent/agent.routes.js";
 import messageRoutes from "./modules/messages/messages.routes.js";
 import webhookRoutes from "./modules/webhooks/webhooks.routes.js";
 import automationRoutes from "./modules/automations/automations.routes.js";
+import settingsRoutes from "./modules/settings/settings.routes.js";
 
 const app = express();
 
@@ -86,6 +87,7 @@ app.use("/exams", byMethod("exams:read", "exams:write"), examRoutes);
 app.use("/ai/exams", byMethod("exams:read", "exams:write"), examRoutes); // backward compatibility
 app.use("/ai", requirePermission("reports:read"), aiRoutes);
 app.use("/users", requirePermission("users:manage"), userRoutes);
+app.use("/settings", requirePermission("users:manage"), settingsRoutes);
 app.use("/assistant", requirePermission("assistant:use"), agentRoutes);
 app.use("/messages", requirePermission("messages:read"), messageRoutes);
 app.use("/automations", requirePermission("messages:draft"), automationRoutes);

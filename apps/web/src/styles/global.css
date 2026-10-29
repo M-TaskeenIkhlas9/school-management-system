@@ -4093,3 +4093,15 @@ kbd {
   color: var(--bad);
   font-weight: 700;
 }
+
+.settings-form .form-grid label {
+  gap: 6px;
+}
+
+.settings-form__warn {
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--warn-tint);
+  color: var(--warn);
+  font-weight: 500;
+}
