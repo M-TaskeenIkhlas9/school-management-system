@@ -18,7 +18,7 @@ const AREA = {
   results: "Results",
   exams: "Exams",
   fees: "Fees & payments",
-  reports: "Reports & predictions",
+  reports: "Reports",
   users: "User accounts",
   assistant: "AI assistant",
   messages: "Messages to parents",

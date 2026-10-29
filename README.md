@@ -118,6 +118,19 @@ Delivery receipts arrive at `/webhooks/twilio/status` and `/webhooks/whatsapp` (
 `PUBLIC_BASE_URL`, `WHATSAPP_VERIFY_TOKEN` and `WHATSAPP_APP_SECRET`). For testing, `*_REDIRECT_TO`
 sends everything to one address or number.
 
+## Results, report cards and fee challans
+
+Results are kept the Pakistani way: a **class result sheet** per term (each student's marks in each
+subject out of that subject's total, with subjects taken from the class curriculum), graded on the
+**BISE scale** (A+ 80%+, A 70%+, B 60%+, C 50%+, D 40%+, E 33%+, F below 33%; a student fails if any
+subject is below 33%), with each student's **position in class**. Every result has a printable
+**report card**.
+
+Fees are billed monthly per class (**Bill a month**, never twice for the same month), paid in full
+or in instalments with a printable **receipt** for each payment, and printed as three-part **fee
+challans** (bank, school and parent copies) for a class or the whole school. Set `SCHOOL_ADDRESS`,
+`SCHOOL_PHONE`, `SCHOOL_BANK_DETAILS` and `FEE_LATE_FINE` so they print on challans and report cards.
+
 ## Automations
 
 **Automations** prepare messages to parents on a schedule, so routine reminders don't depend on
@@ -131,11 +144,7 @@ creator with their current permissions, so a teacher's rule only reaches their o
 rule stops working if its creator's account is deactivated. Every run is recorded (sent, waiting,
 skipped because nobody matched, or failed), and "Run now" tries a rule immediately.
 
-## AI usage and quality checks
-
-**AI usage** (principal and admin) shows how the assistant is used: questions per day, how many
-were answered, failures, tokens, average answer time, the tools it relied on and who asks most. Set
-`AI_COST_PER_1K_INPUT` / `AI_COST_PER_1K_OUTPUT` to see an estimated cost.
+## Assistant quality checks
 
 `npm run eval --prefix apps/api` asks the real model a set of questions as different staff and checks
 what it did: that answers come from the right tools, that a teacher can't get fee data or an

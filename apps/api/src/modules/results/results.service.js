@@ -1,13 +1,18 @@
 import pool from "../../db/pool.js";
 import { pageResult, pageWindow, whereClause } from "../../lib/pagination.js";
 
+/** Pass mark used by Pakistani boards (BISE): 33%. */
+export const PASS_PERCENT = 33;
+
+/** Grade on the BISE scale used across Pakistan: A+ 80+, A 70+, B 60+, C 50+, D 40+, E 33+, F below. */
 export function calcGrade(percentage) {
   const p = Number(percentage);
-  if (p >= 90) return "A+";
-  if (p >= 80) return "A";
-  if (p >= 70) return "B";
-  if (p >= 60) return "C";
-  if (p >= 50) return "D";
+  if (p >= 80) return "A+";
+  if (p >= 70) return "A";
+  if (p >= 60) return "B";
+  if (p >= 50) return "C";
+  if (p >= 40) return "D";
+  if (p >= PASS_PERCENT) return "E";
   return "F";
 }
 
@@ -22,7 +27,11 @@ export async function list({ student_id, classroom_id, term, classIds = null, ..
   const [[{ total }]] = await pool.query(`SELECT COUNT(*) AS total FROM result_cards r ${where.sql}`, where.params);
   const { limit, offset } = pageWindow(page);
   const [rows] = await pool.query(
-    `SELECT r.*, CONCAT(s.first_name, ' ', s.last_name) AS student_name, c.name AS class_name
+    `SELECT r.*, CONCAT(s.first_name, ' ', s.last_name) AS student_name, c.name AS class_name,
+            (SELECT COUNT(*) + 1 FROM result_cards x
+             WHERE x.classroom_id = r.classroom_id AND x.term = r.term AND x.percentage > r.percentage) AS position,
+            (SELECT COUNT(*) FROM result_cards x WHERE x.classroom_id = r.classroom_id AND x.term = r.term) AS out_of,
+            (SELECT COUNT(*) FROM result_subjects rs WHERE rs.result_id = r.id) AS subject_count
      FROM result_cards r
      JOIN students s ON s.id = r.student_id
      JOIN classrooms c ON c.id = r.classroom_id

@@ -12,7 +12,9 @@ import EmptyState from "../../components/EmptyState.jsx";
 import CountUp from "../../components/CountUp.jsx";
 import Avatar from "../../components/Avatar.jsx";
 import Icon from "../../app/Icon.jsx";
-import ClassResults from "./ClassResults.jsx";
+import ResultSheet from "./ResultSheet.jsx";
+import ReportCard from "./ReportCard.jsx";
+import { ordinal } from "./grades.js";
 
 const gradeTone = (g) => {
   const first = String(g || "").toUpperCase()[0];
@@ -28,6 +30,7 @@ export default function ResultsPage() {
   const [form, setForm] = useState(emptyForm);
   const [open, setOpen] = useState(false);
   const [classEntry, setClassEntry] = useState(false);
+  const [cardId, setCardId] = useState(null);
   const [editing, setEditing] = useState(null); // { id, percentage, total_score, remarks }
   const canWrite = can("results:write");
   const saveEdit = useApiMutation(({ id, ...changes }) => api.put(`/results/${id}`, changes), {
@@ -86,7 +89,7 @@ export default function ResultsPage() {
               Add one result
             </button>
             <button type="button" className="btn primary" onClick={() => setClassEntry(true)}>
-              <Icon name="plus" size={18} strokeWidth={2} /> Enter class results
+              <Icon name="plus" size={18} strokeWidth={2} /> Class result sheet
             </button>
           </>
         )}
@@ -115,9 +118,7 @@ export default function ResultsPage() {
         </StatCard>
       </StatRow>
 
-      {canWrite && classEntry && (
-        <ClassResults students={students} classrooms={classrooms} onDone={() => setClassEntry(false)} />
-      )}
+      {canWrite && classEntry && <ResultSheet classrooms={classrooms} onDone={() => setClassEntry(false)} />}
       {canWrite && open && (
         <div className="card form-card">
           <div className="card__title">
@@ -185,6 +186,7 @@ export default function ResultsPage() {
               <th>Term</th>
               <th>Percentage</th>
               <th>Grade</th>
+              <th>Position</th>
               <th>Remarks</th>
               {canWrite && <th aria-label="Actions" />}
             </tr>
@@ -192,7 +194,7 @@ export default function ResultsPage() {
           <tbody>
             {results?.items.length === 0 && (
               <tr>
-                <td colSpan={canWrite ? 7 : 6}>
+                <td colSpan={canWrite ? 8 : 7}>
                   <EmptyState icon="results" title="No results match">
                     Try another class, or enter the first result.
                   </EmptyState>
@@ -224,6 +226,15 @@ export default function ResultsPage() {
                 </td>
                 <td>
                   <span className={`grade grade--${gradeTone(row.grade)}`}>{row.grade}</span>
+                </td>
+                <td className="nowrap">
+                  {row.position ? (
+                    <>
+                      <strong>{ordinal(Number(row.position))}</strong> <span className="muted">of {row.out_of}</span>
+                    </>
+                  ) : (
+                    "—"
+                  )}
                 </td>
                 <td>
                   {editing?.id === row.id ? (
@@ -268,13 +279,18 @@ export default function ResultsPage() {
                       </div>
                     ) : (
                       <div className="row-actions">
-                        <button
-                          type="button"
-                          className="btn ghost small"
-                          onClick={() => setEditing({ id: row.id, percentage: row.percentage, remarks: row.remarks })}
-                        >
-                          Edit
+                        <button type="button" className="btn ghost small" onClick={() => setCardId(row.id)}>
+                          Report card
                         </button>
+                        {Number(row.subject_count) === 0 && (
+                          <button
+                            type="button"
+                            className="btn link"
+                            onClick={() => setEditing({ id: row.id, percentage: row.percentage, remarks: row.remarks })}
+                          >
+                            Edit
+                          </button>
+                        )}
                         <button
                           type="button"
                           className="icon-btn-danger"
@@ -297,6 +313,7 @@ export default function ResultsPage() {
         </table>
         <Pagination data={results} onPageChange={(page) => setFilters((f) => ({ ...f, page }))} />
       </div>
+      {cardId && <ReportCard resultId={cardId} onClose={() => setCardId(null)} />}
     </section>
   );
 }

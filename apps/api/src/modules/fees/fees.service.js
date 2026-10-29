@@ -196,3 +196,43 @@ export async function remove(id) {
   }
   await pool.execute("DELETE FROM fee_ledgers WHERE id = ?", [id]);
 }
+
+/**
+ * Fee challans (bank vouchers) to print: unpaid or partly paid fees for a month, with what a
+ * challan shows — student, father/guardian, class, roll number, amount and due date.
+ */
+export async function challans({ month, classroom_id = null, fee_id = null }) {
+  const where = [];
+  const params = [];
+  if (fee_id) {
+    where.push("f.id = ?");
+    params.push(fee_id);
+  } else {
+    where.push("f.month = ?", "f.amount_paid < f.amount_due");
+    params.push(month);
+    if (classroom_id) {
+      where.push("e.classroom_id = ?");
+      params.push(classroom_id);
+    }
+  }
+  const [rows] = await pool.query(
+    `SELECT f.id, f.month, f.due_date, f.amount_due, f.amount_paid,
+            CONCAT(s.first_name, ' ', s.last_name) AS student_name, s.roll_number,
+            c.name AS class_name, c.section, g.full_name AS guardian_name
+     FROM fee_ledgers f
+     JOIN students s ON s.id = f.student_id
+     LEFT JOIN enrollments e ON e.student_id = s.id AND e.is_active = 1
+     LEFT JOIN classrooms c ON c.id = e.classroom_id
+     LEFT JOIN student_guardians sg ON sg.student_id = s.id AND sg.is_primary = 1
+     LEFT JOIN guardians g ON g.id = sg.guardian_id
+     WHERE ${where.join(" AND ")}
+     ORDER BY c.name, s.roll_number IS NULL, s.roll_number, s.first_name`,
+    params
+  );
+  return rows.map((r) => ({
+    ...r,
+    amount_due: Number(r.amount_due),
+    amount_paid: Number(r.amount_paid),
+    payable: Number((Number(r.amount_due) - Number(r.amount_paid)).toFixed(2)),
+  }));
+}

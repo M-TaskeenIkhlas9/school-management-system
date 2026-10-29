@@ -8,6 +8,10 @@ export default function SettingsPage() {
     ["School name", school?.name, "SCHOOL_NAME"],
     ["Currency", school?.currency, "CURRENCY"],
     ["Time zone", school?.timezone, "SCHOOL_TIMEZONE"],
+    ["Address", school?.address, "SCHOOL_ADDRESS"],
+    ["Phone", school?.phone, "SCHOOL_PHONE"],
+    ["Bank account (on challans)", school?.bank_details, "SCHOOL_BANK_DETAILS"],
+    ["Late fee fine", school?.late_fine ? String(school.late_fine) : "", "FEE_LATE_FINE"],
   ];
   return (
     <section className="section">

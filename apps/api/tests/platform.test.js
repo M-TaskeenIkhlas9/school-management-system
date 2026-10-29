@@ -67,17 +67,6 @@ describe("Phase 1 security & bug fixes", () => {
       .send({ username: "x", email: "x@example.com", password: "secret123" });
     expect(res.status).toBe(401);
   });
-
-  it("risk prediction keeps legitimate zero values", async () => {
-    const res = await request
-      .post("/predict/explain/custom")
-      .set(auth())
-      .send({ attendance_rate: 0, average_score: 0, fee_status: "Clear" });
-    expect(res.status).toBe(200);
-    const att = res.body.contributions.find((c) => c.feature.startsWith("attendance_rate"));
-    expect(att.value).toBe(0);
-    expect(res.body.prediction).toBe("Needs Attention");
-  });
 });
 
 describe("Validation and errors (zod + Express 5)", () => {

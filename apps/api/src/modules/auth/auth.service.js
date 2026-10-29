@@ -34,6 +34,17 @@ export function schoolInfo() {
   };
 }
 
+/** School details for signed-in staff: what fee challans and report cards print. */
+export function schoolDetails() {
+  return {
+    ...schoolInfo(),
+    address: process.env.SCHOOL_ADDRESS || "",
+    phone: process.env.SCHOOL_PHONE || "",
+    bank_details: process.env.SCHOOL_BANK_DETAILS || "",
+    late_fine: Number(process.env.FEE_LATE_FINE) || 0,
+  };
+}
+
 /** What the web app needs to know about the signed-in user. */
 export async function describeSession(userRow) {
   let classIds = null;
@@ -47,7 +58,7 @@ export async function describeSession(userRow) {
     user: { id: userRow.id, username: userRow.username, email: userRow.email, role: userRow.role },
     permissions: permissionsFor(userRow.role),
     classIds,
-    school: schoolInfo(),
+    school: schoolDetails(),
   };
 }
 

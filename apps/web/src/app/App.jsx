@@ -12,14 +12,12 @@ import ExamsPage from "../features/exams/ExamsPage.jsx";
 import AttendancePage from "../features/attendance/AttendancePage.jsx";
 import ResultsPage from "../features/results/ResultsPage.jsx";
 import FeesPage from "../features/fees/FeesPage.jsx";
-import PredictPage from "../features/predict/PredictPage.jsx";
 import SettingsPage from "../features/settings/SettingsPage.jsx";
 import ApprovalsPage from "../features/actions/ApprovalsPage.jsx";
 import OutboxPage from "../features/actions/OutboxPage.jsx";
 import UsersPage from "../features/users/UsersPage.jsx";
 import AccountPage from "../features/account/AccountPage.jsx";
 import AutomationsPage from "../features/automations/AutomationsPage.jsx";
-import UsagePage from "../features/usage/UsagePage.jsx";
 
 // Every page with the permission required to open it.
 const pages = [
@@ -32,11 +30,9 @@ const pages = [
   { path: "attendance", element: <AttendancePage />, permission: "attendance:read" },
   { path: "results", element: <ResultsPage />, permission: "results:read" },
   { path: "fees", element: <FeesPage />, permission: "fees:read" },
-  { path: "predict", element: <PredictPage />, permission: "reports:read" },
   { path: "approvals", element: <ApprovalsPage />, permission: "messages:draft" },
   { path: "outbox", element: <OutboxPage />, permission: "messages:read" },
   { path: "automations", element: <AutomationsPage />, permission: "messages:draft" },
-  { path: "ai-usage", element: <UsagePage />, permission: "reports:read" },
   { path: "users", element: <UsersPage />, permission: "users:manage" },
   { path: "settings", element: <SettingsPage />, permission: "users:manage" },
   { path: "account", element: <AccountPage />, permission: null }, // everyone signed in

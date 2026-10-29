@@ -45,6 +45,17 @@ const paymentSchema = z.object({
   note: optionalText(200),
 });
 
+const challanQuery = z
+  .object({
+    month: z
+      .string()
+      .regex(/^\d{4}-(0[1-9]|1[0-2])$/)
+      .optional(),
+    classroom_id: optionalId(),
+    fee_id: optionalId(),
+  })
+  .refine((q) => q.month || q.fee_id, "Give a month or a fee");
+
 const router = Router();
 
 // Bill a month's fee to one class (or every class). Students already billed that month are skipped.
@@ -53,6 +64,11 @@ router.post("/generate", validate(generateSchema), async (req, res) => {
   const result = await feeService.generateMonth(req.body);
   await audit(req, "fees.generate", { details: { ...req.body, created: result.created } });
   res.status(201).json(result);
+});
+
+// Fee challans to print: one fee (?fee_id=) or a month's unpaid fees, optionally for one class.
+router.get("/challans", async (req, res) => {
+  res.json(await feeService.challans(parseQuery(challanQuery, req.query)));
 });
 
 router.get("/:id/payments", async (req, res) => {

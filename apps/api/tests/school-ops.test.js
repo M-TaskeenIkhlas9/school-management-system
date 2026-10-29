@@ -27,6 +27,7 @@ beforeAll(async () => {
   await pool.execute("DELETE FROM users WHERE email LIKE '%@ops.test'");
   for (const table of [
     "fee_payments",
+    "result_subjects",
     "result_cards",
     "student_guardians",
     "guardians",
@@ -213,5 +214,107 @@ describe("Importing students", () => {
     expect(res.body.results[3].error).toMatch(/No class called "Class 99"/);
     const reg = await request.get(`/attendance/register?classroom_id=${ids.class5}`).set(as("principal"));
     expect(reg.body.students.map((s) => s.student_name)).toEqual(expect.arrayContaining(["Hira Khan", "Imran Ali"]));
+  });
+});
+
+describe("Subject-wise results (award list, position, report card)", () => {
+  const sheet = (
+    rows,
+    subjects = [
+      { name: "English", total: 100 },
+      { name: "Maths", total: 100 },
+      { name: "Urdu", total: 75 },
+    ]
+  ) =>
+    request
+      .post("/results/sheet")
+      .set(as("teacher"))
+      .send({ classroom_id: ids.class5, term: "Final Term", subjects, rows });
+
+  it("saves a class award list, skipping blank marks and students with none", async () => {
+    const res = await sheet([
+      { student_id: ids.ayesha, marks: { English: 90, Maths: 85, Urdu: 70 } },
+      { student_id: ids.bilal, marks: { English: 40, Maths: "", Urdu: 20 } },
+    ]);
+    expect(res.status).toBe(200);
+    expect(res.body.saved).toBe(2);
+    const back = (await request.get(`/results/sheet?classroom_id=${ids.class5}&term=Final Term`).set(as("teacher")))
+      .body;
+    expect(back.subjects.map((s) => [s.name, s.total])).toEqual([
+      ["English", 100],
+      ["Maths", 100],
+      ["Urdu", 75],
+    ]);
+    const bilal = back.students.find((s) => s.student_id === ids.bilal);
+    expect(bilal.marks).toEqual({ English: 40, Urdu: 20 });
+  });
+
+  it("refuses marks above a subject's total", async () => {
+    const res = await sheet([{ student_id: ids.ayesha, marks: { Urdu: 80 } }]);
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("MARKS_OUT_OF_RANGE");
+  });
+
+  it("re-saving replaces a student's marks; positions and BISE grades follow", async () => {
+    await sheet([{ student_id: ids.bilal, marks: { English: 60, Maths: 55, Urdu: 50 } }]);
+    const list = (await request.get(`/results?classroom_id=${ids.class5}&term=Final Term`).set(as("teacher"))).body
+      .items;
+    const ayesha = list.find((r) => r.student_id === ids.ayesha);
+    const bilal = list.find((r) => r.student_id === ids.bilal);
+    // Ayesha 245/275 = 89.1% → A+, 1st; Bilal 165/275 = 60% → B, 2nd
+    expect(ayesha).toMatchObject({ grade: "A+", position: 1, out_of: 2 });
+    expect(bilal).toMatchObject({ percentage: "60.00", grade: "B", position: 2 });
+  });
+
+  it("builds a report card with subject grades, pass/fail, position and attendance", async () => {
+    const list = (await request.get(`/results?classroom_id=${ids.class5}&term=Final Term`).set(as("teacher"))).body
+      .items;
+    const id = list.find((r) => r.student_id === ids.ayesha).id;
+    const card = (await request.get(`/results/${id}/report-card`).set(as("teacher"))).body;
+    expect(card).toMatchObject({
+      term: "Final Term",
+      obtained: 245,
+      max_marks: 275,
+      grade: "A+",
+      passed: true,
+      position: 1,
+      out_of: 2,
+      student: { name: "Ayesha Ops", roll_number: "501" },
+    });
+    expect(card.subjects.map((s) => [s.subject, s.obtained, s.total, s.grade])).toEqual([
+      ["English", 90, 100, "A+"],
+      ["Maths", 85, 100, "A+"],
+      ["Urdu", 70, 75, "A+"],
+    ]);
+    expect(card.attendance_rate).toEqual(expect.any(Number));
+  });
+
+  it("fails a student who is below 33% in any subject", async () => {
+    await sheet([{ student_id: ids.bilal, marks: { English: 90, Maths: 20, Urdu: 70 } }]);
+    const list = (await request.get(`/results?classroom_id=${ids.class5}&term=Final Term`).set(as("teacher"))).body
+      .items;
+    const card = (
+      await request.get(`/results/${list.find((r) => r.student_id === ids.bilal).id}/report-card`).set(as("teacher"))
+    ).body;
+    expect(card.passed).toBe(false);
+    expect(card.subjects.find((s) => s.subject === "Maths")).toMatchObject({ grade: "F", passed: false });
+  });
+});
+
+describe("Fee challans", () => {
+  it("lists a month's unpaid fees with father's name, class and roll number, or one fee", async () => {
+    await request
+      .post("/fees/generate")
+      .set(as("principal"))
+      .send({ month: "2026-12", due_date: "2026-12-10", amount: 2500, classroom_id: ids.class5 });
+    const res = await request.get(`/fees/challans?month=2026-12&classroom_id=${ids.class5}`).set(as("principal"));
+    expect(res.status).toBe(200);
+    expect(res.body.map((c) => [c.student_name, c.roll_number, c.payable])).toEqual(
+      expect.arrayContaining([["Ayesha Ops", "501", 2500]])
+    );
+    expect(res.body[0]).toHaveProperty("guardian_name");
+    const one = await request.get(`/fees/challans?fee_id=${res.body[0].id}`).set(as("principal"));
+    expect(one.body).toHaveLength(1);
+    expect((await request.get("/fees/challans").set(as("principal"))).status).toBe(400);
   });
 });

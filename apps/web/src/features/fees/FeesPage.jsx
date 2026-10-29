@@ -14,6 +14,7 @@ import CountUp from "../../components/CountUp.jsx";
 import Avatar from "../../components/Avatar.jsx";
 import Icon from "../../app/Icon.jsx";
 import { GenerateFees, PaymentDrawer } from "./FeeTools.jsx";
+import Challans from "./Challans.jsx";
 
 const emptyForm = { student_id: "", due_date: "", amount_due: "", amount_paid: "" };
 
@@ -28,6 +29,7 @@ export default function FeesPage() {
   const [open, setOpen] = useState(false);
   const [billing, setBilling] = useState(false);
   const [paying, setPaying] = useState(null);
+  const [challans, setChallans] = useState(null); // { feeId? } when open
   const canWrite = can("fees:write");
   const removeFee = useApiMutation((id) => api.del(`/fees/${id}`), {
     invalidate: [keys.fees, keys.attention],
@@ -69,6 +71,9 @@ export default function FeesPage() {
       >
         {canWrite && !open && !billing && (
           <>
+            <button type="button" className="btn ghost" onClick={() => setChallans({})}>
+              <Icon name="exams" size={18} /> Print challans
+            </button>
             <button type="button" className="btn ghost" onClick={() => setOpen(true)}>
               Add one fee
             </button>
@@ -273,9 +278,14 @@ export default function FeesPage() {
                       <td>
                         <div className="row-actions">
                           {Number(fee.amount_paid) < Number(fee.amount_due) ? (
-                            <button type="button" className="btn primary small" onClick={() => setPaying(fee)}>
-                              Receive payment
-                            </button>
+                            <>
+                              <button type="button" className="btn link" onClick={() => setChallans({ feeId: fee.id })}>
+                                Challan
+                              </button>
+                              <button type="button" className="btn primary small" onClick={() => setPaying(fee)}>
+                                Receive payment
+                              </button>
+                            </>
                           ) : (
                             <button type="button" className="btn ghost small" onClick={() => setPaying(fee)}>
                               Receipts
@@ -312,6 +322,7 @@ export default function FeesPage() {
         <Pagination data={fees} onPageChange={(page) => setFilters((f) => ({ ...f, page }))} />
       </div>
       {paying && <PaymentDrawer fee={paying} onClose={() => setPaying(null)} />}
+      {challans && <Challans classrooms={classrooms} feeId={challans.feeId} onClose={() => setChallans(null)} />}
     </section>
   );
 }

@@ -3714,3 +3714,382 @@ kbd {
 .card-actions .icon-btn-danger {
   margin-left: auto;
 }
+
+/* ───────────────────────────── Result sheet ───────────────────────────── */
+
+.sheet-wrap {
+  margin: 16px 0;
+  overflow-x: auto;
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+}
+
+.sheet th,
+.sheet td {
+  padding: 8px 10px;
+  vertical-align: middle;
+}
+
+.sheet__name {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  min-width: 190px;
+  background: var(--sheet);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sheet thead .sheet__name {
+  background: var(--paper);
+}
+
+.sheet__subject {
+  position: relative;
+  min-width: 120px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.sheet__subject > input {
+  min-height: 32px;
+  padding: 4px 8px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.sheet__out-of {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  font-weight: 500;
+  color: var(--ink-3);
+}
+
+.sheet__out-of input {
+  width: 64px;
+  min-height: 28px;
+  padding: 2px 6px;
+}
+
+.sheet__remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  border: 0;
+  background: none;
+  color: var(--ink-3);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.sheet__remove:hover {
+  color: var(--bad);
+}
+
+.sheet__add {
+  min-width: 100px;
+}
+
+.sheet__mark {
+  width: 78px;
+  min-height: 34px;
+  padding: 4px 8px;
+  text-align: right;
+}
+
+.sheet__mark.is-invalid {
+  border-color: var(--bad);
+  box-shadow: 0 0 0 3px var(--bad-tint);
+}
+
+.sheet__num {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* ───────────────────────────── Report card ───────────────────────────── */
+
+.report {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 22px;
+  border: 1.5px solid var(--rule);
+  border-radius: 12px;
+  background: var(--sheet);
+}
+
+.report__head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--ink);
+  text-align: center;
+}
+
+.report__school {
+  font-family: var(--font-display);
+  font-size: 22px;
+}
+
+.report__head span {
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+
+.report__title {
+  margin-top: 6px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink) !important;
+}
+
+.report__who {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 16px;
+}
+
+.report__who dt {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.report__who dd {
+  font-weight: 600;
+}
+
+.report__table th,
+.report__table td {
+  padding: 8px 10px;
+  border: 1px solid var(--rule);
+  text-align: center;
+}
+
+.report__table th:first-child,
+.report__table td:first-child {
+  text-align: left;
+}
+
+.report__table tr.is-fail td {
+  color: var(--bad);
+  font-weight: 600;
+}
+
+.report__table tfoot td {
+  font-weight: 800;
+  background: var(--paper);
+}
+
+.report__summary {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.report__summary div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 6px;
+  border-radius: 10px;
+  background: var(--paper);
+}
+
+.report__summary span {
+  font-size: 11.5px;
+  color: var(--ink-3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.report__summary strong {
+  font-family: var(--font-display);
+  font-size: 17px;
+}
+
+.report__remarks {
+  font-style: italic;
+  color: var(--ink-2);
+}
+
+.report__signs {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 28px;
+}
+
+.report__signs span {
+  flex: 1;
+  padding-top: 6px;
+  border-top: 1px solid var(--ink-3);
+  font-size: 12px;
+  color: var(--ink-3);
+  text-align: center;
+}
+
+/* ───────────────────────────── Fee challans ───────────────────────────── */
+
+.challans {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.challans h2 {
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.challans__list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.challan {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 1px solid var(--ink-3);
+  border-radius: 8px;
+  overflow: hidden;
+  font-size: 11px;
+  background: var(--sheet);
+}
+
+.challan__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+}
+
+.challan__copy + .challan__copy {
+  border-left: 1px dashed var(--ink-3);
+}
+
+.challan__head {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--rule);
+  text-align: center;
+}
+
+.challan__head strong {
+  font-size: 12px;
+}
+
+.challan__head span {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--brand);
+}
+
+.challan__bank {
+  text-align: center;
+  color: var(--ink-2);
+}
+
+.challan dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 2px 0;
+}
+
+.challan dt {
+  color: var(--ink-3);
+}
+
+.challan dd {
+  font-weight: 600;
+  text-align: right;
+}
+
+.challan__amount {
+  margin: 4px 0;
+  padding: 4px 6px !important;
+  border-radius: 4px;
+  background: var(--paper);
+}
+
+.challan__amount dd {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.challan__sign {
+  margin-top: auto;
+  padding-top: 18px;
+  border-top: 1px dashed var(--rule);
+  color: var(--ink-3);
+  text-align: center;
+}
+
+/* Printing a report card or challans prints only them, each challan on whole paper. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+
+  .print-area {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    border-color: #999;
+  }
+
+  .drawer,
+  .drawer__panel {
+    position: static;
+    overflow: visible;
+    box-shadow: none;
+    animation: none;
+  }
+
+  .challan {
+    break-inside: avoid;
+    margin-bottom: 12px;
+  }
+}
+
+@media (max-width: 760px) {
+  .challan {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .challan__copy + .challan__copy {
+    border-left: 0;
+    border-top: 1px dashed var(--ink-3);
+  }
+
+  .report__summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.sheet__mark.is-fail {
+  border-color: color-mix(in srgb, var(--bad) 45%, var(--rule));
+  background: var(--bad-tint);
+  color: var(--bad);
+  font-weight: 700;
+}

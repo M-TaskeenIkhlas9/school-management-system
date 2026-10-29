@@ -251,7 +251,7 @@ describe("Results", () => {
     expect(res.body.grade).toBe("A+");
   });
 
-  it("POST /results grade B for 75%", async () => {
+  it("POST /results grade A for 75% (BISE scale)", async () => {
     const res = await request.post("/results").set("Authorization", `Bearer ${token}`).send({
       student_id: studentId,
       classroom_id: classroomId,
@@ -260,7 +260,7 @@ describe("Results", () => {
       percentage: 75,
     });
     expect(res.status).toBe(201);
-    expect(res.body.grade).toBe("B");
+    expect(res.body.grade).toBe("A");
   });
 
   it("POST /results/generate batch creates multiple results", async () => {
@@ -274,7 +274,7 @@ describe("Results", () => {
       });
     expect(res.status).toBe(201);
     expect(Array.isArray(res.body)).toBe(true);
-    expect(res.body[0].grade).toBe("F");
+    expect(res.body[0].grade).toBe("D"); // 45% on the BISE scale
   });
 });
 

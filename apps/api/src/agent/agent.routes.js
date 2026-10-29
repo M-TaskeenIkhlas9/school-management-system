@@ -10,18 +10,8 @@ import { toolsForUser } from "./tools/registry.js";
 import * as actions from "./actions/actions.service.js";
 import { channelModes } from "../messaging/channels/index.js";
 import { optionalText } from "../middleware/validate.js";
-import { hasPermission } from "../middleware/access.js";
-import { usageSummary } from "./usage.js";
 
 const router = Router();
-
-// How the assistant is used (for people who see reports or manage users).
-router.get("/usage", async (req, res) => {
-  if (!hasPermission(req, "reports:read") && !hasPermission(req, "users:manage")) {
-    throw createError(403, "You don't have access to AI usage", "FORBIDDEN");
-  }
-  res.json(await usageSummary({ days: req.query.days }));
-});
 
 router.get("/status", (req, res) => {
   res.json({

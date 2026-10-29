@@ -23,7 +23,6 @@ import feeRoutes from "./modules/fees/fees.routes.js";
 import resultRoutes from "./modules/results/results.routes.js";
 import examRoutes from "./modules/exams/exams.routes.js";
 import aiRoutes from "./modules/ai/ai.routes.js";
-import predictRoutes from "./modules/predict/predict.routes.js";
 import userRoutes from "./modules/users/users.routes.js";
 import guardianRoutes from "./modules/guardians/guardians.routes.js";
 import agentRoutes from "./agent/agent.routes.js";
@@ -86,7 +85,6 @@ app.use("/results", byMethod("results:read", "results:write"), resultRoutes);
 app.use("/exams", byMethod("exams:read", "exams:write"), examRoutes);
 app.use("/ai/exams", byMethod("exams:read", "exams:write"), examRoutes); // backward compatibility
 app.use("/ai", requirePermission("reports:read"), aiRoutes);
-app.use("/predict", requirePermission("reports:read"), predictRoutes);
 app.use("/users", requirePermission("users:manage"), userRoutes);
 app.use("/assistant", requirePermission("assistant:use"), agentRoutes);
 app.use("/messages", requirePermission("messages:read"), messageRoutes);
