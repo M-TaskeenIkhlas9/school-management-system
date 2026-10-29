@@ -6,6 +6,7 @@ import pool from "./db/pool.js";
 import { assertConfig } from "./config/env.js";
 import { ensureDefaultPrincipal } from "./modules/auth/auth.service.js";
 import { startWorker } from "./jobs/queue.js";
+import { startAutomationClock } from "./modules/automations/automations.service.js";
 import "./jobs/handlers.js";
 
 const PORT = Number(process.env.PORT) || 4000;
@@ -15,6 +16,7 @@ async function start() {
   await ensureDefaultPrincipal();
 
   const stopWorker = process.env.JOBS_WORKER === "off" ? () => {} : startWorker();
+  const stopAutomations = process.env.JOBS_WORKER === "off" ? () => {} : startAutomationClock();
 
   const server = app.listen(PORT, () => {
     logger.info(`Server running on http://localhost:${PORT}`);
@@ -23,6 +25,7 @@ async function start() {
   const shutdown = (signal) => {
     logger.info(`${signal} received, shutting down…`);
     stopWorker();
+    stopAutomations();
     server.close(async () => {
       await pool.end().catch(() => {});
       process.exit(0);

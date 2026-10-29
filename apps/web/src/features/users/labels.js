@@ -45,6 +45,7 @@ export const ACTIVITY_KINDS = [
   ["user.", "Account changes"],
   ["teacher.", "Class assignments"],
   ["action.", "Approvals"],
+  ["automation.", "Automations"],
 ];
 
 /** One line describing an audit entry. */
@@ -78,6 +79,18 @@ export function describeActivity(a) {
       return `Prepared ${d.type === "record_fee_payment" ? "a fee payment" : "a message to parents"} for approval`;
     case "action.edit":
       return "Edited a prepared message";
+    case "automation.create":
+      return `Created an automation (${d.kind?.replace("_", " ") ?? "rule"}${d.mode === "auto" ? ", sends automatically" : ""})`;
+    case "automation.update":
+      return d.is_active === false
+        ? "Paused an automation"
+        : d.is_active === true
+          ? "Turned on an automation"
+          : "Changed an automation";
+    case "automation.delete":
+      return "Deleted an automation";
+    case "automation.run":
+      return `Ran an automation by hand (${d.status})`;
     case "action.approve":
       return `Approved ${d.type === "record_fee_payment" ? "a fee payment" : "a message to parents"}`;
     case "action.reject":

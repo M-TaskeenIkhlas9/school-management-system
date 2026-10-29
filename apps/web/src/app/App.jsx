@@ -18,6 +18,8 @@ import ApprovalsPage from "../features/actions/ApprovalsPage.jsx";
 import OutboxPage from "../features/actions/OutboxPage.jsx";
 import UsersPage from "../features/users/UsersPage.jsx";
 import AccountPage from "../features/account/AccountPage.jsx";
+import AutomationsPage from "../features/automations/AutomationsPage.jsx";
+import UsagePage from "../features/usage/UsagePage.jsx";
 
 // Every page with the permission required to open it.
 const pages = [
@@ -33,6 +35,8 @@ const pages = [
   { path: "predict", element: <PredictPage />, permission: "reports:read" },
   { path: "approvals", element: <ApprovalsPage />, permission: "messages:draft" },
   { path: "outbox", element: <OutboxPage />, permission: "messages:read" },
+  { path: "automations", element: <AutomationsPage />, permission: "messages:draft" },
+  { path: "ai-usage", element: <UsagePage />, permission: "reports:read" },
   { path: "users", element: <UsersPage />, permission: "users:manage" },
   { path: "settings", element: <SettingsPage />, permission: "users:manage" },
   { path: "account", element: <AccountPage />, permission: null }, // everyone signed in

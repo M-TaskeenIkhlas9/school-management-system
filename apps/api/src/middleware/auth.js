@@ -24,15 +24,27 @@ export default async function auth(req, _res, next) {
     return next(createError(401, "Invalid token", "INVALID_TOKEN"));
   }
 
-  const [[user]] = await pool.execute(
-    "SELECT id, username, email, role, teacher_id, is_active, session_version FROM users WHERE id = ?",
-    [payload.id]
-  );
-  if (!user || !user.is_active)
-    return next(createError(401, "Account is disabled or no longer exists", "ACCOUNT_DISABLED"));
-  if ((payload.sv ?? 0) !== user.session_version) {
+  const user = await loadUserContext(payload.id);
+  if (!user) return next(createError(401, "Account is disabled or no longer exists", "ACCOUNT_DISABLED"));
+  if ((payload.sv ?? 0) !== user.sessionVersion) {
     return next(createError(401, "You were signed out. Please sign in again.", "SESSION_REVOKED"));
   }
+  const { sessionVersion: _sv, ...context } = user;
+  req.user = context;
+  next();
+}
+
+/**
+ * The same shape as req.user, loaded fresh from the database for an active account (null otherwise).
+ * Also used by scheduled work that acts for a person (automations), so it always gets their
+ * current role, permissions and classes.
+ */
+export async function loadUserContext(userId) {
+  const [[user]] = await pool.execute(
+    "SELECT id, username, email, role, teacher_id, is_active, session_version FROM users WHERE id = ?",
+    [userId]
+  );
+  if (!user || !user.is_active) return null;
 
   let classIds = null;
   if (CLASS_SCOPED_ROLES.has(user.role)) {
@@ -41,8 +53,7 @@ export default async function auth(req, _res, next) {
       : [[]];
     classIds = rows.map((r) => r.classroom_id);
   }
-
-  req.user = {
+  return {
     id: user.id,
     username: user.username,
     email: user.email,
@@ -50,6 +61,6 @@ export default async function auth(req, _res, next) {
     teacherId: user.teacher_id,
     permissions: new Set(permissionsFor(user.role)),
     classIds,
+    sessionVersion: user.session_version,
   };
-  next();
 }

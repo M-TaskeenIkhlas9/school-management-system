@@ -27,7 +27,9 @@ export const navGroups = [
       { path: "/ai-center", permission: "assistant:use", label: "AI assistant", icon: "sparkle" },
       { path: "/approvals", permission: "messages:draft", label: "Approvals", icon: "approvals", badge: "pending" },
       { path: "/outbox", permission: "messages:read", label: "Outbox", icon: "outbox" },
+      { path: "/automations", permission: "messages:draft", label: "Automations", icon: "calendar" },
       { path: "/predict", permission: "reports:read", label: "Risk predictions", icon: "predict" },
+      { path: "/ai-usage", permission: "reports:read", label: "AI usage", icon: "chart" },
     ],
   },
   {

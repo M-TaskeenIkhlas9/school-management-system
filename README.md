@@ -118,6 +118,31 @@ Delivery receipts arrive at `/webhooks/twilio/status` and `/webhooks/whatsapp` (
 `PUBLIC_BASE_URL`, `WHATSAPP_VERIFY_TOKEN` and `WHATSAPP_APP_SECRET`). For testing, `*_REDIRECT_TO`
 sends everything to one address or number.
 
+## Automations
+
+**Automations** prepare messages to parents on a schedule, so routine reminders don't depend on
+someone remembering: a weekly fee reminder, a daily absence alert, or an alert when a student has
+missed several days in a row. Schedules follow the school's time zone (`SCHOOL_TIMEZONE`) and school
+days (`SCHOOL_DAYS`, default Monday–Friday).
+
+Each rule either **waits for approval** (the default: its messages appear on Approvals) or, if the
+person who made it can approve messages, **sends automatically**. A run always acts as the rule's
+creator with their current permissions, so a teacher's rule only reaches their own classes, and a
+rule stops working if its creator's account is deactivated. Every run is recorded (sent, waiting,
+skipped because nobody matched, or failed), and "Run now" tries a rule immediately.
+
+## AI usage and quality checks
+
+**AI usage** (principal and admin) shows how the assistant is used: questions per day, how many
+were answered, failures, tokens, average answer time, the tools it relied on and who asks most. Set
+`AI_COST_PER_1K_INPUT` / `AI_COST_PER_1K_OUTPUT` to see an estimated cost.
+
+`npm run eval --prefix apps/api` asks the real model a set of questions as different staff and checks
+what it did: that answers come from the right tools, that a teacher can't get fee data or an
+accountant attendance, and that a drafted message is left waiting for approval and never described
+as sent. It uses the demo accounts (`npm run seed`) and removes everything it creates. Add cases in
+`apps/api/evals/cases.js`.
+
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs on every push and pull request: lint + format check, API tests against
