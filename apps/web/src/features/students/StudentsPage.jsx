@@ -9,6 +9,8 @@ import { useAuth } from "../../auth/AuthContext.jsx";
 import StudentForm from "./StudentForm.jsx";
 import StudentProfileCard from "./StudentProfileCard.jsx";
 import Avatar from "../../components/Avatar.jsx";
+import Icon from "../../app/Icon.jsx";
+import ImportStudents from "./ImportStudents.jsx";
 import StatCard, { StatRow } from "../../components/StatCard.jsx";
 import EmptyState from "../../components/EmptyState.jsx";
 import CountUp from "../../components/CountUp.jsx";
@@ -34,6 +36,11 @@ export default function StudentsPage() {
   }, [params, setParams]);
   const [editing, setEditing] = useState(null); // student being edited
   const [adding, setAdding] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const removeStudent = useApiMutation((id) => api.del(`/students/${id}`), {
+    invalidate: [keys.students],
+    success: "Student removed",
+  });
   const [search, setSearch] = useState("");
   const [classFilter, setClassFilter] = useState("");
   const [feeFilter, setFeeFilter] = useState("");
@@ -97,9 +104,14 @@ export default function StudentsPage() {
         subtitle="Find a student, see their class, parents and progress."
       >
         {canEdit && !adding && !editing && (
-          <button type="button" className="btn primary" onClick={() => setAdding(true)}>
-            Add student
-          </button>
+          <>
+            <button type="button" className="btn ghost" onClick={() => setImporting(true)}>
+              <Icon name="exams" size={18} /> Import from Excel
+            </button>
+            <button type="button" className="btn primary" onClick={() => setAdding(true)}>
+              <Icon name="plus" size={18} strokeWidth={2} /> Add student
+            </button>
+          </>
         )}
       </PageHeader>
 
@@ -240,18 +252,38 @@ export default function StudentsPage() {
                   )}
                   {canEdit && (
                     <td>
-                      <button
-                        className="btn ghost small"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          setEditing(student);
-                          setAdding(false);
-                          setSelectedId(student.id);
-                          window.scrollTo({ top: 0, behavior: "smooth" });
-                        }}
-                      >
-                        Edit
-                      </button>
+                      <div className="row-actions">
+                        <button
+                          type="button"
+                          className="btn ghost small"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setEditing(student);
+                            setAdding(false);
+                            window.scrollTo({ top: 0, behavior: "smooth" });
+                          }}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="icon-btn-danger"
+                          aria-label={`Remove ${fullName(student)}`}
+                          title="Remove (left the school)"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            if (
+                              window.confirm(
+                                `Remove ${fullName(student)}? Use this when a student has left the school.`
+                              )
+                            ) {
+                              removeStudent.mutate(student.id);
+                            }
+                          }}
+                        >
+                          <Icon name="trash" size={16} />
+                        </button>
+                      </div>
                     </td>
                   )}
                 </tr>
@@ -271,6 +303,7 @@ export default function StudentsPage() {
           onClose={() => setSelectedId(null)}
         />
       )}
+      {importing && <ImportStudents onClose={() => setImporting(false)} />}
     </section>
   );
 }

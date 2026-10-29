@@ -11,6 +11,8 @@ import StatCard, { StatRow } from "../../components/StatCard.jsx";
 import EmptyState from "../../components/EmptyState.jsx";
 import CountUp from "../../components/CountUp.jsx";
 import Avatar from "../../components/Avatar.jsx";
+import Icon from "../../app/Icon.jsx";
+import ClassResults from "./ClassResults.jsx";
 
 const gradeTone = (g) => {
   const first = String(g || "").toUpperCase()[0];
@@ -25,6 +27,17 @@ export default function ResultsPage() {
   const { students, classrooms, classIdOf } = useLookups();
   const [form, setForm] = useState(emptyForm);
   const [open, setOpen] = useState(false);
+  const [classEntry, setClassEntry] = useState(false);
+  const [editing, setEditing] = useState(null); // { id, percentage, total_score, remarks }
+  const canWrite = can("results:write");
+  const saveEdit = useApiMutation(({ id, ...changes }) => api.put(`/results/${id}`, changes), {
+    invalidate: [keys.results],
+    success: (r) => `Result updated (grade ${r.grade})`,
+  });
+  const removeResult = useApiMutation((id) => api.del(`/results/${id}`), {
+    invalidate: [keys.results],
+    success: "Result deleted",
+  });
   const [filters, setFilters] = useState({ classroom_id: "", page: 1 });
   const { data: results } = useResultsPage({ ...filters, pageSize: 20 });
   const { data: trends } = useTrends();
@@ -67,10 +80,15 @@ export default function ResultsPage() {
         title="Results"
         subtitle="Term results for each student. Grades are worked out from the percentage."
       >
-        {can("results:write") && !open && (
-          <button type="button" className="btn primary" onClick={() => setOpen(true)}>
-            Enter a result
-          </button>
+        {canWrite && !open && !classEntry && (
+          <>
+            <button type="button" className="btn ghost" onClick={() => setOpen(true)}>
+              Add one result
+            </button>
+            <button type="button" className="btn primary" onClick={() => setClassEntry(true)}>
+              <Icon name="plus" size={18} strokeWidth={2} /> Enter class results
+            </button>
+          </>
         )}
       </PageHeader>
       <StatRow>
@@ -97,10 +115,13 @@ export default function ResultsPage() {
         </StatCard>
       </StatRow>
 
-      {can("results:write") && open && (
+      {canWrite && classEntry && (
+        <ClassResults students={students} classrooms={classrooms} onDone={() => setClassEntry(false)} />
+      )}
+      {canWrite && open && (
         <div className="card form-card">
           <div className="card__title">
-            <h2>Enter a result</h2>
+            <h2>Add one result</h2>
           </div>
           <form className="form-row" onSubmit={submit}>
             <label>
@@ -165,12 +186,13 @@ export default function ResultsPage() {
               <th>Percentage</th>
               <th>Grade</th>
               <th>Remarks</th>
+              {canWrite && <th aria-label="Actions" />}
             </tr>
           </thead>
           <tbody>
             {results?.items.length === 0 && (
               <tr>
-                <td colSpan="6">
+                <td colSpan={canWrite ? 7 : 6}>
                   <EmptyState icon="results" title="No results match">
                     Try another class, or enter the first result.
                   </EmptyState>
@@ -203,7 +225,72 @@ export default function ResultsPage() {
                 <td>
                   <span className={`grade grade--${gradeTone(row.grade)}`}>{row.grade}</span>
                 </td>
-                <td>{row.remarks || <span className="muted">—</span>}</td>
+                <td>
+                  {editing?.id === row.id ? (
+                    <input
+                      value={editing.remarks ?? ""}
+                      aria-label="Remarks"
+                      onChange={(e) => setEditing((x) => ({ ...x, remarks: e.target.value }))}
+                    />
+                  ) : (
+                    row.remarks || <span className="muted">—</span>
+                  )}
+                </td>
+                {canWrite && (
+                  <td>
+                    {editing?.id === row.id ? (
+                      <div className="row-editor">
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.1"
+                          aria-label="Percentage"
+                          value={editing.percentage}
+                          onChange={(e) => setEditing((x) => ({ ...x, percentage: e.target.value }))}
+                        />
+                        <button
+                          type="button"
+                          className="btn primary small"
+                          disabled={saveEdit.isPending}
+                          onClick={() =>
+                            saveEdit.mutate(
+                              { id: row.id, percentage: Number(editing.percentage), remarks: editing.remarks ?? "" },
+                              { onSuccess: () => setEditing(null) }
+                            )
+                          }
+                        >
+                          Save
+                        </button>
+                        <button type="button" className="btn link" onClick={() => setEditing(null)}>
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="row-actions">
+                        <button
+                          type="button"
+                          className="btn ghost small"
+                          onClick={() => setEditing({ id: row.id, percentage: row.percentage, remarks: row.remarks })}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="icon-btn-danger"
+                          aria-label={`Delete ${row.student_name}'s ${row.term} result`}
+                          title="Delete"
+                          onClick={() =>
+                            window.confirm(`Delete ${row.student_name}'s ${row.term} result?`) &&
+                            removeResult.mutate(row.id)
+                          }
+                        >
+                          <Icon name="trash" size={16} />
+                        </button>
+                      </div>
+                    )}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

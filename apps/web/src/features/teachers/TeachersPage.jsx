@@ -8,6 +8,8 @@ import StatCard, { StatRow } from "../../components/StatCard.jsx";
 import EmptyState from "../../components/EmptyState.jsx";
 import CountUp from "../../components/CountUp.jsx";
 import { useAuth } from "../../auth/AuthContext.jsx";
+import InlineEditor from "../../components/InlineEditor.jsx";
+import Icon from "../../app/Icon.jsx";
 
 const emptyTeacher = { first_name: "", last_name: "", subject: "", phone: "", email: "" };
 
@@ -18,6 +20,16 @@ export default function TeachersPage() {
   const subjects = [...new Set(curriculum.map((c) => c.subject).filter(Boolean))];
   const [form, setForm] = useState(emptyTeacher);
   const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const canWrite = can("teachers:write");
+  const saveTeacher = useApiMutation(({ id, ...values }) => api.put(`/teachers/${id}`, values), {
+    invalidate: [keys.teachers],
+    success: (t) => `Saved ${fullName(t)}`,
+  });
+  const removeTeacher = useApiMutation((id) => api.del(`/teachers/${id}`), {
+    invalidate: [keys.teachers],
+    success: "Teacher removed",
+  });
 
   const create = useApiMutation((values) => api.post("/teachers", values), {
     invalidate: [keys.teachers],
@@ -115,23 +127,62 @@ export default function TeachersPage() {
         )}
         {teachers.map((teacher) => (
           <article className="card teacher-card" key={teacher.id}>
-            <div className="teacher-header">
-              <Avatar name={fullName(teacher)} size={46} />
-              <div>
-                <h2>{fullName(teacher)}</h2>
-                {teacher.subject ? (
-                  <span className="badge info">{teacher.subject}</span>
-                ) : (
-                  <p className="teacher-meta">No subject set</p>
+            {editingId === teacher.id ? (
+              <InlineEditor
+                fields={[
+                  { name: "first_name", label: "First name", required: true },
+                  { name: "last_name", label: "Last name", required: true },
+                  { name: "subject", label: "Subject" },
+                  { name: "phone", label: "Phone", type: "tel" },
+                  { name: "email", label: "Email", type: "email" },
+                ]}
+                initial={teacher}
+                saving={saveTeacher.isPending}
+                onCancel={() => setEditingId(null)}
+                onSave={(values) =>
+                  saveTeacher.mutate({ id: teacher.id, ...values }, { onSuccess: () => setEditingId(null) })
+                }
+              />
+            ) : (
+              <>
+                <div className="teacher-header">
+                  <Avatar name={fullName(teacher)} size={46} />
+                  <div>
+                    <h2>{fullName(teacher)}</h2>
+                    {teacher.subject ? (
+                      <span className="badge info">{teacher.subject}</span>
+                    ) : (
+                      <p className="teacher-meta">No subject set</p>
+                    )}
+                  </div>
+                </div>
+                <dl className="teacher-contact">
+                  <dt>Phone</dt>
+                  <dd>{teacher.phone || <span className="muted">—</span>}</dd>
+                  <dt>Email</dt>
+                  <dd>{teacher.email || <span className="muted">—</span>}</dd>
+                </dl>
+                {canWrite && (
+                  <div className="card-actions">
+                    <button type="button" className="btn ghost small" onClick={() => setEditingId(teacher.id)}>
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      className="icon-btn-danger"
+                      aria-label={`Remove ${fullName(teacher)}`}
+                      title="Remove (left the school)"
+                      onClick={() =>
+                        window.confirm(`Remove ${fullName(teacher)} from the staff list?`) &&
+                        removeTeacher.mutate(teacher.id)
+                      }
+                    >
+                      <Icon name="trash" size={16} />
+                    </button>
+                  </div>
                 )}
-              </div>
-            </div>
-            <dl className="teacher-contact">
-              <dt>Phone</dt>
-              <dd>{teacher.phone || <span className="muted">—</span>}</dd>
-              <dt>Email</dt>
-              <dd>{teacher.email || <span className="muted">—</span>}</dd>
-            </dl>
+              </>
+            )}
           </article>
         ))}
       </div>

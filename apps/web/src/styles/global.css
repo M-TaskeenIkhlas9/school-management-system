@@ -3275,3 +3275,442 @@ kbd {
   color: var(--ink-3);
   white-space: nowrap;
 }
+
+/* ───────────────────────────── Daily register ───────────────────────────── */
+
+.register-card__pickers {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.register-card__pickers select,
+.register-card__pickers input {
+  width: auto;
+  min-width: 170px;
+}
+
+.register-card__note {
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--info-tint);
+  color: var(--info);
+  font-size: 13px;
+}
+
+.register-card__bulk {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.register-list {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  gap: 8px;
+}
+
+.register-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  transition:
+    background 160ms var(--ease),
+    border-color 160ms var(--ease);
+}
+
+.register-list li.is-absent {
+  border-color: color-mix(in srgb, var(--bad) 35%, var(--rule));
+  background: var(--bad-tint);
+}
+
+.register-list li.is-late {
+  border-color: color-mix(in srgb, var(--warn) 35%, var(--rule));
+  background: var(--warn-tint);
+}
+
+.register-list__roll {
+  min-width: 34px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.register-list__name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.register-list__marks {
+  display: flex;
+  gap: 4px;
+}
+
+/* Big round P / L / A buttons, easy to hit on a phone. */
+.mark {
+  width: 38px;
+  height: 38px;
+  border: 1.5px solid var(--rule);
+  border-radius: 50%;
+  background: var(--sheet);
+  color: var(--ink-3);
+  font-weight: 800;
+  cursor: pointer;
+  transition:
+    background 140ms var(--ease),
+    color 140ms var(--ease),
+    border-color 140ms var(--ease),
+    transform 120ms var(--ease);
+}
+
+.mark:active {
+  transform: scale(0.92);
+}
+
+.mark--present.is-on {
+  background: var(--ok);
+  border-color: var(--ok);
+  color: #fff;
+}
+
+.mark--late.is-on {
+  background: var(--amber);
+  border-color: var(--amber);
+  color: #fff;
+}
+
+.mark--absent.is-on {
+  background: var(--bad);
+  border-color: var(--bad);
+  color: #fff;
+}
+
+.register-card__save {
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+@media (max-width: 560px) {
+  .register-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .register-card__save .btn {
+    width: 100%;
+  }
+}
+
+/* ───────────────────────────── Fee payments & receipts ───────────────────────────── */
+
+.payment {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.payment h2 {
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.payment__form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.payment__history h3 {
+  margin-bottom: 8px;
+  font-size: 15px;
+}
+
+.payment__history ul {
+  list-style: none;
+}
+
+.payment__history li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--rule);
+  font-size: 13px;
+}
+
+.receipt {
+  padding: 22px;
+  border: 1.5px dashed var(--rule);
+  border-radius: 12px;
+  background: var(--sheet);
+}
+
+.receipt__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 14px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.receipt__head span {
+  display: block;
+  font-size: 12px;
+  color: var(--ink-3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.receipt__school {
+  font-family: var(--font-display);
+  font-size: 18px;
+}
+
+.receipt__no {
+  text-align: right;
+}
+
+.receipt__rows > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+}
+
+.receipt__rows dt {
+  color: var(--ink-3);
+}
+
+.receipt__rows dd {
+  font-weight: 600;
+}
+
+.receipt__amount {
+  margin: 6px 0;
+  padding: 10px 12px !important;
+  border-radius: 10px;
+  background: var(--ok-tint);
+}
+
+.receipt__amount dd {
+  font-family: var(--font-display);
+  font-size: 20px;
+  color: var(--ok);
+}
+
+.receipt__sign {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--rule);
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+
+.row-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.icon-btn-danger {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--sheet);
+  color: var(--ink-3);
+  cursor: pointer;
+}
+
+.icon-btn-danger:hover {
+  border-color: var(--bad);
+  color: var(--bad);
+}
+
+/* Printing a receipt prints only the receipt. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .print-receipt,
+  .print-receipt * {
+    visibility: visible;
+  }
+
+  .print-receipt {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    border: 1px solid #999;
+  }
+}
+
+/* Class award list (results entry). */
+.marks-list {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.marks-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+}
+
+.marks-list input {
+  width: 84px;
+  min-height: 36px;
+  text-align: right;
+}
+
+.marks-list input.is-invalid {
+  border-color: var(--bad);
+  box-shadow: 0 0 0 3px var(--bad-tint);
+}
+
+.marks-list__of {
+  font-size: 12.5px;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.marks-list__pct {
+  min-width: 52px;
+  font-weight: 700;
+  text-align: right;
+}
+
+.marks-list__pct.is-good {
+  color: var(--ok);
+}
+
+.marks-list__pct.is-mid {
+  color: var(--amber);
+}
+
+.marks-list__pct.is-low {
+  color: var(--bad);
+}
+
+.row-editor {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.row-editor input {
+  width: 110px;
+  min-height: 34px;
+}
+
+@media (max-width: 560px) {
+  .marks-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Student import */
+.import {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.import h2 {
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.import__steps {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-left: 20px;
+  color: var(--ink-2);
+}
+
+.import__drop {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 26px;
+  border: 2px dashed color-mix(in srgb, var(--brand) 40%, var(--rule));
+  border-radius: 14px;
+  background: var(--brand-tint);
+  color: var(--brand);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.import__drop input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.import__preview {
+  max-height: 280px;
+  overflow: auto;
+}
+
+.import__result ul {
+  margin: 10px 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.text-ok {
+  color: var(--ok);
+}
+
+.inline-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.card-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--rule);
+}
+
+.card-actions .icon-btn-danger {
+  margin-left: auto;
+}

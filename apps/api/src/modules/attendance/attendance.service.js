@@ -121,3 +121,53 @@ export async function getConsecutiveAbsent(days = 3) {
     .filter(([, streak]) => streak >= days)
     .map(([student_id, absent_streak]) => ({ student_id, absent_streak }));
 }
+
+/** A class register for one day: every enrolled student with their mark (null = not marked yet). */
+export async function register(classroomId, day = today()) {
+  const [rows] = await pool.query(
+    `SELECT s.id AS student_id, CONCAT(s.first_name, ' ', s.last_name) AS student_name, s.roll_number,
+            a.status, a.id AS attendance_id
+     FROM enrollments e
+     JOIN students s ON s.id = e.student_id AND s.is_active = 1
+     LEFT JOIN attendance a ON a.student_id = s.id AND a.day = ?
+     WHERE e.classroom_id = ? AND e.is_active = 1
+     ORDER BY s.roll_number IS NULL, s.roll_number, s.first_name, s.last_name`,
+    [day, classroomId]
+  );
+  return { classroom_id: classroomId, day, students: rows };
+}
+
+/**
+ * Save a whole class register at once. Marking the same day again updates the marks (a teacher
+ * correcting the register), so it never fails as a duplicate. Students not in the class are refused.
+ */
+export async function saveRegister({ classroom_id, day = today(), entries, marked_by }) {
+  const [enrolled] = await pool.query("SELECT student_id FROM enrollments WHERE classroom_id = ? AND is_active = 1", [
+    classroom_id,
+  ]);
+  const inClass = new Set(enrolled.map((r) => r.student_id));
+  const outsiders = entries.filter((e) => !inClass.has(e.student_id));
+  if (outsiders.length) {
+    throw createError(400, "Some students are not in this class", "STUDENT_NOT_IN_CLASS");
+  }
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    for (const e of entries) {
+      await conn.execute(
+        `INSERT INTO attendance (student_id, classroom_id, day, status, marked_by) VALUES (?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE status = VALUES(status), classroom_id = VALUES(classroom_id), marked_by = VALUES(marked_by)`,
+        [e.student_id, classroom_id, day, e.status, marked_by]
+      );
+    }
+    await conn.commit();
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+  const counts = { present: 0, late: 0, absent: 0 };
+  for (const e of entries) counts[e.status] += 1;
+  return { classroom_id, day, saved: entries.length, ...counts };
+}

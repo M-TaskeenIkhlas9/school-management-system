@@ -39,6 +39,29 @@ export async function getById(id) {
   return rows[0] || null;
 }
 
+/** Correct a result; the grade follows the percentage. */
+export async function update(id, data) {
+  const fields = [];
+  const values = [];
+  for (const key of ["term", "total_score", "percentage", "remarks"]) {
+    if (data[key] !== undefined) {
+      fields.push(`${key} = ?`);
+      values.push(data[key] === "" ? null : data[key]);
+    }
+  }
+  if (data.percentage !== undefined) {
+    fields.push("grade = ?");
+    values.push(calcGrade(data.percentage));
+  }
+  if (fields.length) await pool.execute(`UPDATE result_cards SET ${fields.join(", ")} WHERE id = ?`, [...values, id]);
+  return getById(id);
+}
+
+/** Remove a result entered by mistake. */
+export async function remove(id) {
+  await pool.execute("DELETE FROM result_cards WHERE id = ?", [id]);
+}
+
 export async function create({ student_id, classroom_id, term, total_score, percentage, remarks, ai_remarks }) {
   const grade = calcGrade(percentage);
   const [result] = await pool.execute(

@@ -15,6 +15,8 @@ import CountUp from "../../components/CountUp.jsx";
 
 const TONES = ["blue", "violet", "green", "amber", "rose"];
 import { useAuth } from "../../auth/AuthContext.jsx";
+import InlineEditor from "../../components/InlineEditor.jsx";
+import Icon from "../../app/Icon.jsx";
 
 const emptyClass = { name: "", grade: "", section: "" };
 
@@ -28,6 +30,16 @@ export default function ClassesPage() {
   const subjectCount = new Set(curriculum.map((c) => c.subject)).size;
   const [form, setForm] = useState(emptyClass);
   const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const canWrite = can("classes:write");
+  const saveClass = useApiMutation(({ id, ...values }) => api.put(`/classrooms/${id}`, values), {
+    invalidate: [keys.classrooms, keys.students],
+    success: (c) => `Saved ${c.name}`,
+  });
+  const removeClass = useApiMutation((id) => api.del(`/classrooms/${id}`), {
+    invalidate: [keys.classrooms],
+    success: "Class removed",
+  });
 
   const create = useApiMutation((values) => api.post("/classrooms", values), {
     invalidate: [keys.classrooms],
@@ -117,42 +129,82 @@ export default function ClassesPage() {
           const studentCount = students.filter((st) => st.classroom_id === room.id).length;
           return (
             <article className={`class-card class-card--${TONES[index % TONES.length]}`} key={room.id}>
-              <div className="class-header">
-                <div>
-                  <h2>{room.name}</h2>
-                  <p>
-                    Grade {room.grade}
-                    {room.section ? ` · Section ${room.section}` : ""}
-                  </p>
-                </div>
-                <span className="class-count">
-                  <strong>{studentCount}</strong> {studentCount === 1 ? "student" : "students"}
-                </span>
-              </div>
-              {rateOf.has(room.id) && (
-                <div className="class-card__rate">
-                  <span>Attendance</span>
-                  <div className="meter">
-                    <span className="meter__track">
-                      <span
-                        className={`meter__fill is-${rateOf.get(room.id) >= 85 ? "good" : rateOf.get(room.id) >= 75 ? "mid" : "low"}`}
-                        style={{ width: `${rateOf.get(room.id)}%` }}
-                      />
-                    </span>
-                    <strong>{rateOf.get(room.id)}%</strong>
-                  </div>
-                </div>
-              )}
-              {subjects.length ? (
-                <div className="tag-row">
-                  {subjects.map((s) => (
-                    <span key={s} className="badge neutral">
-                      {s}
-                    </span>
-                  ))}
-                </div>
+              {editingId === room.id ? (
+                <InlineEditor
+                  fields={[
+                    { name: "name", label: "Name", required: true },
+                    { name: "grade", label: "Grade", required: true },
+                    { name: "section", label: "Section" },
+                  ]}
+                  initial={room}
+                  saving={saveClass.isPending}
+                  onCancel={() => setEditingId(null)}
+                  onSave={(values) =>
+                    saveClass.mutate({ id: room.id, ...values }, { onSuccess: () => setEditingId(null) })
+                  }
+                />
               ) : (
-                <p className="muted">No subjects added yet.</p>
+                <>
+                  <div className="class-header">
+                    <div>
+                      <h2>{room.name}</h2>
+                      <p>
+                        Grade {room.grade}
+                        {room.section ? ` · Section ${room.section}` : ""}
+                      </p>
+                    </div>
+                    <span className="class-count">
+                      <strong>{studentCount}</strong> {studentCount === 1 ? "student" : "students"}
+                    </span>
+                  </div>
+                  {rateOf.has(room.id) && (
+                    <div className="class-card__rate">
+                      <span>Attendance</span>
+                      <div className="meter">
+                        <span className="meter__track">
+                          <span
+                            className={`meter__fill is-${rateOf.get(room.id) >= 85 ? "good" : rateOf.get(room.id) >= 75 ? "mid" : "low"}`}
+                            style={{ width: `${rateOf.get(room.id)}%` }}
+                          />
+                        </span>
+                        <strong>{rateOf.get(room.id)}%</strong>
+                      </div>
+                    </div>
+                  )}
+                  {subjects.length ? (
+                    <div className="tag-row">
+                      {subjects.map((s) => (
+                        <span key={s} className="badge neutral">
+                          {s}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="muted">No subjects added yet.</p>
+                  )}
+                  {canWrite && (
+                    <div className="card-actions">
+                      <button type="button" className="btn ghost small" onClick={() => setEditingId(room.id)}>
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        className="icon-btn-danger"
+                        aria-label={`Remove ${room.name}`}
+                        title="Remove class"
+                        onClick={() =>
+                          window.confirm(
+                            studentCount
+                              ? `${room.name} still has ${studentCount} students. Remove it anyway? Move them to another class first if they are staying.`
+                              : `Remove ${room.name}?`
+                          ) && removeClass.mutate(room.id)
+                        }
+                      >
+                        <Icon name="trash" size={16} />
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </article>
           );

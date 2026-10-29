@@ -69,6 +69,27 @@ router.post("/", validate(resultSchema), async (req, res) => {
   res.status(201).json(await resultService.create(req.body));
 });
 
+router.put(
+  "/:id",
+  validate(resultSchema.pick({ term: true, total_score: true, percentage: true, remarks: true }).partial()),
+  async (req, res) => {
+    const id = idParam(req);
+    const existing = await resultService.getById(id);
+    if (!existing) throw createError(404, "Result not found", "NOT_FOUND");
+    assertClassAccess(req, existing.classroom_id);
+    res.json(await resultService.update(id, req.body));
+  }
+);
+
+router.delete("/:id", async (req, res) => {
+  const id = idParam(req);
+  const existing = await resultService.getById(id);
+  if (!existing) throw createError(404, "Result not found", "NOT_FOUND");
+  assertClassAccess(req, existing.classroom_id);
+  await resultService.remove(id);
+  res.status(204).end();
+});
+
 router.post("/generate", validate(batchSchema), async (req, res) => {
   assertClassAccess(req, req.body.classroom_id);
   for (const item of req.body.results) await assertStudentInClass(item.student_id, req.body.classroom_id);

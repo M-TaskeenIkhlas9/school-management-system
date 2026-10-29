@@ -13,6 +13,7 @@ import Segmented from "../../components/Segmented.jsx";
 import CountUp from "../../components/CountUp.jsx";
 import Avatar from "../../components/Avatar.jsx";
 import Icon from "../../app/Icon.jsx";
+import { GenerateFees, PaymentDrawer } from "./FeeTools.jsx";
 
 const emptyForm = { student_id: "", due_date: "", amount_due: "", amount_paid: "" };
 
@@ -20,11 +21,18 @@ export default function FeesPage() {
   const { can } = useAuth();
   const { data: stats } = useDashboard();
   const { data: defaulters = [] } = useDefaulters();
-  const { students } = useLookups();
+  const { students, classrooms } = useLookups();
   const [filters, setFilters] = useState({ status: "", page: 1 });
   const { data: fees } = useFeesPage({ ...filters, pageSize: 20 });
   const [form, setForm] = useState(emptyForm);
   const [open, setOpen] = useState(false);
+  const [billing, setBilling] = useState(false);
+  const [paying, setPaying] = useState(null);
+  const canWrite = can("fees:write");
+  const removeFee = useApiMutation((id) => api.del(`/fees/${id}`), {
+    invalidate: [keys.fees, keys.attention],
+    success: "Fee deleted",
+  });
 
   const create = useApiMutation((values) => api.post("/fees", values), {
     invalidate: [keys.fees, keys.attention],
@@ -59,16 +67,22 @@ export default function FeesPage() {
         title="Fees"
         subtitle="What has been billed, what has come in, and who is behind."
       >
-        {can("fees:write") && !open && (
-          <button type="button" className="btn primary" onClick={() => setOpen(true)}>
-            Record a fee
-          </button>
+        {canWrite && !open && !billing && (
+          <>
+            <button type="button" className="btn ghost" onClick={() => setOpen(true)}>
+              Add one fee
+            </button>
+            <button type="button" className="btn primary" onClick={() => setBilling(true)}>
+              <Icon name="plus" size={18} strokeWidth={2} /> Bill a month
+            </button>
+          </>
         )}
       </PageHeader>
-      {can("fees:write") && open && (
+      {canWrite && billing && <GenerateFees classrooms={classrooms} onDone={() => setBilling(false)} />}
+      {canWrite && open && (
         <div className="card form-card">
           <div className="card__title">
-            <h2>Record a fee</h2>
+            <h2>Add one fee</h2>
             <span>The status (paid, partial or pending) follows from the amounts.</span>
           </div>
           <form className="form-row" onSubmit={submit}>
@@ -225,6 +239,7 @@ export default function FeesPage() {
                 <th>Amount</th>
                 <th>Paid</th>
                 <th>Status</th>
+                {canWrite && <th aria-label="Actions" />}
               </tr>
             </thead>
             <tbody>
@@ -254,6 +269,40 @@ export default function FeesPage() {
                     <td>
                       <span className={`badge ${badgeClass(fee.status)}`}>{fee.status}</span>
                     </td>
+                    {canWrite && (
+                      <td>
+                        <div className="row-actions">
+                          {Number(fee.amount_paid) < Number(fee.amount_due) ? (
+                            <button type="button" className="btn primary small" onClick={() => setPaying(fee)}>
+                              Receive payment
+                            </button>
+                          ) : (
+                            <button type="button" className="btn ghost small" onClick={() => setPaying(fee)}>
+                              Receipts
+                            </button>
+                          )}
+                          {Number(fee.amount_paid) === 0 && (
+                            <button
+                              type="button"
+                              className="icon-btn-danger"
+                              aria-label={`Delete this fee for ${fee.student_name}`}
+                              title="Delete (entered by mistake)"
+                              onClick={() => {
+                                if (
+                                  window.confirm(
+                                    `Delete the ${formatCurrency(fee.amount_due)} fee for ${fee.student_name}?`
+                                  )
+                                ) {
+                                  removeFee.mutate(fee.id);
+                                }
+                              }}
+                            >
+                              <Icon name="trash" size={16} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 );
               })}
@@ -262,6 +311,7 @@ export default function FeesPage() {
         )}
         <Pagination data={fees} onPageChange={(page) => setFilters((f) => ({ ...f, page }))} />
       </div>
+      {paying && <PaymentDrawer fee={paying} onClose={() => setPaying(null)} />}
     </section>
   );
 }

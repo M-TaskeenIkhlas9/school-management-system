@@ -12,6 +12,7 @@ import validate, {
 } from "../../middleware/validate.js";
 import { pageParams } from "../../lib/pagination.js";
 import { createError } from "../../middleware/errorHandler.js";
+import { audit } from "../../lib/audit.js";
 
 const money = () => z.coerce.number().min(0);
 const optionalMoney = () => z.preprocess((v) => (v === "" || v === null ? undefined : v), money().optional());
@@ -30,7 +31,52 @@ const feeSchema = z.object({
 
 const listQuery = z.object({ ...pageParams, student_id: optionalId(), status: feeStatus.optional() });
 
+const generateSchema = z.object({
+  month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "use YYYY-MM"),
+  due_date: isoDate(),
+  amount: money().refine((n) => n > 0, "must be more than 0"),
+  classroom_id: optionalId(),
+});
+
+const paymentSchema = z.object({
+  amount: money().refine((n) => n > 0, "must be more than 0"),
+  paid_on: optionalDate(),
+  method: z.enum(["cash", "bank", "online", "other"]).default("cash"),
+  note: optionalText(200),
+});
+
 const router = Router();
+
+// Bill a month's fee to one class (or every class). Students already billed that month are skipped.
+// (Writes on /fees need fees:write — see app.js.)
+router.post("/generate", validate(generateSchema), async (req, res) => {
+  const result = await feeService.generateMonth(req.body);
+  await audit(req, "fees.generate", { details: { ...req.body, created: result.created } });
+  res.status(201).json(result);
+});
+
+router.get("/:id/payments", async (req, res) => {
+  res.json(await feeService.payments(idParam(req)));
+});
+
+// Record a payment or instalment; the response is the receipt.
+router.post("/:id/payments", validate(paymentSchema), async (req, res) => {
+  const id = idParam(req);
+  const receipt = await feeService.recordPayment(id, req.body, req.user.id);
+  await audit(req, "fees.payment", {
+    entityType: "fee",
+    entityId: id,
+    details: { amount: receipt.amount, method: receipt.method },
+  });
+  res.status(201).json(receipt);
+});
+
+router.delete("/:id", async (req, res) => {
+  const id = idParam(req);
+  await feeService.remove(id);
+  await audit(req, "fees.delete", { entityType: "fee", entityId: id });
+  res.status(204).end();
+});
 
 // GET /fees?page=&pageSize=&student_id=&status=
 router.get("/", async (req, res) => {

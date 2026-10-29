@@ -5,6 +5,7 @@ import validate, { idParam, parseQuery, requiredId, optionalDate, optionalId } f
 import { pageParams } from "../../lib/pagination.js";
 import { createError } from "../../middleware/errorHandler.js";
 import { assertClassAccess, assertStudentInClass, classScope } from "../../middleware/access.js";
+import { audit } from "../../lib/audit.js";
 
 const status = z.enum(["present", "absent", "late"]);
 
@@ -29,7 +30,40 @@ const listQuery = z.object({
   to: optionalDate(),
 });
 
+const registerQuery = z.object({ classroom_id: requiredId(), day: optionalDate() });
+const registerSchema = z.object({
+  classroom_id: requiredId(),
+  day: optionalDate(),
+  entries: z
+    .array(z.object({ student_id: requiredId(), status }))
+    .min(1)
+    .max(500),
+});
+
 const router = Router();
+
+// The day's register for one class (every student, marked or not).
+router.get("/register", async (req, res) => {
+  const { classroom_id, day } = parseQuery(registerQuery, req.query);
+  assertClassAccess(req, classroom_id);
+  res.json(await attendanceService.register(classroom_id, day || undefined));
+});
+
+// Save a whole class register at once; re-saving a day updates it.
+router.post("/register", validate(registerSchema), async (req, res) => {
+  assertClassAccess(req, req.body.classroom_id);
+  const result = await attendanceService.saveRegister({
+    ...req.body,
+    day: req.body.day || undefined,
+    marked_by: req.user.id,
+  });
+  await audit(req, "attendance.register", {
+    entityType: "classroom",
+    entityId: req.body.classroom_id,
+    details: result,
+  });
+  res.json(result);
+});
 
 // GET /attendance?page=&pageSize=&student_id=&classroom_id=&status=&from=&to=
 router.get("/", async (req, res) => {

@@ -104,3 +104,95 @@ function addRemaining(fee) {
     remaining_amount: Number((Number(fee.amount_due) - Number(fee.amount_paid)).toFixed(2)),
   };
 }
+
+/** Payments recorded against one fee (newest first), with who received them. */
+export async function payments(feeId) {
+  const [rows] = await pool.execute(
+    `SELECT p.id, p.amount, p.paid_on, p.method, p.note, p.created_at, u.username AS received_by
+     FROM fee_payments p LEFT JOIN users u ON u.id = p.received_by
+     WHERE p.fee_id = ? ORDER BY p.id DESC`,
+    [feeId]
+  );
+  return rows.map((r) => ({ ...r, amount: Number(r.amount) }));
+}
+
+/**
+ * Record a payment (full or an instalment). The fee's paid amount and status follow; paying more
+ * than what is left is refused. Returns the fee and the payment (the receipt).
+ */
+export async function recordPayment(feeId, { amount, paid_on, method = "cash", note }, userId) {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const [[fee]] = await conn.execute("SELECT * FROM fee_ledgers WHERE id = ? FOR UPDATE", [feeId]);
+    if (!fee) throw createError(404, "Fee record not found", "NOT_FOUND");
+    const due = Number(fee.amount_due);
+    const paidBefore = Number(fee.amount_paid);
+    const value = Math.round(Number(amount) * 100) / 100;
+    const left = Math.round((due - paidBefore) * 100) / 100;
+    if (left <= 0) throw createError(400, "This fee is already fully paid", "ALREADY_PAID");
+    if (value > left) throw createError(400, `Only ${left} is left to pay on this fee`, "PAYMENT_EXCEEDS_FEE");
+    const day = paid_on || schoolToday();
+    const [res] = await conn.execute(
+      "INSERT INTO fee_payments (fee_id, amount, paid_on, method, note, received_by) VALUES (?, ?, ?, ?, ?, ?)",
+      [feeId, value, day, method, note || null, userId]
+    );
+    const paid = Math.round((paidBefore + value) * 100) / 100;
+    const status = paid >= due ? "paid" : "partial";
+    await conn.execute("UPDATE fee_ledgers SET amount_paid = ?, status = ?, paid_date = ? WHERE id = ?", [
+      paid,
+      status,
+      status === "paid" ? day : fee.paid_date,
+      feeId,
+    ]);
+    await conn.commit();
+    return { fee: await getById(feeId), payment_id: res.insertId, amount: value, paid_on: day, method };
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
+/**
+ * Bill a month's fee to every student in a class (or every class). Students already billed for
+ * that month are skipped, so running it twice never double-charges.
+ */
+export async function generateMonth({ month, due_date, amount, classroom_id = null }) {
+  const [students] = await pool.query(
+    `SELECT DISTINCT s.id FROM students s
+     JOIN enrollments e ON e.student_id = s.id AND e.is_active = 1
+     WHERE s.is_active = 1 ${classroom_id ? "AND e.classroom_id = ?" : ""}`,
+    classroom_id ? [classroom_id] : []
+  );
+  if (!students.length) throw createError(400, "No students in that class", "EMPTY_CLASS");
+  const [billed] = await pool.query("SELECT student_id FROM fee_ledgers WHERE month = ? AND student_id IN (?)", [
+    month,
+    students.map((s) => s.id),
+  ]);
+  const already = new Set(billed.map((b) => b.student_id));
+  const toBill = students.filter((s) => !already.has(s.id));
+  if (toBill.length) {
+    await pool.query(
+      "INSERT INTO fee_ledgers (student_id, month, due_date, amount_due, amount_paid, status) VALUES ?",
+      [toBill.map((s) => [s.id, month, due_date, amount, 0, "pending"])]
+    );
+  }
+  return {
+    month,
+    created: toBill.length,
+    skipped: already.size,
+    total: Math.round(toBill.length * amount * 100) / 100,
+  };
+}
+
+/** Remove a fee entered by mistake. Refused once anything has been paid against it. */
+export async function remove(id) {
+  const fee = await getById(id);
+  if (!fee) throw createError(404, "Fee record not found", "NOT_FOUND");
+  if (Number(fee.amount_paid) > 0) {
+    throw createError(400, "This fee has payments against it, so it can't be deleted", "FEE_HAS_PAYMENTS");
+  }
+  await pool.execute("DELETE FROM fee_ledgers WHERE id = ?", [id]);
+}
