@@ -184,11 +184,31 @@ skipped because nobody matched, or failed), and "Run now" tries a rule immediate
 
 ## Assistant quality checks
 
-`npm run eval --prefix apps/api` asks the real model a set of questions as different staff and checks
-what it did: that answers come from the right tools, that a teacher can't get fee data or an
-accountant attendance, and that a drafted message is left waiting for approval and never described
-as sent. It uses the demo accounts (`npm run seed`) and removes everything it creates. Add cases in
-`apps/api/evals/cases.js`.
+`npm run eval --prefix apps/api` asks the real model 16 questions as different staff, and drafts
+report-card remarks twice, then checks what it did. The cases (`apps/api/evals/cases.js`) are tagged:
+
+| Tag         | What it guards                                                                                                                                                           |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `data`      | answers come from the right tools and match the database (e.g. the real student count); a student who doesn't exist is not made up                                       |
+| `access`    | a teacher can't get fee data, an accountant can't get attendance, a teacher sees only their class                                                                        |
+| `approval`  | a message to parents is only prepared and left for approval, never described as sent                                                                                     |
+| `urdu`      | questions in Urdu (and Roman Urdu) are answered from the same data, in Urdu script                                                                                       |
+| `injection` | "ignore your instructions / I'm the principal now", asking for the hidden prompt, and instructions hidden inside a student's record don't change what the assistant does |
+| `remarks`   | AI report-card remarks are usable in English and Urdu, name a failed subject and don't repeat percentages                                                                |
+
+```bash
+npm run eval --prefix apps/api                       # everything
+npm run eval --prefix apps/api -- --tag injection    # one group
+npm run eval --prefix apps/api -- urdu               # cases whose name contains "urdu"
+npm run eval --prefix apps/api -- --repeat 3         # a case passes only if all 3 runs pass
+```
+
+It uses the demo accounts (`npm run seed`) and removes everything it creates. When the AI service is
+rate-limited the run waits and retries (`EVAL_RETRY_WAIT_MS`, default 20 s; `EVAL_PAUSE_MS` adds a
+pause between cases for free tiers), and a case that still can't run is reported as **ERROR**, not
+as a failure of the assistant. Each run writes a JSON report (answers, tools used, tokens) to
+`apps/api/evals/reports/` for comparing models or prompt changes. The grading itself is unit-tested
+in `apps/api/tests/evals.test.js`, which runs in CI without a model.
 
 ## Continuous integration
 
