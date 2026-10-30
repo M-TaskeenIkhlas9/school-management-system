@@ -14,6 +14,7 @@ const fromEnv = () => ({
   phone: process.env.SCHOOL_PHONE || "",
   bank_details: process.env.SCHOOL_BANK_DETAILS || "",
   late_fine: Number(process.env.FEE_LATE_FINE) || 0,
+  sibling_discount: Number(process.env.SIBLING_DISCOUNT) || 0,
 });
 
 /** Current details: saved values first, server settings for anything not set. */
@@ -26,6 +27,7 @@ export function school() {
     phone: pick("phone"),
     bank_details: pick("bank_details"),
     late_fine: Number(pick("late_fine")) || 0,
+    sibling_discount: Number(pick("sibling_discount")) || 0,
     currency: process.env.CURRENCY || "USD",
     timezone: process.env.SCHOOL_TIMEZONE || "Asia/Karachi",
   };
@@ -35,7 +37,7 @@ export function school() {
 export async function refreshSchool() {
   try {
     const [[row]] = await pool.query(
-      "SELECT name, address, phone, bank_details, late_fine FROM school_settings WHERE id = 1"
+      "SELECT name, address, phone, bank_details, late_fine, sibling_discount FROM school_settings WHERE id = 1"
     );
     saved = row ?? {};
   } catch (err) {
@@ -46,9 +48,12 @@ export async function refreshSchool() {
 
 /** Save what the principal entered (empty text clears a value back to the server setting). */
 export async function updateSchool(changes, userId) {
-  const fields = ["name", "address", "phone", "bank_details", "late_fine"].filter((k) => changes[k] !== undefined);
+  const fields = ["name", "address", "phone", "bank_details", "late_fine", "sibling_discount"].filter(
+    (k) => changes[k] !== undefined
+  );
   if (fields.length) {
-    const value = (k) => (k === "late_fine" ? Number(changes[k]) || 0 : String(changes[k]).trim() || null);
+    const value = (k) =>
+      ["late_fine", "sibling_discount"].includes(k) ? Number(changes[k]) || 0 : String(changes[k]).trim() || null;
     await pool.query(
       `INSERT INTO school_settings (id, ${fields.join(", ")}, updated_by) VALUES (1, ${fields.map(() => "?").join(", ")}, ?)
        ON DUPLICATE KEY UPDATE ${fields.map((k) => `${k} = VALUES(${k})`).join(", ")}, updated_by = VALUES(updated_by)`,

@@ -15,6 +15,7 @@ import Avatar from "../../components/Avatar.jsx";
 import Icon from "../../app/Icon.jsx";
 import { GenerateFees, PaymentDrawer } from "./FeeTools.jsx";
 import Challans from "./Challans.jsx";
+import { ConcessionsDrawer, FamiliesDrawer } from "./Families.jsx";
 
 const emptyForm = { student_id: "", due_date: "", amount_due: "", amount_paid: "" };
 
@@ -30,6 +31,7 @@ export default function FeesPage() {
   const [billing, setBilling] = useState(false);
   const [paying, setPaying] = useState(null);
   const [challans, setChallans] = useState(null); // { feeId? } when open
+  const [drawer, setDrawer] = useState(null); // "families" | "concessions"
   const canWrite = can("fees:write");
   const removeFee = useApiMutation((id) => api.del(`/fees/${id}`), {
     invalidate: [keys.fees, keys.attention],
@@ -71,6 +73,12 @@ export default function FeesPage() {
       >
         {canWrite && !open && !billing && (
           <>
+            <button type="button" className="btn ghost" onClick={() => setDrawer("families")}>
+              <Icon name="students" size={18} /> Families
+            </button>
+            <button type="button" className="btn ghost" onClick={() => setDrawer("concessions")}>
+              Concessions
+            </button>
             <button type="button" className="btn ghost" onClick={() => setChallans({})}>
               <Icon name="exams" size={18} /> Print challans
             </button>
@@ -259,7 +267,14 @@ export default function FeesPage() {
                       </div>
                     </td>
                     <td>{displayDate(fee.due_date)}</td>
-                    <td>{formatCurrency(fee.amount_due)}</td>
+                    <td>
+                      {formatCurrency(fee.amount_due)}
+                      {Number(fee.discount) > 0 && (
+                        <span className="cell-note" title={`${formatCurrency(fee.discount)} off`}>
+                          {fee.discount_note || "Discount"}
+                        </span>
+                      )}
+                    </td>
                     <td>
                       <div className="meter">
                         <span className="meter__track">
@@ -322,6 +337,8 @@ export default function FeesPage() {
         <Pagination data={fees} onPageChange={(page) => setFilters((f) => ({ ...f, page }))} />
       </div>
       {paying && <PaymentDrawer fee={paying} onClose={() => setPaying(null)} />}
+      {drawer === "families" && <FamiliesDrawer onClose={() => setDrawer(null)} />}
+      {drawer === "concessions" && <ConcessionsDrawer students={students} onClose={() => setDrawer(null)} />}
       {challans && <Challans classrooms={classrooms} feeId={challans.feeId} onClose={() => setChallans(null)} />}
     </section>
   );

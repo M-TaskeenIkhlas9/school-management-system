@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import * as feeService from "./fees.service.js";
+import * as families from "./families.service.js";
 import validate, {
   idParam,
   parseQuery,
@@ -56,7 +57,56 @@ const challanQuery = z
   })
   .refine((q) => q.month || q.fee_id, "Give a month or a fee");
 
+const concessionSchema = z.object({
+  student_id: requiredId(),
+  kind: z.enum(["scholarship", "staff_child", "need_based", "other"]).default("other"),
+  type: z.enum(["percent", "amount"]).default("percent"),
+  value: money().refine((n) => n > 0, "must be more than 0"),
+  note: optionalText(200),
+});
+
 const router = Router();
+
+// ---------- Family accounts (a primary guardian and their children) ----------
+
+router.get("/families", async (req, res) => {
+  res.json(await families.listFamilies({ q: typeof req.query.q === "string" ? req.query.q : "" }));
+});
+
+router.get("/families/:id", async (req, res) => {
+  res.json(await families.statement(idParam(req)));
+});
+
+// One payment for the whole family, spread over the children's oldest unpaid fees.
+router.post("/families/:id/payments", validate(paymentSchema), async (req, res) => {
+  const id = idParam(req);
+  const result = await families.payFamily(id, req.body, req.user.id);
+  await audit(req, "fees.family_payment", {
+    entityType: "guardian",
+    entityId: id,
+    details: { amount: result.amount, fees: result.applied.length },
+  });
+  res.status(201).json(result);
+});
+
+// ---------- Concessions (scholarship, staff child, need-based …) ----------
+
+router.get("/concessions", async (req, res) => {
+  res.json(await families.listConcessions({ student_id: Number(req.query.student_id) || undefined }));
+});
+
+router.post("/concessions", validate(concessionSchema), async (req, res) => {
+  const concession = await families.addConcession(req.body, req.user.id);
+  await audit(req, "fees.concession", { entityType: "student", entityId: req.body.student_id, details: req.body });
+  res.status(201).json(concession);
+});
+
+router.delete("/concessions/:id", async (req, res) => {
+  const id = idParam(req);
+  await families.endConcession(id);
+  await audit(req, "fees.concession_end", { entityType: "concession", entityId: id });
+  res.status(204).end();
+});
 
 // Bill a month's fee to one class (or every class). Students already billed that month are skipped.
 // (Writes on /fees need fees:write — see app.js.)

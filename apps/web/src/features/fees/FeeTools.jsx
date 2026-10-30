@@ -9,15 +9,20 @@ import { useAuth } from "../../auth/AuthContext.jsx";
 import { displayDate, formatCurrency } from "../../lib/format.js";
 
 const thisMonth = () => new Date().toISOString().slice(0, 7);
-const METHOD_LABEL = { cash: "Cash", bank: "Bank transfer", online: "Online (JazzCash/Easypaisa)", other: "Other" };
-const monthName = (ym) =>
+export const METHOD_LABEL = {
+  cash: "Cash",
+  bank: "Bank transfer",
+  online: "Online (JazzCash/Easypaisa)",
+  other: "Other",
+};
+export const monthName = (ym) =>
   ym
     ? new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric", timeZone: "UTC" }).format(
         new Date(`${ym}-01T00:00:00Z`)
       )
     : "";
 
-function useRefreshFees() {
+export function useRefreshFees() {
   const queryClient = useQueryClient();
   return () => {
     for (const key of [keys.fees, keys.dashboard, keys.students, keys.attention]) {
@@ -54,7 +59,11 @@ export function GenerateFees({ classrooms, onDone }) {
       });
       toast.success(
         r.created
-          ? `Billed ${r.created} students for ${monthName(r.month)} (${formatCurrency(r.total)})${r.skipped ? `. ${r.skipped} were already billed.` : "."}`
+          ? `Billed ${r.created} students for ${monthName(r.month)} (${formatCurrency(r.total)})` +
+              (r.discounted
+                ? `, with ${formatCurrency(r.discount)} off for ${r.discounted} (siblings and concessions)`
+                : "") +
+              (r.skipped ? `. ${r.skipped} were already billed.` : ".")
           : `Everyone was already billed for ${monthName(r.month)}.`
       );
       refresh();
@@ -162,6 +171,15 @@ function Receipt({ fee, payment, school }) {
           <dt>Total fee</dt>
           <dd>{formatCurrency(fee.amount_due)}</dd>
         </div>
+        {Number(fee.discount) > 0 && (
+          <div>
+            <dt>Discount given</dt>
+            <dd>
+              {formatCurrency(fee.discount)}
+              {fee.discount_note ? ` (${fee.discount_note})` : ""}
+            </dd>
+          </div>
+        )}
         <div>
           <dt>Balance left</dt>
           <dd>{left ? formatCurrency(left) : "Fully paid"}</dd>

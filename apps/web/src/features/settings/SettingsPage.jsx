@@ -5,7 +5,7 @@ import { useAuth } from "../../auth/AuthContext.jsx";
 import { useToast } from "../../components/Toast.jsx";
 import { formatCurrency } from "../../lib/format.js";
 
-const FIELDS = ["name", "address", "phone", "bank_details", "late_fine"];
+const FIELDS = ["name", "address", "phone", "bank_details", "late_fine", "sibling_discount"];
 
 /**
  * The school's details, set by the principal. They print on fee challans, receipts and report
@@ -31,7 +31,11 @@ export default function SettingsPage() {
     e.preventDefault();
     setBusy(true);
     try {
-      await api.put("/settings/school", { ...form, late_fine: Number(form.late_fine) || 0 });
+      await api.put("/settings/school", {
+        ...form,
+        late_fine: Number(form.late_fine) || 0,
+        sibling_discount: Number(form.sibling_discount) || 0,
+      });
       await refreshSession();
       toast.success("School details saved");
     } catch (err) {
@@ -101,6 +105,20 @@ export default function SettingsPage() {
               <span className="label-hint">
                 Added after the due date on challans
                 {Number(form.late_fine) ? ` (${formatCurrency(form.late_fine)})` : ""}. 0 = no fine.
+              </span>
+            </label>
+            <label>
+              Sibling discount (%)
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="1"
+                value={form.sibling_discount}
+                onChange={set("sibling_discount")}
+              />
+              <span className="label-hint">
+                Taken off the monthly fee for each younger brother or sister; the eldest pays in full. 0 = no discount.
               </span>
             </label>
           </div>

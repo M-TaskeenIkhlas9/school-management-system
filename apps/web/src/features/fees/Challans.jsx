@@ -55,6 +55,15 @@ function Challan({ c, school }) {
               <dt>Due date</dt>
               <dd>{displayDate(c.due_date)}</dd>
             </div>
+            {c.discount > 0 && (
+              <div>
+                <dt>Discount</dt>
+                <dd>
+                  − {formatCurrency(c.discount)}
+                  {c.discount_note ? ` (${c.discount_note})` : ""}
+                </dd>
+              </div>
+            )}
             <div className="challan__amount">
               <dt>Payable by due date</dt>
               <dd>{formatCurrency(c.payable)}</dd>

@@ -76,6 +76,12 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  // Put the school's sample details back, so the next run starts the same way.
+  await request.put("/settings/school").set(as("principal")).send({
+    phone: "",
+    bank_details: "SAMPLE — Meezan Bank · A/C title: School Fee Account · A/C no. 0101-0123456789",
+    late_fine: 200,
+  });
   await pool.end();
 });
 

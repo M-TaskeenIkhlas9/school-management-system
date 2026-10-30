@@ -2,6 +2,7 @@ import pool from "../../db/pool.js";
 import { schoolToday } from "../../config/env.js";
 import { createError } from "../../middleware/errorHandler.js";
 import { pageResult, pageWindow, whereClause } from "../../lib/pagination.js";
+import { discountsFor } from "./families.service.js";
 
 /** One page of fee records (latest due date first) with student names. */
 export async function list({ student_id, status, ...page }) {
@@ -173,17 +174,31 @@ export async function generateMonth({ month, due_date, amount, classroom_id = nu
   ]);
   const already = new Set(billed.map((b) => b.student_id));
   const toBill = students.filter((s) => !already.has(s.id));
-  if (toBill.length) {
+  // Sibling discount and concessions, worked out per student.
+  const discounts = await discountsFor(
+    toBill.map((s) => s.id),
+    Number(amount)
+  );
+  const rows = toBill.map((s) => {
+    const d = discounts.get(s.id) ?? { discount: 0, note: null };
+    const due = Math.round((Number(amount) - d.discount) * 100) / 100;
+    return [s.id, month, due_date, due, d.discount, d.note, 0, due > 0 ? "pending" : "paid"];
+  });
+  if (rows.length) {
     await pool.query(
-      "INSERT INTO fee_ledgers (student_id, month, due_date, amount_due, amount_paid, status) VALUES ?",
-      [toBill.map((s) => [s.id, month, due_date, amount, 0, "pending"])]
+      "INSERT INTO fee_ledgers (student_id, month, due_date, amount_due, discount, discount_note, amount_paid, status) VALUES ?",
+      [rows]
     );
   }
+  const total = rows.reduce((n, r) => n + r[3], 0);
+  const discount = rows.reduce((n, r) => n + r[4], 0);
   return {
     month,
     created: toBill.length,
     skipped: already.size,
-    total: Math.round(toBill.length * amount * 100) / 100,
+    total: Math.round(total * 100) / 100,
+    discount: Math.round(discount * 100) / 100,
+    discounted: rows.filter((r) => r[4] > 0).length,
   };
 }
 
@@ -216,7 +231,7 @@ export async function challans({ month, classroom_id = null, fee_id = null }) {
     }
   }
   const [rows] = await pool.query(
-    `SELECT f.id, f.month, f.due_date, f.amount_due, f.amount_paid,
+    `SELECT f.id, f.month, f.due_date, f.amount_due, f.amount_paid, f.discount, f.discount_note,
             CONCAT(s.first_name, ' ', s.last_name) AS student_name, s.roll_number,
             c.name AS class_name, c.section, g.full_name AS guardian_name
      FROM fee_ledgers f
@@ -233,6 +248,7 @@ export async function challans({ month, classroom_id = null, fee_id = null }) {
     ...r,
     amount_due: Number(r.amount_due),
     amount_paid: Number(r.amount_paid),
+    discount: Number(r.discount),
     payable: Number((Number(r.amount_due) - Number(r.amount_paid)).toFixed(2)),
   }));
 }
