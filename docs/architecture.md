@@ -19,12 +19,17 @@ apps/
 │   │   ├── config/env.js       assertConfig(), schoolToday() (school-timezone date)
 │   │   ├── db/
 │   │   │   ├── pool.js         mysql2 connection pool
+│   │   │   ├── transaction.js  inTransaction(work): commit or roll back as one
 │   │   │   ├── migrate.js      applies migrations/NNN_*.sql once each (schema_migrations table)
 │   │   │   ├── seed.js         demo data for an empty database
 │   │   │   └── migrations/
 │   │   ├── middleware/         auth (JWT, requireRole), validate (zod), errorHandler
 │   │   ├── lib/                logger, audit, phone normalisation, pagination
 │   │   ├── modules/<feature>/  <feature>.routes.js (HTTP + zod schema) and <feature>.service.js (logic + SQL)
+│   │   ├── agent/              AI assistant harness: engine (loop), llm (provider), tools, actions, context
+│   │   ├── messaging/          email / SMS / WhatsApp channels, templates, consent
+│   │   └── jobs/               DB-backed job queue (sending, automations)
+│   ├── evals/                  assistant quality checks against the real model (npm run eval)
 │   └── tests/                  Jest + supertest, always against school_management_test
 └── web/
     └── src/
@@ -50,7 +55,8 @@ package.json                    root scripts: npm run dev / test / migrate / see
   unknown fields stripped). Route ids go through `idParam()`.
 - **Errors:** throw `createError(status, message, code)`. Express 5 forwards async errors to
   `errorHandler`, which always responds `{ error, code, details? }`. No try/catch in routes.
-- **Multi-row writes use transactions** (student + enrollment, batch results, exam + questions, insights refresh, teacher class assignments).
+- **Multi-row writes use transactions** (student + enrollment, batch results, exam + questions, family payments,
+  promotion, teacher class assignments). New code uses `inTransaction()` from `db/transaction.js`.
 - **Dates:** "today" is `schoolToday()` (SCHOOL_TIMEZONE), never UTC `toISOString()` or MySQL `CURDATE()`.
 - **Schema changes:** add `src/db/migrations/NNN_description.sql`, run `npm run migrate`.
 

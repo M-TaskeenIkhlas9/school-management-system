@@ -128,8 +128,29 @@ subject is below 33%), with each student's **position in class**. Every result h
 
 Fees are billed monthly per class (**Bill a month**, never twice for the same month), paid in full
 or in instalments with a printable **receipt** for each payment, and printed as three-part **fee
-challans** (bank, school and parent copies) for a class or the whole school. Set `SCHOOL_ADDRESS`,
-`SCHOOL_PHONE`, `SCHOOL_BANK_DETAILS` and `FEE_LATE_FINE` so they print on challans and report cards.
+challans** (bank, school and parent copies) for a class or the whole school. The principal sets the
+school's address, phone, bank account and late fine on **Settings**, and they print on challans,
+receipts and report cards (the `SCHOOL_*` values in `.env` are only the starting defaults).
+
+## Families, discounts and concessions
+
+Brothers and sisters who share a primary parent form a **family account** (Fees → Families): one
+statement of every child's unpaid months, and one payment that settles the oldest months first, with
+one family receipt. A **sibling discount** (a percentage, set on Settings) is taken off each younger
+child's monthly fee; the eldest pays in full. Standing **concessions** (scholarship, staff child,
+need-based; a percentage or a fixed amount) are taken off every month's bill until ended. Each fee
+keeps what was taken off and why, and shows it on challans and receipts.
+
+## Admissions
+
+Every student gets a **GR number** (General Register), given in order on admission unless typed in,
+along with the admission form details (father's name and CNIC, B-Form, gender, religion, address,
+previous school). **Admissions → General register** lists everyone ever admitted. When a student
+leaves, the school issues a numbered **School Leaving Certificate** (refused while fees are unpaid,
+unless the principal leaves them anyway); the student comes off the class lists but stays in the
+register, and can be taken back. **Year-end promotion** moves a class up, keeping back students who
+failed their last result (the principal can change any choice), and the final class passes out with
+certificates. CNIC and B-Form numbers are shown only to staff who manage student records.
 
 ## Automations
 

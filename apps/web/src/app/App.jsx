@@ -5,6 +5,7 @@ import AppLayout from "./AppLayout.jsx";
 import { navItems } from "./navItems.jsx";
 import DashboardPage from "../features/dashboard/DashboardPage.jsx";
 import StudentsPage from "../features/students/StudentsPage.jsx";
+import AdmissionsPage from "../features/admissions/AdmissionsPage.jsx";
 import TeachersPage from "../features/teachers/TeachersPage.jsx";
 import ClassesPage from "../features/classes/ClassesPage.jsx";
 import AiCenterPage from "../features/ai-center/AiCenterPage.jsx";
@@ -23,6 +24,7 @@ import AutomationsPage from "../features/automations/AutomationsPage.jsx";
 const pages = [
   { path: "dashboard", element: <DashboardPage />, permission: "dashboard:read" },
   { path: "students", element: <StudentsPage />, permission: "students:read" },
+  { path: "admissions", element: <AdmissionsPage />, permission: "students:write" },
   { path: "teachers", element: <TeachersPage />, permission: "teachers:read" },
   { path: "classes", element: <ClassesPage />, permission: "classes:read" },
   { path: "ai-center", element: <AiCenterPage />, permission: "assistant:use" },

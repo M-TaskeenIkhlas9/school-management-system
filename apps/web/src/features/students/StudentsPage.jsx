@@ -11,6 +11,7 @@ import StudentProfileCard from "./StudentProfileCard.jsx";
 import Avatar from "../../components/Avatar.jsx";
 import Icon from "../../app/Icon.jsx";
 import ImportStudents from "./ImportStudents.jsx";
+import { LeaveDrawer } from "../admissions/Leaving.jsx";
 import StatCard, { StatRow } from "../../components/StatCard.jsx";
 import EmptyState from "../../components/EmptyState.jsx";
 import CountUp from "../../components/CountUp.jsx";
@@ -37,6 +38,7 @@ export default function StudentsPage() {
   const [editing, setEditing] = useState(null); // student being edited
   const [adding, setAdding] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [leaving, setLeaving] = useState(null); // student whose leaving is being recorded
   const removeStudent = useApiMutation((id) => api.del(`/students/${id}`), {
     invalidate: [keys.students],
     success: "Student removed",
@@ -91,6 +93,12 @@ export default function StudentsPage() {
         guardian_phone: editing.guardian_phone || "",
         guardian_email: editing.guardian_email || "",
         classroom_id: classIdOf(editing.id) ? String(classIdOf(editing.id)) : "",
+        ...Object.fromEntries(
+          ["gr_number", "gender", "b_form", "father_name", "father_cnic", "religion", "address", "previous_school"].map(
+            (k) => [k, editing[k] || ""]
+          )
+        ),
+        admission_date: formatDate(editing.admission_date) === "—" ? "" : formatDate(editing.admission_date),
       },
     [editing, classIdOf]
   );
@@ -226,7 +234,14 @@ export default function StudentsPage() {
                       <Avatar name={fullName(student)} size={38} />
                       <div>
                         <div className="student-name">{fullName(student)}</div>
-                        <div className="student-meta">{student.roll_number || "No roll number"}</div>
+                        <div className="student-meta">
+                          {[
+                            student.gr_number && `GR ${student.gr_number}`,
+                            student.roll_number && `Roll ${student.roll_number}`,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ") || "No roll number"}
+                        </div>
                       </div>
                     </div>
                   </td>
@@ -268,17 +283,11 @@ export default function StudentsPage() {
                         <button
                           type="button"
                           className="icon-btn-danger"
-                          aria-label={`Remove ${fullName(student)}`}
-                          title="Remove (left the school)"
+                          aria-label={`${fullName(student)} is leaving`}
+                          title="Leaving the school (leaving certificate)"
                           onClick={(event) => {
                             event.stopPropagation();
-                            if (
-                              window.confirm(
-                                `Remove ${fullName(student)}? Use this when a student has left the school.`
-                              )
-                            ) {
-                              removeStudent.mutate(student.id);
-                            }
+                            setLeaving(student);
                           }}
                         >
                           <Icon name="trash" size={16} />
@@ -304,6 +313,19 @@ export default function StudentsPage() {
         />
       )}
       {importing && <ImportStudents onClose={() => setImporting(false)} />}
+      {leaving && (
+        <LeaveDrawer
+          student={leaving}
+          onClose={() => setLeaving(null)}
+          onRemove={() => {
+            if (window.confirm(`Remove ${fullName(leaving)}'s record? Use this only for a student added by mistake.`)) {
+              removeStudent.mutate(leaving.id);
+              setLeaving(null);
+              setSelectedId(null);
+            }
+          }}
+        />
+      )}
     </section>
   );
 }

@@ -30,6 +30,7 @@ import messageRoutes from "./modules/messages/messages.routes.js";
 import webhookRoutes from "./modules/webhooks/webhooks.routes.js";
 import automationRoutes from "./modules/automations/automations.routes.js";
 import settingsRoutes from "./modules/settings/settings.routes.js";
+import admissionRoutes from "./modules/admissions/admissions.routes.js";
 
 const app = express();
 
@@ -75,6 +76,7 @@ app.use(auth);
 // Teachers are further limited to their classes inside the modules.
 app.use("/dashboard", requirePermission("dashboard:read"), dashboardRoutes);
 app.use("/students", byMethod("students:read", "students:write"), studentRoutes);
+app.use("/admissions", requirePermission("students:write"), admissionRoutes);
 app.use("/enrollments", byMethod("students:read", "students:write"), enrollmentRoutes);
 app.use("/guardians", byMethod("students:read", "students:write"), guardianRoutes);
 app.use("/teachers", byMethod("teachers:read", "teachers:write"), teacherRoutes);

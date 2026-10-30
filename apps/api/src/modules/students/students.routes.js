@@ -15,11 +15,31 @@ import { createError } from "../../middleware/errorHandler.js";
 import { assertStudentAccess, classScope } from "../../middleware/access.js";
 import { redactStudent } from "./students.redact.js";
 
+// CNIC / B-Form: 13 digits, stored as NADRA prints them (12345-1234567-1).
+const nadraNumber = () =>
+  z.preprocess(
+    (v) => (v === "" || v === null || v === undefined ? null : String(v).replace(/[\s-]/g, "")),
+    z
+      .string()
+      .regex(/^\d{13}$/, "must be 13 digits, e.g. 35202-1234567-1")
+      .transform((d) => `${d.slice(0, 5)}-${d.slice(5, 12)}-${d.slice(12)}`)
+      .nullish()
+  );
+
 const studentSchema = z.object({
   first_name: requiredText(100),
   last_name: requiredText(100),
   roll_number: optionalText(50),
+  gr_number: optionalText(30), // left empty, the next number in the register is given
+  admission_date: optionalDate(),
   date_of_birth: optionalDate(),
+  gender: z.preprocess((v) => (v === "" ? null : v), z.enum(["male", "female"]).nullish()),
+  b_form: nadraNumber(),
+  father_name: optionalText(150),
+  father_cnic: nadraNumber(),
+  religion: optionalText(50),
+  address: optionalText(255),
+  previous_school: optionalText(150),
   guardian_name: optionalText(200),
   guardian_phone: optionalText(30),
   guardian_email: optionalEmail(),

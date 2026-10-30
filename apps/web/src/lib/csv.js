@@ -61,5 +61,5 @@ function normaliseHeader(raw) {
 }
 
 export const TEMPLATE_CSV =
-  "first_name,last_name,roll_number,class,guardian_name,guardian_phone,guardian_email,date_of_birth\n" +
-  "Ali,Hassan,501,Class 5,Hassan Ali,0300 1234567,hassan@example.com,2015-03-21\n";
+  "first_name,last_name,roll_number,gr_number,class,father_name,father_cnic,b_form,gender,date_of_birth,admission_date,guardian_name,guardian_phone,guardian_email,address\n" +
+  "Ali,Hassan,501,1024,Class 5,Hassan Ali,35202-1234567-1,35202-7654321-3,male,2015-03-21,2021-04-01,Hassan Ali,0300 1234567,hassan@example.com,House 4 Street 9 Lahore\n";

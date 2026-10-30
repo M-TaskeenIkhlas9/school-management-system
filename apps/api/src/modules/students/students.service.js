@@ -2,6 +2,7 @@ import pool from "../../db/pool.js";
 import { schoolToday } from "../../config/env.js";
 import { createError } from "../../middleware/errorHandler.js";
 import * as guardianService from "../guardians/guardians.service.js";
+import { inTransaction } from "../../db/transaction.js";
 
 // The student's primary guardian, exposed as flat guardian_* fields for list views and forms.
 const PRIMARY_GUARDIAN_JOIN = `
@@ -94,7 +95,41 @@ export async function getProfile(id) {
   };
 }
 
-const STUDENT_FIELDS = ["first_name", "last_name", "roll_number", "date_of_birth", "status"];
+// Columns set from the admission form (the rest of a student's row is managed elsewhere).
+const STUDENT_FIELDS = [
+  "first_name",
+  "last_name",
+  "roll_number",
+  "gr_number",
+  "admission_date",
+  "date_of_birth",
+  "gender",
+  "b_form",
+  "father_name",
+  "father_cnic",
+  "religion",
+  "address",
+  "previous_school",
+  "status",
+];
+
+async function assertGrAvailable(conn, grNumber, exceptId = 0) {
+  if (!grNumber) return;
+  const [dup] = await conn.execute("SELECT id FROM students WHERE gr_number = ? AND id != ?", [grNumber, exceptId]);
+  if (dup.length > 0) throw createError(409, `GR number ${grNumber} is already used`, "DUPLICATE_GR");
+}
+
+/**
+ * The next General Register number: one more than the highest numeric GR number so far.
+ * The school settings row is locked first so two admissions at once can't get the same number.
+ */
+export async function nextGrNumber(conn) {
+  await conn.execute("SELECT id FROM school_settings WHERE id = 1 FOR UPDATE");
+  const [[{ n }]] = await conn.execute(
+    "SELECT COALESCE(MAX(CAST(gr_number AS UNSIGNED)), 0) + 1 AS n FROM students WHERE gr_number REGEXP '^[0-9]+$'"
+  );
+  return String(n);
+}
 
 async function assertRollAvailable(conn, rollNumber, exceptId = 0) {
   if (!rollNumber) return;
@@ -102,21 +137,27 @@ async function assertRollAvailable(conn, rollNumber, exceptId = 0) {
   if (dup.length > 0) throw createError(409, "Roll number already exists", "DUPLICATE_ROLL");
 }
 
-/** Make `classroomId` the student's only active class (reusing an old enrollment row if one exists). */
-async function setActiveClass(conn, studentId, classroomId) {
+/**
+ * Make `classroomId` the student's only active class (reusing an old enrollment row if one exists).
+ * `outcome` records why the old class ended (e.g. "promoted" at year end).
+ */
+export async function setActiveClass(conn, studentId, classroomId, outcome = null) {
   const [rooms] = await conn.execute("SELECT id FROM classrooms WHERE id = ? AND is_active = 1", [classroomId]);
   if (!rooms.length) throw createError(400, "Class not found", "CLASS_NOT_FOUND");
 
   await conn.execute(
-    "UPDATE enrollments SET is_active = 0, end_date = COALESCE(end_date, ?) WHERE student_id = ? AND classroom_id != ? AND is_active = 1",
-    [schoolToday(), studentId, classroomId]
+    `UPDATE enrollments SET is_active = 0, end_date = COALESCE(end_date, ?), outcome = COALESCE(?, outcome)
+     WHERE student_id = ? AND classroom_id != ? AND is_active = 1`,
+    [schoolToday(), outcome, studentId, classroomId]
   );
   const [existing] = await conn.execute("SELECT id FROM enrollments WHERE student_id = ? AND classroom_id = ?", [
     studentId,
     classroomId,
   ]);
   if (existing.length) {
-    await conn.execute("UPDATE enrollments SET is_active = 1, end_date = NULL WHERE id = ?", [existing[0].id]);
+    await conn.execute("UPDATE enrollments SET is_active = 1, end_date = NULL, outcome = NULL WHERE id = ?", [
+      existing[0].id,
+    ]);
   } else {
     await conn.execute("INSERT INTO enrollments (student_id, classroom_id, start_date) VALUES (?, ?, ?)", [
       studentId,
@@ -126,22 +167,6 @@ async function setActiveClass(conn, studentId, classroomId) {
   }
 }
 
-async function inTransaction(work) {
-  const conn = await pool.getConnection();
-  try {
-    await conn.beginTransaction();
-    const result = await work(conn);
-    await conn.commit();
-    return result;
-  } catch (err) {
-    await conn.rollback();
-    throw err;
-  } finally {
-    conn.release();
-  }
-}
-
-/** Create a student and (optionally) enroll them in `classroom_id`, atomically. */
 /**
  * Attach the guardian described by guardian_name/email/phone as the primary guardian.
  * Matching by email, then phone, reuses an existing parent (siblings share one record);
@@ -187,12 +212,25 @@ async function syncPrimaryGuardian(conn, studentId, data) {
   }
 }
 
+/** Admit a student: GR number (next in the register unless given), class and primary guardian, atomically. */
 export async function create(data) {
   const id = await inTransaction(async (conn) => {
     await assertRollAvailable(conn, data.roll_number);
+    await assertGrAvailable(conn, data.gr_number);
+    const row = {
+      ...Object.fromEntries(STUDENT_FIELDS.map((k) => [k, data[k] || null])),
+      status: data.status || "active",
+      gr_number: data.gr_number || (await nextGrNumber(conn)),
+      admission_date: data.admission_date || schoolToday(),
+    };
+    if (data.classroom_id) {
+      const [[room]] = await conn.execute("SELECT name, section FROM classrooms WHERE id = ?", [data.classroom_id]);
+      if (room) row.admission_class = room.section ? `${room.name} (${room.section})` : room.name;
+    }
+    const keys = Object.keys(row);
     const [result] = await conn.execute(
-      "INSERT INTO students (first_name, last_name, roll_number, date_of_birth) VALUES (?, ?, ?, ?)",
-      [data.first_name, data.last_name, data.roll_number || null, data.date_of_birth || null]
+      `INSERT INTO students (${keys.join(", ")}) VALUES (${keys.map(() => "?").join(", ")})`,
+      keys.map((k) => row[k])
     );
     if (data.classroom_id) await setActiveClass(conn, result.insertId, data.classroom_id);
     await syncPrimaryGuardian(conn, result.insertId, data);
@@ -206,7 +244,11 @@ export async function update(id, data) {
   if (!(await getById(id))) return null;
   await inTransaction(async (conn) => {
     await assertRollAvailable(conn, data.roll_number, id);
-    const keys = STUDENT_FIELDS.filter((key) => data[key] !== undefined);
+    await assertGrAvailable(conn, data.gr_number, id);
+    // A GR number and admission date, once given, stay: an empty field on edit leaves them as they are.
+    const keys = STUDENT_FIELDS.filter(
+      (key) => data[key] !== undefined && !(["gr_number", "admission_date"].includes(key) && !data[key])
+    );
     if (keys.length) {
       await conn.execute(`UPDATE students SET ${keys.map((k) => `${k} = ?`).join(", ")} WHERE id = ?`, [
         ...keys.map((k) => data[k]),

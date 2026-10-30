@@ -15,6 +15,7 @@ export const navGroups = [
     label: "Records",
     items: [
       { path: "/students", permission: "students:read", label: "Students", icon: "students" },
+      { path: "/admissions", permission: "students:write", label: "Admissions", icon: "book" },
       { path: "/teachers", permission: "teachers:read", label: "Teachers", icon: "teachers" },
       { path: "/classes", permission: "classes:read", label: "Classes", icon: "classes" },
       { path: "/exams", permission: "exams:read", label: "Exams", icon: "exams" },

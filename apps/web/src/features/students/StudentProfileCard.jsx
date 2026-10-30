@@ -1,5 +1,5 @@
 import { useStudent } from "../../api/queries.js";
-import { average, badgeClass } from "../../lib/format.js";
+import { average, badgeClass, displayDate } from "../../lib/format.js";
 import Drawer from "../../components/Drawer.jsx";
 import Avatar from "../../components/Avatar.jsx";
 import Skeleton from "../../components/Skeleton.jsx";
@@ -98,6 +98,27 @@ function ProfileBody({ studentId, classLabel, risk, feeStatus, showFees }) {
             <p>{profile.attendance_rate ?? "—"}% overall</p>
           </div>
         )}
+        <div className="profile-metric">
+          <h5>Admission</h5>
+          <dl className="profile-facts">
+            {[
+              ["GR no.", profile.gr_number],
+              ["Admitted", profile.admission_date && displayDate(profile.admission_date)],
+              ["In class", profile.admission_class],
+              ["Father", profile.father_name],
+              ["Father's CNIC", profile.father_cnic],
+              ["B-Form", profile.b_form],
+              ["Address", profile.address],
+            ]
+              .filter(([, v]) => v)
+              .map(([label, value]) => (
+                <div key={label}>
+                  <dt>{label}</dt>
+                  <dd>{value}</dd>
+                </div>
+              ))}
+          </dl>
+        </div>
         <div className="profile-metric">
           <h5>Guardians</h5>
           <Guardians guardians={profile.guardians} />

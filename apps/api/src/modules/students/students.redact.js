@@ -9,5 +9,10 @@ export function redactStudent(req, student) {
   }
   if (!hasPermission(req, "results:read")) delete out.results;
   if (!hasPermission(req, "attendance:read")) delete out.attendance_rate;
+  // Identity numbers stay with the office.
+  if (!hasPermission(req, "students:write")) {
+    delete out.b_form;
+    delete out.father_cnic;
+  }
   return out;
 }
