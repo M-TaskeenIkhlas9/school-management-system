@@ -158,3 +158,20 @@
 .account-page {
   max-width: 560px;
 }
+.account-page + .account-page {
+  margin-top: 16px;
+}
+.whatsapp-link p {
+  margin: 0 0 10px;
+}
+.whatsapp-link__message {
+  display: block;
+  margin: 4px 0 12px;
+  padding: 12px 14px;
+  border: 1px dashed var(--rule);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 20px;
+  letter-spacing: 0.08em;
+  user-select: all;
+}

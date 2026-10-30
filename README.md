@@ -127,6 +127,33 @@ Urdu. On WhatsApp, Urdu parents get the same template's Urdu (`ur`) translation,
 translation of `fee_reminder` and `absence_alert` in WhatsApp Manager; until it is approved, those
 messages fail and fall back to SMS.
 
+## The assistant on WhatsApp (for the principal and staff)
+
+The principal can run the school from WhatsApp: ask the assistant anything, and approve what it
+prepares, by messaging the school's WhatsApp number. Parents don't need a portal or another login;
+they already get fee reminders, absence alerts and challans on WhatsApp.
+
+- **Linking.** On **My account → Assistant on WhatsApp**, tap _Link my WhatsApp_ and send the code it
+  shows (`LINK 7K3P-Q9XA`, valid 15 minutes) from your phone; _Open WhatsApp_ fills it in. This proves
+  you hold both the account and the phone. Five wrong codes from a number in an hour and it is ignored.
+  Changing your password, being signed out everywhere or deactivated, or sending **UNLINK**, ends it.
+- **Asking.** Messages from a linked number go to the same assistant, with the same tools and role
+  limits as the web chat (a teacher still sees only their classes). Answers are written for a phone
+  (no tables). The conversations also appear in the AI Center, marked _WhatsApp_.
+- **Approving.** A message to parents or a fee payment the assistant prepares comes back with
+  **Approve** and **Cancel** buttons (or reply `APPROVE 12` / `CANCEL 12`); **PENDING** lists what is
+  waiting. When a teacher or the accountant prepares something, linked approvers are told on WhatsApp
+  with the same buttons. Nothing is done without a tap from someone allowed to approve it.
+- **Commands:** HELP, NEW (fresh conversation), PENDING, APPROVE n, CANCEL n, UNLINK. Anything else is
+  a question for the assistant, in English, Urdu or Roman Urdu.
+
+Setup: WhatsApp must be on (`WHATSAPP_PROVIDER=meta`) with the webhook configured
+(`WHATSAPP_APP_SECRET`, see above), plus `WHATSAPP_BOT_NUMBER`. WhatsApp only allows free-form
+messages within 24 hours of the person's last message; approvers outside that window are told with
+the template `approval_request` (parameters: who prepared it, what, its number), which you approve in
+WhatsApp Manager. Replies are answered in the background (a few seconds), and a message WhatsApp
+delivers twice is answered once.
+
 ## Results, report cards and fee challans
 
 Results are kept the Pakistani way: a **class result sheet** per term (each student's marks in each

@@ -4,13 +4,14 @@ import { api } from "../../api/client.js";
 import { useAuth } from "../../auth/AuthContext.jsx";
 import { useToast } from "../../components/Toast.jsx";
 import { ROLE_LABEL } from "../users/labels.js";
+import WhatsAppLink from "./WhatsAppLink.jsx";
 import "../users/users.css";
 
 const empty = { current_password: "", new_password: "", confirm: "" };
 
 /** The signed-in person's own account: who they are and changing their password. */
 export default function AccountPage() {
-  const { user, replaceToken } = useAuth();
+  const { user, replaceToken, can } = useAuth();
   const toast = useToast();
   const [form, setForm] = useState(empty);
   const [busy, setBusy] = useState(false);
@@ -96,6 +97,7 @@ export default function AccountPage() {
           </div>
         </form>
       </div>
+      {can("assistant:use") && <WhatsAppLink />}
     </section>
   );
 }

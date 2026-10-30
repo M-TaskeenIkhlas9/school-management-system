@@ -7,23 +7,24 @@ const json = (v) => (v === undefined || v === null ? null : JSON.stringify(v));
 
 export async function listConversations(userId) {
   const [rows] = await pool.execute(
-    "SELECT id, title, created_at, updated_at FROM agent_conversations WHERE user_id = ? ORDER BY updated_at DESC, id DESC LIMIT 50",
+    "SELECT id, title, channel, created_at, updated_at FROM agent_conversations WHERE user_id = ? ORDER BY updated_at DESC, id DESC LIMIT 50",
     [userId]
   );
   return rows;
 }
 
-export async function createConversation(userId, title = "New conversation") {
-  const [res] = await pool.execute("INSERT INTO agent_conversations (user_id, title) VALUES (?, ?)", [
+export async function createConversation(userId, title = "New conversation", channel = "web") {
+  const [res] = await pool.execute("INSERT INTO agent_conversations (user_id, title, channel) VALUES (?, ?, ?)", [
     userId,
     title.slice(0, 200),
+    channel,
   ]);
   return getConversation(userId, res.insertId);
 }
 
 export async function getConversation(userId, id) {
   const [[row]] = await pool.execute(
-    "SELECT id, title, created_at, updated_at FROM agent_conversations WHERE id = ? AND user_id = ?",
+    "SELECT id, title, channel, created_at, updated_at FROM agent_conversations WHERE id = ? AND user_id = ?",
     [id, userId]
   );
   if (!row) throw createError(404, "Conversation not found", "NOT_FOUND");

@@ -81,10 +81,19 @@ function friendlyModelError(err) {
 }
 
 /**
- * @param {{ user, conversationId, message, model, emit?, signal?, limits? }} options
+ * @param {{ user, conversationId, message, model, emit?, signal?, limits?, channel? }} options
  * @returns {Promise<{ runId, status, answer }>}
  */
-export async function runAgent({ user, conversationId, message, model, emit = () => {}, signal, limits = {} }) {
+export async function runAgent({
+  user,
+  conversationId,
+  message,
+  model,
+  emit = () => {},
+  signal,
+  limits = {},
+  channel = "web",
+}) {
   const { maxSteps, timeoutMs, maxTokens } = { ...DEFAULT_LIMITS, ...limits };
   const userMessage = await store.addMessage(conversationId, "user", message);
   await store.renameIfNew(conversationId, message);
@@ -96,7 +105,7 @@ export async function runAgent({ user, conversationId, message, model, emit = ()
     user.classIds === null ? [] : (await classroomService.getAll({ classIds: user.classIds })).map((c) => c.name);
   const history = await store.recentMessages(conversationId, HISTORY_MESSAGES);
   const messages = [
-    { role: "system", content: systemPrompt({ user, tools, classNames }) },
+    { role: "system", content: systemPrompt({ user, tools, classNames, channel }) },
     ...history.map((m) => ({ role: m.role, content: m.content })),
   ];
   const ctx = {
@@ -104,6 +113,7 @@ export async function runAgent({ user, conversationId, message, model, emit = ()
     req: { user },
     conversationId,
     runId,
+    channel,
     onAction: (action) => emit("action_proposed", { action }),
   };
   const runSignal = AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)].filter(Boolean));

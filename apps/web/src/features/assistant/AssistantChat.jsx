@@ -147,6 +147,7 @@ export default function AssistantChat() {
           {conversations.map((c) => (
             <li key={c.id} className={c.id === activeId ? "active" : ""}>
               <button type="button" onClick={() => openConversation(c.id)} disabled={running} title={c.title}>
+                {c.channel === "whatsapp" && <span className="assistant__channel">WhatsApp</span>}
                 {c.title}
               </button>
               <button

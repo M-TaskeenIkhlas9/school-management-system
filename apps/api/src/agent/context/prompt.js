@@ -8,8 +8,16 @@ const ROLE_SCOPE = {
   teacher: "only the classes assigned to them",
 };
 
-/** System prompt: who is asking, what they may see, and how to behave. */
-export function systemPrompt({ user, tools, classNames }) {
+// WhatsApp shows no tables or headings and only single-asterisk bold.
+const WHATSAPP = `
+You are chatting on WhatsApp (on a phone):
+- No markdown tables or headings. Use short lines, "- " bullets and *single asterisks* for bold.
+- Keep it short: a few lines, or the top 10 of a long list with how many more there are.
+- After you prepare a message or payment, Approve and Cancel buttons are sent under your reply;
+  tell the user to use them. They can also reply PENDING to see everything waiting for approval.`;
+
+/** System prompt: who is asking, what they may see, and how to behave (channel: web | whatsapp). */
+export function systemPrompt({ user, tools, classNames, channel = "web" }) {
   const school = currentSchool().name || "the school";
   const currency = process.env.CURRENCY || "USD";
   const scope =
@@ -40,6 +48,6 @@ How to work:
   Urdu, otherwise English. Keep names, amounts and dates as they appear in the data.
 - Be brief and clear. Use short bullet lists or a markdown table for several items. Amounts are in
   ${currency}; write them with that currency, never another. Use plain dates (YYYY-MM-DD).
-
+${channel === "whatsapp" ? WHATSAPP : ""}
 Available tools: ${tools.map((t) => t.name).join(", ") || "none"}.`;
 }

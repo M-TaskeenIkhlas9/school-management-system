@@ -57,6 +57,13 @@ export async function propose(type, spec, { req, conversationId = null, runId = 
     ]
   );
   await audit(req, "action.propose", { entityType: "agent_action", entityId: res.insertId, details: { type } });
+  // Approvers who use the assistant on WhatsApp are told there (only queued when someone has linked).
+  const [[linked]] = await pool.execute(
+    `SELECT COUNT(*) AS n FROM users WHERE whatsapp_phone IS NOT NULL AND is_active = 1
+       AND whatsapp_sv = session_version AND id <> ?`,
+    [req.user.id]
+  );
+  if (Number(linked.n) > 0) await enqueue("whatsapp_notify_approvers", { action_id: res.insertId });
   return getForUser(req.user, res.insertId);
 }
 

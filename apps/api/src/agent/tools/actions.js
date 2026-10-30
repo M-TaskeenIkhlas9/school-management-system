@@ -20,7 +20,9 @@ async function proposeFor(type, spec, ctx) {
     status: "waiting_for_approval",
     summary: action.summary,
     approval: action.can_approve
-      ? "The user can approve this on the card shown in the chat."
+      ? ctx.channel === "whatsapp"
+        ? "The user can approve this with the Approve button sent under your reply."
+        : "The user can approve this on the card shown in the chat."
       : "Someone with permission (e.g. the principal) must approve this; it is listed on their Approvals page.",
     note: "NOT done yet. Nothing has been sent or changed. Do not say it was sent or recorded.",
     ...(action.preview?.recipients

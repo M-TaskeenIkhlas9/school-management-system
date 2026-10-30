@@ -32,6 +32,7 @@ import onebillRoutes from "./modules/payments/onebill.routes.js";
 import automationRoutes from "./modules/automations/automations.routes.js";
 import settingsRoutes from "./modules/settings/settings.routes.js";
 import admissionRoutes from "./modules/admissions/admissions.routes.js";
+import whatsappBotRoutes from "./modules/whatsapp-bot/bot.routes.js";
 
 const app = express();
 
@@ -96,6 +97,7 @@ app.use("/settings", requirePermission("users:manage"), settingsRoutes);
 app.use("/assistant", requirePermission("assistant:use"), agentRoutes);
 app.use("/messages", requirePermission("messages:read"), messageRoutes);
 app.use("/automations", requirePermission("messages:draft"), automationRoutes);
+app.use("/account/whatsapp", requirePermission("assistant:use"), whatsappBotRoutes); // your own number
 
 // ---------- Error handler ----------
 app.use(errorHandler);

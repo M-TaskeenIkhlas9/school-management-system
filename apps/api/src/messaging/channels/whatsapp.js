@@ -22,7 +22,7 @@ const cleanParam = (v) =>
     .replace(/ {4,}/g, "   ")
     .trim() || "-";
 
-export function buildWhatsAppPayload({ to, body, templateName, templateParams, templateLanguage }) {
+export function buildWhatsAppPayload({ to, body, templateName, templateParams, templateLanguage, buttons }) {
   const recipient = String(to).replace(/^\+/, "");
   if (templateName) {
     return {
@@ -36,6 +36,23 @@ export function buildWhatsAppPayload({ to, body, templateName, templateParams, t
         components: templateParams?.length
           ? [{ type: "body", parameters: templateParams.map((p) => ({ type: "text", text: cleanParam(p) })) }]
           : [],
+      },
+    };
+  }
+  if (buttons?.length) {
+    // Reply buttons (up to 3, titles up to 20 characters); only inside the 24-hour window.
+    return {
+      messaging_product: "whatsapp",
+      to: recipient,
+      type: "interactive",
+      interactive: {
+        type: "button",
+        body: { text: String(body).slice(0, 1024) },
+        action: {
+          buttons: buttons
+            .slice(0, 3)
+            .map((b) => ({ type: "reply", reply: { id: b.id, title: b.title.slice(0, 20) } })),
+        },
       },
     };
   }
@@ -53,7 +70,7 @@ export default {
   estimate() {
     return { segments: null, cost: Number(process.env.WHATSAPP_COST_PER_MESSAGE) || 0 };
   },
-  async send({ to, body, templateName, templateParams, templateLanguage }) {
+  async send({ to, body, templateName, templateParams, templateLanguage, buttons }) {
     const deliveredTo = process.env.WHATSAPP_REDIRECT_TO || to;
     if (this.mode() !== "live")
       return { status: "simulated", provider: "simulated", providerMessageId: null, deliveredTo };
@@ -65,7 +82,7 @@ export default {
         method: "POST",
         headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`, "Content-Type": "application/json" },
         body: JSON.stringify(
-          buildWhatsAppPayload({ to: deliveredTo, body, templateName, templateParams, templateLanguage })
+          buildWhatsAppPayload({ to: deliveredTo, body, templateName, templateParams, templateLanguage, buttons })
         ),
         signal: AbortSignal.timeout(15000),
       });

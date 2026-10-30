@@ -11,6 +11,7 @@ import { createError } from "../../middleware/errorHandler.js";
 import { applyStatus, handleInbound } from "../../messaging/receipts.js";
 import { statusCallbackUrl } from "../../messaging/channels/sms.js";
 import { receive } from "../payments/payments.service.js";
+import { inbound as staffBotInbound } from "../whatsapp-bot/bot.service.js";
 
 const router = Router();
 router.use(rateLimit({ windowMs: 60_000, limit: Number(process.env.WEBHOOK_RATE_LIMIT) || 600 }));
@@ -102,6 +103,8 @@ router.post("/whatsapp", raw({ type: "*/*", limit: "1mb" }), async (req, res, ne
         });
       }
       for (const m of value.messages ?? []) {
+        // Linked staff talk to the assistant; everyone else is a parent (STOP / START).
+        if (await staffBotInbound(m)) continue;
         await handleInbound({
           provider: "meta",
           channel: "whatsapp",
