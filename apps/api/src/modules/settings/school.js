@@ -1,6 +1,6 @@
 /**
  * The school's details (name, address, phone, bank account for challans, late fee fine, the language
- * parents get messages in). The principal edits them on the Settings page; anything left empty falls
+ * parents get messages in, and how parents can pay online: the 1Bill biller prefix and the Raast ID). The principal edits them on the Settings page; anything left empty falls
  * back to the server settings.
  * Kept in memory so messages and prompts can read them without a query; refreshed on change.
  */
@@ -17,6 +17,8 @@ const fromEnv = () => ({
   late_fine: Number(process.env.FEE_LATE_FINE) || 0,
   sibling_discount: Number(process.env.SIBLING_DISCOUNT) || 0,
   message_language: process.env.MESSAGE_LANGUAGE === "ur" ? "ur" : "en",
+  onebill_prefix: process.env.ONEBILL_PREFIX || "",
+  raast_id: process.env.RAAST_ID || "",
 });
 
 /** Current details: saved values first, server settings for anything not set. */
@@ -31,6 +33,8 @@ export function school() {
     late_fine: Number(pick("late_fine")) || 0,
     sibling_discount: Number(pick("sibling_discount")) || 0,
     message_language: pick("message_language"), // parents without their own choice get messages in this
+    onebill_prefix: pick("onebill_prefix"), // from 1LINK when the school registers as a 1Bill biller
+    raast_id: pick("raast_id"), // the school account's IBAN or Raast alias
     currency: process.env.CURRENCY || "USD",
     timezone: process.env.SCHOOL_TIMEZONE || "Asia/Karachi",
   };
@@ -40,7 +44,8 @@ export function school() {
 export async function refreshSchool() {
   try {
     const [[row]] = await pool.query(
-      "SELECT name, address, phone, bank_details, late_fine, sibling_discount, message_language FROM school_settings WHERE id = 1"
+      `SELECT name, address, phone, bank_details, late_fine, sibling_discount, message_language,
+              onebill_prefix, raast_id FROM school_settings WHERE id = 1`
     );
     saved = row ?? {};
   } catch (err) {
@@ -59,6 +64,8 @@ export async function updateSchool(changes, userId) {
     "late_fine",
     "sibling_discount",
     "message_language",
+    "onebill_prefix",
+    "raast_id",
   ].filter((k) => changes[k] !== undefined);
   if (fields.length) {
     const value = (k) =>

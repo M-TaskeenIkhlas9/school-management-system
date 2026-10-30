@@ -13,6 +13,12 @@ const schoolSchema = z.object({
   late_fine: z.coerce.number().min(0).max(100000).optional(),
   sibling_discount: z.coerce.number().min(0).max(100).optional(),
   message_language: z.enum(["en", "ur"]).optional(),
+  onebill_prefix: z
+    .string()
+    .trim()
+    .regex(/^\d{0,8}$/, "digits only, up to 8")
+    .optional(),
+  raast_id: text(40).optional(),
 });
 
 const router = Router();

@@ -158,6 +158,28 @@ child's monthly fee; the eldest pays in full. Standing **concessions** (scholars
 need-based; a percentage or a fixed amount) are taken off every month's bill until ended. Each fee
 keeps what was taken off and why, and shows it on challans and receipts.
 
+## Online fee payments (1Bill, Raast, bank transfer)
+
+Every challan prints a **payment reference**: the fee's number with a check digit, so a mistyped
+reference is never matched to someone else's fee. Payments that come in online are kept on Fees →
+**Online payments**; each bank transaction is recorded once, however many times it is sent.
+
+- **1Bill.** Once the school is registered as a 1Bill biller (through its bank or an aggregator),
+  the principal enters the 1LINK prefix on Settings, and the reference becomes a consumer number
+  parents can pay from any bank app, JazzCash or Easypaisa. 1LINK calls
+  `/billing/1bill/BillInquiry` and `/BillPayment` with the username and password agreed at
+  onboarding (`ONEBILL_USERNAME`, `ONEBILL_PASSWORD`, optionally `ONEBILL_ALLOWED_IPS`). The fee is
+  marked paid straight away, and after the due date the late fine is accepted and kept apart from
+  the fee. The message format follows the usual 1Bill biller convention; the exact one comes with
+  onboarding, and only `apps/api/src/modules/payments/onebill.routes.js` changes if it differs.
+- **Raast and bank transfers.** With the school's Raast ID (IBAN or alias) on Settings, challans
+  tell parents to send the fee by Raast and write the reference in the purpose. Credits arrive
+  either as signed notices from the bank at `/webhooks/raast` (`RAAST_WEBHOOK_SECRET`,
+  `X-Signature: sha256=…`), or by **importing the bank statement** (CSV from internet banking).
+  Credits with a valid reference are recorded at once. The rest, such as no reference, a typo or
+  more than is due, wait under **To match**: the accountant picks the fee from suggestions (same
+  amount first, then the payer's name), or sets the payment aside as not a fee.
+
 ## Admissions
 
 Every student gets a **GR number** (General Register), given in order on admission unless typed in,

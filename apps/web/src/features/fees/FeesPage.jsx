@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { api } from "../../api/client.js";
 import { keys, useApiMutation, useDashboard, useDefaulters, useFeesPage } from "../../api/queries.js";
@@ -16,6 +17,7 @@ import Icon from "../../app/Icon.jsx";
 import { GenerateFees, PaymentDrawer } from "./FeeTools.jsx";
 import Challans from "./Challans.jsx";
 import { ConcessionsDrawer, FamiliesDrawer } from "./Families.jsx";
+import { OnlinePaymentsDrawer } from "./OnlinePayments.jsx";
 
 const emptyForm = { student_id: "", due_date: "", amount_due: "", amount_paid: "" };
 
@@ -31,8 +33,13 @@ export default function FeesPage() {
   const [billing, setBilling] = useState(false);
   const [paying, setPaying] = useState(null);
   const [challans, setChallans] = useState(null); // { feeId? } when open
-  const [drawer, setDrawer] = useState(null); // "families" | "concessions"
+  const [drawer, setDrawer] = useState(null); // "families" | "concessions" | "online"
   const canWrite = can("fees:write");
+  const { data: online } = useQuery({
+    queryKey: ["fees", "online", "summary"],
+    queryFn: () => api.get("/fees/online/summary"),
+    enabled: canWrite,
+  });
   const removeFee = useApiMutation((id) => api.del(`/fees/${id}`), {
     invalidate: [keys.fees, keys.attention],
     success: "Fee deleted",
@@ -78,6 +85,14 @@ export default function FeesPage() {
             </button>
             <button type="button" className="btn ghost" onClick={() => setDrawer("concessions")}>
               Concessions
+            </button>
+            <button type="button" className="btn ghost" onClick={() => setDrawer("online")}>
+              Online payments
+              {online?.unmatched > 0 && (
+                <span className="btn__count" title={`${online.unmatched} to match`}>
+                  {online.unmatched}
+                </span>
+              )}
             </button>
             <button type="button" className="btn ghost" onClick={() => setChallans({})}>
               <Icon name="exams" size={18} /> Print challans
@@ -339,6 +354,7 @@ export default function FeesPage() {
       {paying && <PaymentDrawer fee={paying} onClose={() => setPaying(null)} />}
       {drawer === "families" && <FamiliesDrawer onClose={() => setDrawer(null)} />}
       {drawer === "concessions" && <ConcessionsDrawer students={students} onClose={() => setDrawer(null)} />}
+      {drawer === "online" && <OnlinePaymentsDrawer onClose={() => setDrawer(null)} />}
       {challans && <Challans classrooms={classrooms} feeId={challans.feeId} onClose={() => setChallans(null)} />}
     </section>
   );

@@ -14,6 +14,8 @@ export const METHOD_LABEL = {
   bank: "Bank transfer",
   online: "Online (JazzCash/Easypaisa)",
   other: "Other",
+  "1bill": "1Bill (bank app, JazzCash, Easypaisa)",
+  raast: "Raast",
 };
 export const monthName = (ym) =>
   ym
@@ -163,10 +165,22 @@ function Receipt({ fee, payment, school }) {
           <dt>Paid by</dt>
           <dd>{METHOD_LABEL[payment.method] ?? payment.method}</dd>
         </div>
+        {payment.reference && (
+          <div>
+            <dt>Transaction</dt>
+            <dd>{payment.reference}</dd>
+          </div>
+        )}
         <div className="receipt__amount">
           <dt>Amount received</dt>
-          <dd>{formatCurrency(payment.amount)}</dd>
+          <dd>{formatCurrency(Number(payment.amount) + (Number(payment.late_fine) || 0))}</dd>
         </div>
+        {Number(payment.late_fine) > 0 && (
+          <div>
+            <dt>Of which late fine</dt>
+            <dd>{formatCurrency(payment.late_fine)}</dd>
+          </div>
+        )}
         <div>
           <dt>Total fee</dt>
           <dd>{formatCurrency(fee.amount_due)}</dd>

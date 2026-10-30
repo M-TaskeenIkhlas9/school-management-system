@@ -3,6 +3,8 @@ import { schoolToday } from "../../config/env.js";
 import { createError } from "../../middleware/errorHandler.js";
 import { pageResult, pageWindow, whereClause } from "../../lib/pagination.js";
 import { discountsFor } from "./families.service.js";
+import { school } from "../settings/school.js";
+import { feeReference } from "../payments/reference.js";
 
 /** One page of fee records (latest due date first) with student names. */
 export async function list({ student_id, status, ...page }) {
@@ -109,45 +111,66 @@ function addRemaining(fee) {
 /** Payments recorded against one fee (newest first), with who received them. */
 export async function payments(feeId) {
   const [rows] = await pool.execute(
-    `SELECT p.id, p.amount, p.paid_on, p.method, p.note, p.created_at, u.username AS received_by
+    `SELECT p.id, p.amount, p.late_fine, p.paid_on, p.method, p.note, p.reference, p.created_at,
+            u.username AS received_by
      FROM fee_payments p LEFT JOIN users u ON u.id = p.received_by
      WHERE p.fee_id = ? ORDER BY p.id DESC`,
     [feeId]
   );
-  return rows.map((r) => ({ ...r, amount: Number(r.amount) }));
+  return rows.map((r) => ({ ...r, amount: Number(r.amount), late_fine: Number(r.late_fine) }));
+}
+
+const round2 = (n) => Math.round(Number(n) * 100) / 100;
+const dateOnly = (d) => (d instanceof Date ? d.toISOString().slice(0, 10) : String(d).slice(0, 10));
+
+/**
+ * Apply a payment to a fee inside the caller's transaction (the fee row is locked first). Paying
+ * more than what is left is refused; with `allowFine`, a payment made after the due date may also
+ * carry the late fine on top of the full balance (it is kept apart from the fee in late_fine).
+ */
+export async function applyPayment(conn, feeId, payment, userId, { allowFine = false } = {}) {
+  const { amount, paid_on, method = "cash", note, reference = null } = payment;
+  const [[fee]] = await conn.execute("SELECT * FROM fee_ledgers WHERE id = ? FOR UPDATE", [feeId]);
+  if (!fee) throw createError(404, "Fee record not found", "NOT_FOUND");
+  const due = Number(fee.amount_due);
+  const paidBefore = Number(fee.amount_paid);
+  const value = round2(amount);
+  const left = round2(due - paidBefore);
+  if (left <= 0) throw createError(400, "This fee is already fully paid", "ALREADY_PAID");
+  const day = paid_on || schoolToday();
+  const fine = value > left ? round2(value - left) : 0;
+  const fineAllowed = allowFine && day > dateOnly(fee.due_date) && fine <= school().late_fine;
+  if (fine > 0 && !fineAllowed) {
+    throw createError(400, `Only ${left} is left to pay on this fee`, "PAYMENT_EXCEEDS_FEE");
+  }
+  const feePart = round2(value - fine);
+  const [res] = await conn.execute(
+    `INSERT INTO fee_payments (fee_id, amount, late_fine, paid_on, method, note, reference, received_by)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [feeId, feePart, fine, day, method, note || null, reference, userId ?? null]
+  );
+  const paid = round2(paidBefore + feePart);
+  const status = paid >= due ? "paid" : "partial";
+  await conn.execute("UPDATE fee_ledgers SET amount_paid = ?, status = ?, paid_date = ? WHERE id = ?", [
+    paid,
+    status,
+    status === "paid" ? day : fee.paid_date,
+    feeId,
+  ]);
+  return { payment_id: res.insertId, amount: feePart, late_fine: fine, paid_on: day, method };
 }
 
 /**
  * Record a payment (full or an instalment). The fee's paid amount and status follow; paying more
  * than what is left is refused. Returns the fee and the payment (the receipt).
  */
-export async function recordPayment(feeId, { amount, paid_on, method = "cash", note }, userId) {
+export async function recordPayment(feeId, payment, userId) {
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
-    const [[fee]] = await conn.execute("SELECT * FROM fee_ledgers WHERE id = ? FOR UPDATE", [feeId]);
-    if (!fee) throw createError(404, "Fee record not found", "NOT_FOUND");
-    const due = Number(fee.amount_due);
-    const paidBefore = Number(fee.amount_paid);
-    const value = Math.round(Number(amount) * 100) / 100;
-    const left = Math.round((due - paidBefore) * 100) / 100;
-    if (left <= 0) throw createError(400, "This fee is already fully paid", "ALREADY_PAID");
-    if (value > left) throw createError(400, `Only ${left} is left to pay on this fee`, "PAYMENT_EXCEEDS_FEE");
-    const day = paid_on || schoolToday();
-    const [res] = await conn.execute(
-      "INSERT INTO fee_payments (fee_id, amount, paid_on, method, note, received_by) VALUES (?, ?, ?, ?, ?, ?)",
-      [feeId, value, day, method, note || null, userId]
-    );
-    const paid = Math.round((paidBefore + value) * 100) / 100;
-    const status = paid >= due ? "paid" : "partial";
-    await conn.execute("UPDATE fee_ledgers SET amount_paid = ?, status = ?, paid_date = ? WHERE id = ?", [
-      paid,
-      status,
-      status === "paid" ? day : fee.paid_date,
-      feeId,
-    ]);
+    const receipt = await applyPayment(conn, feeId, payment, userId);
     await conn.commit();
-    return { fee: await getById(feeId), payment_id: res.insertId, amount: value, paid_on: day, method };
+    return { fee: await getById(feeId), ...receipt };
   } catch (err) {
     await conn.rollback();
     throw err;
@@ -250,5 +273,6 @@ export async function challans({ month, classroom_id = null, fee_id = null }) {
     amount_paid: Number(r.amount_paid),
     discount: Number(r.discount),
     payable: Number((Number(r.amount_due) - Number(r.amount_paid)).toFixed(2)),
+    reference: feeReference(r.id), // 1Bill consumer number / Raast reference
   }));
 }

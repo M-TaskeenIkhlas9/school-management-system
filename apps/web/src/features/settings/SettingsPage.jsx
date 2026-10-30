@@ -5,7 +5,17 @@ import { useAuth } from "../../auth/AuthContext.jsx";
 import { useToast } from "../../components/Toast.jsx";
 import { formatCurrency } from "../../lib/format.js";
 
-const FIELDS = ["name", "address", "phone", "bank_details", "late_fine", "sibling_discount", "message_language"];
+const FIELDS = [
+  "name",
+  "address",
+  "phone",
+  "bank_details",
+  "late_fine",
+  "sibling_discount",
+  "message_language",
+  "onebill_prefix",
+  "raast_id",
+];
 
 /**
  * The school's details, set by the principal. They print on fee challans, receipts and report
@@ -129,6 +139,34 @@ export default function SettingsPage() {
               </select>
               <span className="label-hint">
                 For parents who haven&apos;t chosen a language. A parent&apos;s own choice is set on the student form.
+              </span>
+            </label>
+            <label>
+              1Bill biller prefix
+              <input
+                value={form.onebill_prefix}
+                onChange={set("onebill_prefix")}
+                inputMode="numeric"
+                pattern="\d{0,8}"
+                maxLength={8}
+                placeholder="e.g. 12345"
+              />
+              <span className="label-hint">
+                Given by 1LINK (through your bank) when the school registers for 1Bill. Challans then show a consumer
+                number parents can pay from any bank app, JazzCash or Easypaisa. Leave empty if not registered.
+              </span>
+            </label>
+            <label>
+              Raast ID
+              <input
+                value={form.raast_id}
+                onChange={set("raast_id")}
+                maxLength={40}
+                placeholder="IBAN (PK36…) or Raast alias"
+              />
+              <span className="label-hint">
+                Printed on challans so parents can send the fee by Raast, writing the challan&apos;s payment reference
+                in the purpose. Leave empty to leave it off.
               </span>
             </label>
           </div>

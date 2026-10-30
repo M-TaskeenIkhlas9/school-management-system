@@ -28,6 +28,7 @@ import guardianRoutes from "./modules/guardians/guardians.routes.js";
 import agentRoutes from "./agent/agent.routes.js";
 import messageRoutes from "./modules/messages/messages.routes.js";
 import webhookRoutes from "./modules/webhooks/webhooks.routes.js";
+import onebillRoutes from "./modules/payments/onebill.routes.js";
 import automationRoutes from "./modules/automations/automations.routes.js";
 import settingsRoutes from "./modules/settings/settings.routes.js";
 import admissionRoutes from "./modules/admissions/admissions.routes.js";
@@ -68,6 +69,8 @@ app.use(express.json({ limit: "1mb" }));
 // ---------- Public routes ----------
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
 app.use("/auth", authRoutes);
+// 1LINK calls these when a parent pays a challan by 1Bill; they check 1LINK's own credentials.
+app.use("/billing/1bill", onebillRoutes);
 
 // ---------- Protected routes (require JWT) ----------
 app.use(auth);

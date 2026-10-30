@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import * as feeService from "./fees.service.js";
 import * as families from "./families.service.js";
+import onlinePayments from "../payments/payments.routes.js";
 import validate, {
   idParam,
   parseQuery,
@@ -66,6 +67,9 @@ const concessionSchema = z.object({
 });
 
 const router = Router();
+
+// Payments that came in by 1Bill, Raast or bank transfer.
+router.use("/online", onlinePayments);
 
 // ---------- Family accounts (a primary guardian and their children) ----------
 

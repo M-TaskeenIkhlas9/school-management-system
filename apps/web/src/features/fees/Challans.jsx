@@ -8,6 +8,11 @@ import { useAuth } from "../../auth/AuthContext.jsx";
 import { displayDate, formatCurrency } from "../../lib/format.js";
 
 const COPIES = ["Bank copy", "School copy", "Parent copy"];
+/** "12345" + "000000141" → "12345 0000 0014 1": the 1Bill prefix, then groups of four, easier to read out. */
+const grouped = (ref, prefix = "") => {
+  const rest = prefix && ref.startsWith(prefix) ? ref.slice(prefix.length) : ref;
+  return `${rest === ref ? "" : `${prefix} `}${rest.replace(/(\d{4})(?=\d)/g, "$1 ")}`;
+};
 const monthName = (ym) =>
   ym
     ? new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric", timeZone: "UTC" }).format(
@@ -27,6 +32,16 @@ function Challan({ c, school }) {
             <span>{copy}</span>
           </div>
           <p className="challan__bank">{school?.bank_details || "Pay at the school office"}</p>
+          {c.reference && (
+            <div className="challan__online">
+              <div>
+                <span>{school?.onebill_prefix ? "1Bill consumer no." : "Payment reference"}</span>
+                <strong>{grouped(c.reference, school?.onebill_prefix)}</strong>
+              </div>
+              {school?.onebill_prefix && <p>Pay from any bank app, JazzCash or Easypaisa: Bill payment → 1Bill.</p>}
+              {school?.raast_id && <p>Raast: send to {school.raast_id} and write this reference in the purpose.</p>}
+            </div>
+          )}
           <dl>
             <div>
               <dt>Challan no.</dt>

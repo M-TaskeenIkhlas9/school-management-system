@@ -1,6 +1,7 @@
 /**
- * Public callbacks from messaging providers. No login: every request must carry the provider's
- * signature (Twilio: X-Twilio-Signature; Meta: X-Hub-Signature-256), checked against our secret.
+ * Public callbacks from messaging providers and the school's bank. No login: every request must carry
+ * the sender's signature (Twilio: X-Twilio-Signature; Meta: X-Hub-Signature-256; bank: X-Signature),
+ * checked against our secret.
  * Mounted before the JSON parser so the signature is checked against the exact raw body.
  */
 import { Router, raw, urlencoded } from "express";
@@ -9,6 +10,7 @@ import rateLimit from "express-rate-limit";
 import { createError } from "../../middleware/errorHandler.js";
 import { applyStatus, handleInbound } from "../../messaging/receipts.js";
 import { statusCallbackUrl } from "../../messaging/channels/sms.js";
+import { receive } from "../payments/payments.service.js";
 
 const router = Router();
 router.use(rateLimit({ windowMs: 60_000, limit: Number(process.env.WEBHOOK_RATE_LIMIT) || 600 }));
@@ -111,6 +113,53 @@ router.post("/whatsapp", raw({ type: "*/*", limit: "1mb" }), async (req, res, ne
     }
   }
   res.status(200).end();
+});
+
+// ---------- Bank (Raast and other transfers into the school account) ----------
+
+/**
+ * Field names differ between banks; the usual ones are accepted here. A notice is
+ * { transaction_id, amount, date, purpose (what the parent wrote), payer_name, channel? }.
+ */
+export function bankNotice(n) {
+  const transaction_id = String(n.transaction_id ?? n.txn_id ?? n.stan ?? "").trim();
+  const amount = Number(n.amount);
+  const day = String(n.date ?? n.paid_at ?? n.transaction_date ?? "").slice(0, 10);
+  if (!/^[\w-]{1,64}$/.test(transaction_id) || !(amount > 0) || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return null;
+  const reference = n.purpose ?? n.reference ?? n.remarks ?? n.narration ?? null;
+  const payer = n.payer_name ?? n.sender_name ?? null;
+  return {
+    channel: /ibft|bank/i.test(n.channel ?? "") ? "bank" : "raast",
+    transaction_id,
+    amount: Math.round(amount * 100) / 100,
+    paid_on: day,
+    reference: reference ? String(reference).slice(0, 140) : null,
+    payer: payer ? String(payer).slice(0, 150) : null,
+  };
+}
+
+router.post("/raast", raw({ type: "*/*", limit: "100kb" }), async (req, res, next) => {
+  const secret = process.env.RAAST_WEBHOOK_SECRET;
+  if (!secret) return next(createError(503, "Bank notices are not configured", "WEBHOOK_NOT_CONFIGURED"));
+  const body = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
+  const expected = `sha256=${createHmac("sha256", secret).update(body).digest("hex")}`;
+  if (!safeEqual(expected, req.get("X-Signature"))) return next(createError(403, "Invalid signature", "BAD_SIGNATURE"));
+  let data;
+  try {
+    data = JSON.parse(body.toString("utf8"));
+  } catch {
+    return next(createError(400, "Malformed JSON", "INVALID_JSON"));
+  }
+  const notices = (Array.isArray(data) ? data : [data]).map((item) => bankNotice(item ?? {}));
+  if (!notices.length || notices.some((n) => !n)) {
+    return next(createError(400, "A notice is missing its transaction id, amount or date", "BAD_NOTICE"));
+  }
+  const results = [];
+  for (const notice of notices) {
+    const saved = await receive(notice);
+    results.push({ transaction_id: notice.transaction_id, status: saved.status, duplicate: !!saved.duplicate });
+  }
+  res.json({ received: results });
 });
 
 export default router;
