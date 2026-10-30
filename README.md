@@ -118,6 +118,15 @@ Delivery receipts arrive at `/webhooks/twilio/status` and `/webhooks/whatsapp` (
 `PUBLIC_BASE_URL`, `WHATSAPP_VERIFY_TOKEN` and `WHATSAPP_APP_SECRET`). For testing, `*_REDIRECT_TO`
 sends everything to one address or number.
 
+**Urdu.** Each parent gets messages in English or Urdu: chosen on the student form ("Messages to
+them in"), or else the school's default set by the principal on **Settings**. The fee reminder,
+absence alert and announcement each have an Urdu version (greeting, names joined with "اور",
+absence dates in Urdu); a message the school writes or edits goes to everyone exactly as written.
+Urdu SMS is billed as Unicode (70 characters per part), and the approval preview shows who gets
+Urdu. On WhatsApp, Urdu parents get the same template's Urdu (`ur`) translation, so add an Urdu
+translation of `fee_reminder` and `absence_alert` in WhatsApp Manager; until it is approved, those
+messages fail and fall back to SMS.
+
 ## Results, report cards and fee challans
 
 Results are kept the Pakistani way: a **class result sheet** per term (each student's marks in each
@@ -131,6 +140,14 @@ or in instalments with a printable **receipt** for each payment, and printed as 
 challans** (bank, school and parent copies) for a class or the whole school. The principal sets the
 school's address, phone, bank account and late fine on **Settings**, and they print on challans,
 receipts and report cards (the `SCHOOL_*` values in `.env` are only the starting defaults).
+
+**Report-card remarks** (Results → Report-card remarks): pick a class and term, and the AI drafts a
+one- or two-sentence remark for each student in English or Urdu, from that student's own figures
+only (marks per subject, pass/fail, position, attendance, change since last term; no surname or
+family details are sent). Teachers read and edit each draft; nothing is saved until they press
+Save, and the AI's original draft is kept alongside the saved remark. Drafts that are too long, in
+the wrong script or contain links are replaced with a standard remark written from the same
+figures, which is also what you get when no AI service is set up.
 
 ## Families, discounts and concessions
 

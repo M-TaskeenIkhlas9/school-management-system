@@ -1,11 +1,12 @@
 /**
  * Turn students into recipients: one per primary guardian (siblings combined into one
- * message), on a channel that guardian has agreed to. Students without a reachable guardian
+ * message), on a channel that guardian has agreed to, in their language (English or Urdu). Students without a reachable guardian
  * are listed as skipped with the reason, so the approver sees exactly who will not hear.
  */
 import pool from "../db/pool.js";
 import { availableChannels } from "./channels/index.js";
 import { formatMoney } from "./audiences.js";
+import { school } from "../modules/settings/school.js";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -49,7 +50,7 @@ export function chooseChannel(guardian, enabled = availableChannels(), exclude =
 export async function buildRecipients(students, { channel } = {}) {
   if (!students.length) return { recipients: [], skipped: [] };
   const [rows] = await pool.query(
-    `SELECT sg.student_id, g.id, g.full_name, g.email, g.phone, g.preferred_channel,
+    `SELECT sg.student_id, g.id, g.full_name, g.email, g.phone, g.preferred_channel, g.language,
             g.consent_email, g.consent_sms, g.consent_whatsapp
      FROM student_guardians sg JOIN guardians g ON g.id = sg.guardian_id AND g.is_active = 1
      WHERE sg.is_primary = 1 AND sg.student_id IN (?)`,
@@ -87,20 +88,24 @@ export async function buildRecipients(students, { channel } = {}) {
       .map((k) => k.vars.oldest_due_date)
       .filter(Boolean)
       .sort()[0];
-    const details = kids.map((k) => k.vars.absence_detail).filter(Boolean);
+    const detail = (key, sep) => [...new Set(kids.map((k) => k.vars[key]).filter(Boolean))].join(sep);
+    const absence = detail("absence_detail", "; ");
     recipients.push({
       guardian_id: guardian.id,
       name: guardian.full_name,
       channel: choice.channel,
       to: choice.address,
+      // The parent's own choice, else the school's default (Settings).
+      language: guardian.language || school().message_language || "en",
       student_names: kids.map((k) => k.name).join(" and "),
       vars: {
         guardian_name: guardian.full_name,
         student_names: kids.map((k) => k.name).join(" and "),
+        student_names_ur: kids.map((k) => k.name).join(" اور "),
         class_name: [...new Set(kids.map((k) => k.class_name))].join(", "),
         ...(amount ? { amount_owed: formatMoney(amount) } : {}),
         ...(oldest ? { oldest_due_date: oldest } : {}),
-        ...(details.length ? { absence_detail: [...new Set(details)].join("; ") } : {}),
+        ...(absence ? { absence_detail: absence, absence_detail_ur: detail("absence_detail_ur", "؛ ") } : {}),
       },
     });
   }

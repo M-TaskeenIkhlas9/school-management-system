@@ -5,9 +5,7 @@ import { keys } from "../../api/queries.js";
 import { useToast } from "../../components/Toast.jsx";
 import EmptyState from "../../components/EmptyState.jsx";
 import Icon from "../../app/Icon.jsx";
-import { bise } from "./grades.js";
-
-const TERMS = ["First Term", "Mid Term", "Final Term", "Monthly Test"];
+import { bise, TERMS } from "./grades.js";
 
 /**
  * The class award list: students down the side, subjects across (each with its total marks), the

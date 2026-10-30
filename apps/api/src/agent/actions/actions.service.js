@@ -143,8 +143,8 @@ export async function reject(req, id, reason = null) {
 export async function insertDelivery(conn, actionId, r, sendAfter, fallbackFrom = null) {
   const [res] = await conn.execute(
     `INSERT INTO message_deliveries (action_id, guardian_id, channel, to_address, to_name, subject, body, template_name,
-       template_params, segments, est_cost, student_names, send_after, fallback_from)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       template_params, template_language, segments, est_cost, student_names, send_after, fallback_from)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       actionId,
       r.guardian_id,
@@ -155,6 +155,7 @@ export async function insertDelivery(conn, actionId, r, sendAfter, fallbackFrom 
       r.body,
       r.template_name,
       r.template_params ? JSON.stringify(r.template_params) : null,
+      r.template_language ?? null,
       r.segments,
       r.est_cost,
       r.student_names,

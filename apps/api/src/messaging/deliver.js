@@ -43,6 +43,7 @@ export async function deliverMessage({ delivery_id }, job) {
       body: d.body,
       templateName: d.template_name,
       templateParams: parse(d.template_params),
+      templateLanguage: d.template_language,
     });
     await pool.execute(
       `UPDATE message_deliveries SET status = ?, provider = ?, provider_message_id = ?, error = NULL,

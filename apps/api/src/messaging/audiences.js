@@ -103,7 +103,10 @@ export async function resolveAudience(req, spec) {
       return {
         label: `parents of students absent on ${date}`,
         approverNeeds: ["attendance:read"],
-        students: students.map((s) => ({ ...s, vars: { absence_detail: `on ${date}` } })),
+        students: students.map((s) => ({
+          ...s,
+          vars: { absence_detail: `on ${date}`, absence_detail_ur: `تاریخ ${date}` },
+        })),
       };
     }
     case "absence_streak": {
@@ -117,7 +120,10 @@ export async function resolveAudience(req, spec) {
         approverNeeds: ["attendance:read"],
         students: students.map((s) => ({
           ...s,
-          vars: { absence_detail: `${streakOf.get(s.id)} school days in a row` },
+          vars: {
+            absence_detail: `${streakOf.get(s.id)} school days in a row`,
+            absence_detail_ur: `مسلسل ${streakOf.get(s.id)} دن`,
+          },
         })),
       };
     }

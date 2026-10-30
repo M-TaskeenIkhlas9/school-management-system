@@ -10,6 +10,7 @@ import validate, {
   optionalDate,
   optionalEmail,
   optionalId,
+  messageLanguage,
 } from "../../middleware/validate.js";
 import { createError } from "../../middleware/errorHandler.js";
 import { assertStudentAccess, classScope } from "../../middleware/access.js";
@@ -43,6 +44,7 @@ const studentSchema = z.object({
   guardian_name: optionalText(200),
   guardian_phone: optionalText(30),
   guardian_email: optionalEmail(),
+  guardian_language: messageLanguage(),
   status: z.enum(["active", "inactive"]).optional(),
   classroom_id: optionalId(), // enroll / move class in the same transaction
 });

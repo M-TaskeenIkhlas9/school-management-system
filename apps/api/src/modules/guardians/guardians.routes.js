@@ -9,6 +9,7 @@ import validate, {
   optionalText,
   optionalEmail,
   optionalLongText,
+  messageLanguage,
 } from "../../middleware/validate.js";
 import { createError } from "../../middleware/errorHandler.js";
 import { assertStudentAccess, classScope } from "../../middleware/access.js";
@@ -20,6 +21,7 @@ const guardianSchema = z.object({
   email: optionalEmail(),
   phone: optionalText(30),
   preferred_channel: z.enum(["whatsapp", "sms", "email"]).optional(),
+  language: messageLanguage(), // en | ur; empty: the school's default
   consent_whatsapp: z.boolean().optional(),
   consent_sms: z.boolean().optional(),
   consent_email: z.boolean().optional(),

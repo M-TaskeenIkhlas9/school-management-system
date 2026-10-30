@@ -92,6 +92,7 @@ export default function StudentsPage() {
         guardian_name: editing.guardian_name || "",
         guardian_phone: editing.guardian_phone || "",
         guardian_email: editing.guardian_email || "",
+        guardian_language: editing.guardian_language || "",
         classroom_id: classIdOf(editing.id) ? String(classIdOf(editing.id)) : "",
         ...Object.fromEntries(
           ["gr_number", "gender", "b_form", "father_name", "father_cnic", "religion", "address", "previous_school"].map(

@@ -57,13 +57,20 @@ function MessagePreview({ preview, pending }) {
                 <span className="muted">
                   ({CHANNEL_LABEL[r.channel] ?? r.channel}: {r.to})
                 </span>
+                {r.language === "ur" && (
+                  <span className="badge info pill" lang="ur">
+                    اردو
+                  </span>
+                )}
               </span>
               <span className="muted">{r.student_names}</span>
             </button>
             {open === i && (
               <div className="action-card__message">
-                {r.subject && <strong>{r.subject}</strong>}
-                <pre>{r.body}</pre>
+                {r.subject && <strong dir="auto">{r.subject}</strong>}
+                <pre dir="auto" lang={r.language === "ur" ? "ur" : undefined}>
+                  {r.body}
+                </pre>
                 {r.template_name && (
                   <p className="muted action-card__meta">
                     Sent with the approved WhatsApp template “{r.template_name}”.

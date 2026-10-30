@@ -8,6 +8,7 @@ export const emptyStudent = {
   guardian_name: "",
   guardian_phone: "",
   guardian_email: "",
+  guardian_language: "",
   classroom_id: "",
   // Admission form
   gr_number: "",
@@ -82,6 +83,14 @@ export default function StudentForm({ classrooms, initial, saving, onSubmit, onC
         <label>
           Their email
           <input type="email" {...field("guardian_email")} />
+        </label>
+        <label>
+          Messages to them in
+          <select {...field("guardian_language")}>
+            <option value="">School&apos;s choice (Settings)</option>
+            <option value="en">English</option>
+            <option value="ur">اردو (Urdu)</option>
+          </select>
         </label>
         <h3 className="form-row__heading">Admission details</h3>
         <label>

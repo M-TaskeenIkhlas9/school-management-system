@@ -10,7 +10,7 @@ const PRIMARY_GUARDIAN_JOIN = `
              FROM student_guardians WHERE is_primary = 1 GROUP BY student_id) pg ON pg.student_id = s.id
   LEFT JOIN guardians g ON g.id = pg.guardian_id`;
 const PRIMARY_GUARDIAN_COLUMNS =
-  "g.id AS guardian_id, g.full_name AS guardian_name, g.email AS guardian_email, g.phone AS guardian_phone";
+  "g.id AS guardian_id, g.full_name AS guardian_name, g.email AS guardian_email, g.phone AS guardian_phone, g.language AS guardian_language";
 
 /** Active students with their current class and latest fee status (one row each). */
 export async function getAll({ classIds = null } = {}) {
@@ -41,7 +41,7 @@ export async function getById(id) {
 
 export async function getGuardians(studentId) {
   const [rows] = await pool.execute(
-    `SELECT g.id, g.full_name, g.email, g.phone, g.preferred_channel,
+    `SELECT g.id, g.full_name, g.email, g.phone, g.preferred_channel, g.language,
             g.consent_whatsapp, g.consent_sms, g.consent_email, sg.relationship, sg.is_primary
      FROM student_guardians sg JOIN guardians g ON g.id = sg.guardian_id
      WHERE sg.student_id = ? ORDER BY sg.is_primary DESC, g.full_name`,
@@ -188,6 +188,7 @@ async function syncPrimaryGuardian(conn, studentId, data) {
   if (email) [[match]] = await conn.execute("SELECT id FROM guardians WHERE email = ? LIMIT 1", [email]);
   if (!match && phone) [[match]] = await conn.execute("SELECT id FROM guardians WHERE phone = ? LIMIT 1", [phone]);
 
+  let guardianId = match?.id ?? current?.guardian_id;
   if (match) {
     await guardianService.link(conn, studentId, match.id, { isPrimary: true });
   } else if (current) {
@@ -198,7 +199,7 @@ async function syncPrimaryGuardian(conn, studentId, data) {
       current.guardian_id,
     ]);
   } else {
-    const guardianId = await guardianService.create(
+    guardianId = await guardianService.create(
       {
         full_name: details.full_name || "Parent/Guardian",
         email,
@@ -209,6 +210,9 @@ async function syncPrimaryGuardian(conn, studentId, data) {
       conn
     );
     await guardianService.link(conn, studentId, guardianId, { isPrimary: true });
+  }
+  if (data.guardian_language !== undefined) {
+    await conn.execute("UPDATE guardians SET language = ? WHERE id = ?", [data.guardian_language || null, guardianId]);
   }
 }
 

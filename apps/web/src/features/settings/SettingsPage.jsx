@@ -5,7 +5,7 @@ import { useAuth } from "../../auth/AuthContext.jsx";
 import { useToast } from "../../components/Toast.jsx";
 import { formatCurrency } from "../../lib/format.js";
 
-const FIELDS = ["name", "address", "phone", "bank_details", "late_fine", "sibling_discount"];
+const FIELDS = ["name", "address", "phone", "bank_details", "late_fine", "sibling_discount", "message_language"];
 
 /**
  * The school's details, set by the principal. They print on fee challans, receipts and report
@@ -119,6 +119,16 @@ export default function SettingsPage() {
               />
               <span className="label-hint">
                 Taken off the monthly fee for each younger brother or sister; the eldest pays in full. 0 = no discount.
+              </span>
+            </label>
+            <label>
+              Messages to parents in
+              <select value={form.message_language || "en"} onChange={set("message_language")}>
+                <option value="en">English</option>
+                <option value="ur">اردو (Urdu)</option>
+              </select>
+              <span className="label-hint">
+                For parents who haven&apos;t chosen a language. A parent&apos;s own choice is set on the student form.
               </span>
             </label>
           </div>

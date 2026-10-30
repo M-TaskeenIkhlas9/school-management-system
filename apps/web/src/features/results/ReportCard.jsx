@@ -102,7 +102,11 @@ export default function ReportCard({ resultId, onClose }) {
                 <strong className={card.passed ? "text-ok" : "danger-text"}>{card.passed ? "Pass" : "Fail"}</strong>
               </div>
             </div>
-            {card.remarks && <p className="report__remarks">Remarks: {card.remarks}</p>}
+            {card.remarks && (
+              <p className="report__remarks">
+                Remarks: <span dir="auto">{card.remarks}</span>
+              </p>
+            )}
             <div className="report__signs">
               <span>Class teacher</span>
               <span>Principal</span>

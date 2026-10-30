@@ -14,27 +14,36 @@ const CHANNEL_LABEL = { email: "email", sms: "SMS", whatsapp: "WhatsApp" };
  * Exactly what one parent receives on one channel. Email gets the subject and full text; SMS the
  * short text when the template has one; WhatsApp an approved template with its parameters
  * (or the plain text once the message was edited, since edits can't change an approved template).
+ * Parents who chose Urdu get the template's Urdu text (and the Urdu translation of the WhatsApp
+ * template); text the school wrote or edited goes to everyone exactly as written.
  */
 export function renderForChannel(payload, recipient, channel) {
+  const urdu = recipient.language === "ur" && Boolean(payload.ur);
+  const text = urdu ? payload.ur : payload;
   const vars = {
     ...recipient.vars,
     school_name: school().name || "the school",
     message: payload.message ?? "",
   };
+  const language = urdu ? "ur" : "en";
   if (channel === "email") {
     return {
-      subject: renderTemplate(payload.subject, vars),
-      body: renderTemplate(payload.body, vars),
+      language,
+      subject: renderTemplate(text.subject, vars),
+      body: renderTemplate(text.body, vars),
       template_name: null,
       template_params: null,
+      template_language: null,
       segments: null,
       est_cost: 0,
     };
   }
-  const body = toPlainText(renderTemplate(channel === "sms" ? payload.sms_body || payload.body : payload.body, vars));
+  const body = toPlainText(renderTemplate(channel === "sms" ? text.sms_body || text.body : text.body, vars));
   const template = channel === "whatsapp" && payload.whatsapp_template;
+  const param = (key) => String((urdu ? vars[`${key}_ur`] : undefined) ?? vars[key] ?? "");
   const { segments, cost } = getChannel(channel).estimate(body);
   return {
+    language,
     subject: null,
     body,
     template_name: template || null,
@@ -42,8 +51,9 @@ export function renderForChannel(payload, recipient, channel) {
       ? String(payload.whatsapp_params || "")
           .split(",")
           .filter(Boolean)
-          .map((key) => String(vars[key.trim()] ?? ""))
+          .map((key) => param(key.trim()))
       : null,
+    template_language: template && urdu ? "ur" : null,
     segments,
     est_cost: cost,
   };
@@ -59,6 +69,7 @@ export function renderPreview(payload) {
     student_names: r.student_names,
     ...renderForChannel(payload, r, r.channel),
   }));
+  const inUrdu = recipients.filter((r) => r.language === "ur").length;
 
   const byChannel = {};
   for (const r of recipients) {
@@ -73,6 +84,10 @@ export function renderPreview(payload) {
     notes.push(
       "WhatsApp messages go as plain text, which only reaches parents who messaged the school in the last 24 hours; others fall back to the next channel."
     );
+  }
+  if (inUrdu) notes.push(`${inUrdu} parent(s) get this message in Urdu.`);
+  if (!payload.ur && payload.recipients.some((r) => r.language === "ur")) {
+    notes.push("This text was written for this message, so parents who chose Urdu get it exactly as written.");
   }
   if (byChannel.sms && recipients.some((r) => r.segments > 1)) {
     notes.push("Some SMS are longer than one message and will be billed as several.");
@@ -175,6 +190,15 @@ export const sendMessages = {
       sms_body: custom ? null : template.sms_body,
       whatsapp_template: custom ? null : template.whatsapp_template,
       whatsapp_params: custom ? null : template.whatsapp_params,
+      // The Urdu version, for parents who chose Urdu (none for text written for this message).
+      ur:
+        custom || !template.body_ur
+          ? null
+          : {
+              subject: template.subject_ur || template.subject,
+              body: template.body_ur,
+              sms_body: template.sms_body_ur,
+            },
       message: spec.message ?? null,
       recipients,
       skipped,
@@ -190,13 +214,17 @@ export const sendMessages = {
   /** Apply an edit (new subject/body text) to a pending action's payload. */
   edit(payload, changes) {
     const next = { ...payload };
-    if (changes.subject !== undefined) next.subject = changes.subject;
+    if (changes.subject !== undefined && changes.subject !== payload.subject) {
+      next.subject = changes.subject;
+      next.ur = null; // the edited text goes to every parent as written
+    }
     if (changes.body !== undefined && changes.body !== payload.body) {
       next.body = changes.body;
-      // The approved text is now the edited text on every channel.
+      // The approved text is now the edited text on every channel and in every language.
       next.sms_body = null;
       next.whatsapp_template = null;
       next.whatsapp_params = null;
+      next.ur = null;
     }
     return { payload: next, preview: renderPreview(next) };
   },

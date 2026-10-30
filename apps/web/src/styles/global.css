@@ -54,8 +54,9 @@
   --stamp-ok: #16a34a;
   --stamp-bad: #dc2626;
 
-  --font-display: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
-  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* Urdu letters aren't in the Latin fonts, so they fall through to Nastaliq. */
+  --font-display: "Plus Jakarta Sans", "Inter", "Noto Nastaliq Urdu", system-ui, sans-serif;
+  --font-body: "Inter", "Noto Nastaliq Urdu", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
 
   --radius: 14px;
@@ -4385,4 +4386,65 @@ button.family__row:hover {
   background: var(--warn-tint);
   color: var(--warn);
   font-weight: 500;
+}
+
+/* ---------- Urdu ---------- */
+/* Nastaliq is tall: give Urdu lines room so letters don't clip. */
+:lang(ur),
+.remarks-list textarea,
+.report__remarks,
+.action-card__message pre {
+  line-height: 2;
+}
+
+/* ---------- Report-card remarks ---------- */
+.remarks-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+.remarks-list {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.remarks-list li {
+  display: grid;
+  grid-template-columns: minmax(180px, 240px) 1fr;
+  gap: 14px;
+  align-items: start;
+  padding: 12px 14px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  background: var(--sheet);
+}
+.remarks-list__who {
+  display: grid;
+  gap: 4px;
+}
+.remarks-list__who .muted {
+  font-size: 0.85rem;
+}
+.remarks-list__text {
+  display: grid;
+  gap: 6px;
+}
+.remarks-list textarea {
+  width: 100%;
+  min-height: 64px;
+  resize: vertical;
+}
+.remarks-list__meta {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 0.82rem;
+}
+@media (max-width: 720px) {
+  .remarks-list li {
+    grid-template-columns: 1fr;
+  }
 }

@@ -12,3 +12,6 @@ export function ordinal(n) {
   if (rem100 >= 11 && rem100 <= 13) return `${n}th`;
   return `${n}${{ 1: "st", 2: "nd", 3: "rd" }[n % 10] ?? "th"}`;
 }
+
+/** The usual terms and tests; a school can type any other name. */
+export const TERMS = ["First Term", "Mid Term", "Final Term", "Monthly Test"];

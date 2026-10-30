@@ -22,7 +22,7 @@ const cleanParam = (v) =>
     .replace(/ {4,}/g, "   ")
     .trim() || "-";
 
-export function buildWhatsAppPayload({ to, body, templateName, templateParams }) {
+export function buildWhatsAppPayload({ to, body, templateName, templateParams, templateLanguage }) {
   const recipient = String(to).replace(/^\+/, "");
   if (templateName) {
     return {
@@ -31,7 +31,8 @@ export function buildWhatsAppPayload({ to, body, templateName, templateParams })
       type: "template",
       template: {
         name: templateName,
-        language: { code: process.env.WHATSAPP_TEMPLATE_LANGUAGE || "en" },
+        // Urdu parents get the template's Urdu translation (approved in Meta under the same name).
+        language: { code: templateLanguage || process.env.WHATSAPP_TEMPLATE_LANGUAGE || "en" },
         components: templateParams?.length
           ? [{ type: "body", parameters: templateParams.map((p) => ({ type: "text", text: cleanParam(p) })) }]
           : [],
@@ -52,7 +53,7 @@ export default {
   estimate() {
     return { segments: null, cost: Number(process.env.WHATSAPP_COST_PER_MESSAGE) || 0 };
   },
-  async send({ to, body, templateName, templateParams }) {
+  async send({ to, body, templateName, templateParams, templateLanguage }) {
     const deliveredTo = process.env.WHATSAPP_REDIRECT_TO || to;
     if (this.mode() !== "live")
       return { status: "simulated", provider: "simulated", providerMessageId: null, deliveredTo };
@@ -63,7 +64,9 @@ export default {
       res = await fetch(`https://graph.facebook.com/${version}/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`, {
         method: "POST",
         headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`, "Content-Type": "application/json" },
-        body: JSON.stringify(buildWhatsAppPayload({ to: deliveredTo, body, templateName, templateParams })),
+        body: JSON.stringify(
+          buildWhatsAppPayload({ to: deliveredTo, body, templateName, templateParams, templateLanguage })
+        ),
         signal: AbortSignal.timeout(15000),
       });
     } catch (err) {

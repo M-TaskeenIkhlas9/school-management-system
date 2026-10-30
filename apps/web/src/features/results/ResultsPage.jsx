@@ -14,6 +14,7 @@ import Avatar from "../../components/Avatar.jsx";
 import Icon from "../../app/Icon.jsx";
 import ResultSheet from "./ResultSheet.jsx";
 import ReportCard from "./ReportCard.jsx";
+import Remarks from "./Remarks.jsx";
 import { ordinal } from "./grades.js";
 
 const gradeTone = (g) => {
@@ -30,6 +31,7 @@ export default function ResultsPage() {
   const [form, setForm] = useState(emptyForm);
   const [open, setOpen] = useState(false);
   const [classEntry, setClassEntry] = useState(false);
+  const [remarksOpen, setRemarksOpen] = useState(false);
   const [cardId, setCardId] = useState(null);
   const [editing, setEditing] = useState(null); // { id, percentage, total_score, remarks }
   const canWrite = can("results:write");
@@ -83,10 +85,13 @@ export default function ResultsPage() {
         title="Results"
         subtitle="Term results for each student. Grades are worked out from the percentage."
       >
-        {canWrite && !open && !classEntry && (
+        {canWrite && !open && !classEntry && !remarksOpen && (
           <>
             <button type="button" className="btn ghost" onClick={() => setOpen(true)}>
               Add one result
+            </button>
+            <button type="button" className="btn ghost" onClick={() => setRemarksOpen(true)}>
+              <Icon name="sparkle" size={16} /> Report-card remarks
             </button>
             <button type="button" className="btn primary" onClick={() => setClassEntry(true)}>
               <Icon name="plus" size={18} strokeWidth={2} /> Class result sheet
@@ -119,6 +124,7 @@ export default function ResultsPage() {
       </StatRow>
 
       {canWrite && classEntry && <ResultSheet classrooms={classrooms} onDone={() => setClassEntry(false)} />}
+      {canWrite && remarksOpen && <Remarks classrooms={classrooms} onDone={() => setRemarksOpen(false)} />}
       {canWrite && open && (
         <div className="card form-card">
           <div className="card__title">

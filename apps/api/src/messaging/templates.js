@@ -9,7 +9,8 @@ export function renderTemplate(text, vars) {
 
 export async function getTemplate(key) {
   const [[row]] = await pool.execute(
-    `SELECT template_key, name, subject, body, sms_body, whatsapp_template, whatsapp_params
+    `SELECT template_key, name, subject, body, sms_body, whatsapp_template, whatsapp_params,
+            subject_ur, body_ur, sms_body_ur
      FROM message_templates WHERE template_key = ? AND is_active = 1`,
     [key]
   );

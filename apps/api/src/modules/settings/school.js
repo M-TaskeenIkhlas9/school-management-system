@@ -1,6 +1,7 @@
 /**
- * The school's details (name, address, phone, bank account for challans, late fee fine). The
- * principal edits them on the Settings page; anything left empty falls back to the server settings.
+ * The school's details (name, address, phone, bank account for challans, late fee fine, the language
+ * parents get messages in). The principal edits them on the Settings page; anything left empty falls
+ * back to the server settings.
  * Kept in memory so messages and prompts can read them without a query; refreshed on change.
  */
 import pool from "../../db/pool.js";
@@ -15,6 +16,7 @@ const fromEnv = () => ({
   bank_details: process.env.SCHOOL_BANK_DETAILS || "",
   late_fine: Number(process.env.FEE_LATE_FINE) || 0,
   sibling_discount: Number(process.env.SIBLING_DISCOUNT) || 0,
+  message_language: process.env.MESSAGE_LANGUAGE === "ur" ? "ur" : "en",
 });
 
 /** Current details: saved values first, server settings for anything not set. */
@@ -28,6 +30,7 @@ export function school() {
     bank_details: pick("bank_details"),
     late_fine: Number(pick("late_fine")) || 0,
     sibling_discount: Number(pick("sibling_discount")) || 0,
+    message_language: pick("message_language"), // parents without their own choice get messages in this
     currency: process.env.CURRENCY || "USD",
     timezone: process.env.SCHOOL_TIMEZONE || "Asia/Karachi",
   };
@@ -37,7 +40,7 @@ export function school() {
 export async function refreshSchool() {
   try {
     const [[row]] = await pool.query(
-      "SELECT name, address, phone, bank_details, late_fine, sibling_discount FROM school_settings WHERE id = 1"
+      "SELECT name, address, phone, bank_details, late_fine, sibling_discount, message_language FROM school_settings WHERE id = 1"
     );
     saved = row ?? {};
   } catch (err) {
@@ -48,9 +51,15 @@ export async function refreshSchool() {
 
 /** Save what the principal entered (empty text clears a value back to the server setting). */
 export async function updateSchool(changes, userId) {
-  const fields = ["name", "address", "phone", "bank_details", "late_fine", "sibling_discount"].filter(
-    (k) => changes[k] !== undefined
-  );
+  const fields = [
+    "name",
+    "address",
+    "phone",
+    "bank_details",
+    "late_fine",
+    "sibling_discount",
+    "message_language",
+  ].filter((k) => changes[k] !== undefined);
   if (fields.length) {
     const value = (k) =>
       ["late_fine", "sibling_discount"].includes(k) ? Number(changes[k]) || 0 : String(changes[k]).trim() || null;

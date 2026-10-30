@@ -14,6 +14,9 @@ import { pageParams } from "../../lib/pagination.js";
 import { createError } from "../../middleware/errorHandler.js";
 import { assertClassAccess, assertStudentInClass, classScope } from "../../middleware/access.js";
 import * as sheetService from "./sheet.service.js";
+import * as remarksService from "./remarks.service.js";
+import { agentLimiter } from "../../middleware/rateLimit.js";
+import { audit } from "../../lib/audit.js";
 
 const score = () => z.coerce.number().min(0);
 const percentage = () => z.coerce.number().min(0).max(100);
@@ -68,6 +71,21 @@ const sheetSchema = z.object({
     .max(500),
 });
 
+const remarksDraftSchema = z.object({
+  classroom_id: requiredId(),
+  term: requiredText(50),
+  language: z.enum(["en", "ur"]).default("en"),
+  result_ids: z.array(requiredId()).max(500).optional(),
+});
+const remarksSchema = z.object({
+  classroom_id: requiredId(),
+  term: requiredText(50),
+  items: z
+    .array(z.object({ result_id: requiredId(), remarks: optionalText(500), ai_draft: optionalText(500) }))
+    .min(1, "No remarks to save")
+    .max(500),
+});
+
 const router = Router();
 
 // GET /results?page=&pageSize=&student_id=&classroom_id=&term=
@@ -86,6 +104,31 @@ router.get("/sheet", async (req, res) => {
 router.post("/sheet", validate(sheetSchema), async (req, res) => {
   assertClassAccess(req, req.body.classroom_id);
   res.json(await sheetService.saveSheet(req.body));
+});
+
+// Report-card remarks for a class and term: each result with the figures a remark is written from.
+router.get("/remarks", async (req, res) => {
+  const { classroom_id, term } = parseQuery(sheetQuery, req.query);
+  assertClassAccess(req, classroom_id);
+  res.json(await remarksService.classRemarks(classroom_id, term));
+});
+
+// Draft remarks (English or Urdu) with the AI, or from the figures when no AI is set up. Nothing is saved.
+router.post("/remarks/draft", agentLimiter, validate(remarksDraftSchema), async (req, res) => {
+  assertClassAccess(req, req.body.classroom_id);
+  res.json(await remarksService.draftRemarks(req.body));
+});
+
+// Save the remarks the teacher approved.
+router.put("/remarks", validate(remarksSchema), async (req, res) => {
+  assertClassAccess(req, req.body.classroom_id);
+  const result = await remarksService.saveRemarks(req.body);
+  await audit(req, "results.remarks", {
+    entityType: "classroom",
+    entityId: req.body.classroom_id,
+    details: { term: req.body.term, saved: result.saved, ai_drafted: req.body.items.filter((i) => i.ai_draft).length },
+  });
+  res.json(result);
 });
 
 // A printable report card: subjects, total, percentage, grade, position in class, attendance.

@@ -68,3 +68,6 @@ export const optionalDate = () => z.preprocess(emptyToNull, isoDate().nullish())
 
 export const optionalEmail = () =>
   z.preprocess(emptyToNull, z.string().trim().email("must be a valid email").nullish());
+
+/** Language parents get messages in: en | ur; empty means the school's default. */
+export const messageLanguage = () => z.preprocess(emptyToNull, z.enum(["en", "ur"]).nullish());

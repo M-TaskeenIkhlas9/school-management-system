@@ -12,6 +12,7 @@ const schoolSchema = z.object({
   bank_details: text(255).optional(),
   late_fine: z.coerce.number().min(0).max(100000).optional(),
   sibling_discount: z.coerce.number().min(0).max(100).optional(),
+  message_language: z.enum(["en", "ur"]).optional(),
 });
 
 const router = Router();

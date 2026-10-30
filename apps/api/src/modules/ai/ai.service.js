@@ -110,44 +110,6 @@ Provide a concise 2-3 sentence performance summary.`;
   return summary;
 }
 
-// ---------- Report card remark ----------
-export async function generateReportCardRemark({ studentName, percentage, grade, attendanceRate }) {
-  const userPrompt = `Generate a personalized teacher remark for student "${studentName}":
-- Overall percentage: ${percentage}%
-- Grade: ${grade}
-- Attendance: ${attendanceRate}%
-One to two sentences, professional tone.`;
-
-  if (openai) {
-    try {
-      const completion = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
-        messages: [
-          { role: "system", content: "You write brief, encouraging report card remarks for school students." },
-          { role: "user", content: userPrompt },
-        ],
-        temperature: 0.7,
-        max_tokens: 100,
-      });
-      const text = completion.choices[0].message.content;
-      logAi("report_remark", userPrompt, text, "success");
-      return text;
-    } catch (err) {
-      logAi("report_remark", userPrompt, err.message, "error");
-    }
-  }
-
-  // Fallback
-  let remark;
-  if (percentage >= 90) remark = `Outstanding performance by ${studentName}. Keep up the excellent work!`;
-  else if (percentage >= 70) remark = `${studentName} shows consistent effort and good academic standing.`;
-  else if (percentage >= 50) remark = `${studentName} meets basic requirements but has room for improvement.`;
-  else remark = `${studentName} needs significant improvement. Additional support is recommended.`;
-  if (attendanceRate < 75) remark += " Attendance needs immediate attention.";
-  logAi("report_remark", userPrompt, remark, "fallback");
-  return remark;
-}
-
 // ---------- Insights generation ----------
 export async function generateInsights() {
   // Low attendance students

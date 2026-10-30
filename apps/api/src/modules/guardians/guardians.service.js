@@ -76,13 +76,14 @@ export async function create(data, conn = pool) {
   const phone = phoneOrThrow(data.phone);
   const consent = consentChanges(data);
   const [res] = await conn.execute(
-    `INSERT INTO guardians (full_name, email, phone, preferred_channel, notes${consent.fields.map((f) => `, ${f}`).join("")}${consent.fields.length ? ", consent_updated_at" : ""})
-     VALUES (?, ?, ?, ?, ?${consent.fields.map(() => ", ?").join("")}${consent.fields.length ? ", NOW()" : ""})`,
+    `INSERT INTO guardians (full_name, email, phone, preferred_channel, language, notes${consent.fields.map((f) => `, ${f}`).join("")}${consent.fields.length ? ", consent_updated_at" : ""})
+     VALUES (?, ?, ?, ?, ?, ?${consent.fields.map(() => ", ?").join("")}${consent.fields.length ? ", NOW()" : ""})`,
     [
       data.full_name,
       data.email || null,
       phone ?? null,
       data.preferred_channel || "email",
+      data.language || null,
       data.notes || null,
       ...consent.values,
     ]
@@ -93,10 +94,10 @@ export async function create(data, conn = pool) {
 export async function update(id, data) {
   const sets = [];
   const values = [];
-  for (const key of ["full_name", "email", "preferred_channel", "notes"]) {
+  for (const key of ["full_name", "email", "preferred_channel", "language", "notes"]) {
     if (data[key] !== undefined) {
       sets.push(`${key} = ?`);
-      values.push(data[key]);
+      values.push(data[key] ?? null);
     }
   }
   if (data.phone !== undefined) {

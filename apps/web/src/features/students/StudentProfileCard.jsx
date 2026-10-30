@@ -23,6 +23,7 @@ function Guardians({ guardians }) {
             {g.is_primary ? <span className="badge info pill">Primary</span> : null}
             <div className="muted">{[g.phone, g.email].filter(Boolean).join(" · ") || "No contact details"}</div>
             <div className="muted">Agreed to: {consented.length ? consented.join(", ") : "no channels yet"}</div>
+            {g.language && <div className="muted">Messages in {g.language === "ur" ? "Urdu (اردو)" : "English"}</div>}
           </li>
         );
       })}
