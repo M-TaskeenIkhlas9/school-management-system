@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { actionsApi } from "./api.js";
 import { useToast } from "../../components/Toast.jsx";
-import { displayDateTime } from "../../lib/format.js";
+import { displayDate, displayDateTime } from "../../lib/format.js";
 
 const STATUS = {
   pending: ["Waiting for approval", "warning"],
@@ -30,7 +30,11 @@ function Stamp({ status, fresh }) {
   );
 }
 
-const TYPE_LABEL = { send_parent_messages: "Message to parents", record_fee_payment: "Fee payment" };
+const TYPE_LABEL = {
+  send_parent_messages: "Message to parents",
+  record_fee_payment: "Fee payment",
+  mark_attendance: "Attendance",
+};
 const CHANNEL_LABEL = { email: "Email", sms: "SMS", whatsapp: "WhatsApp" };
 
 function MessagePreview({ preview, pending }) {
@@ -141,6 +145,32 @@ function PaymentPreview({ preview }) {
   );
 }
 
+function AttendancePreview({ preview }) {
+  const list = (names) => (names?.length ? names.join(", ") : "none");
+  return (
+    <>
+      <p className="muted action-card__meta">
+        {preview.class} · {displayDate(preview.day)} · {preview.present} present, {preview.absent} absent,{" "}
+        {preview.late} late
+      </p>
+      <ul className="action-card__list">
+        <li>
+          <strong>Absent:</strong> {list(preview.absent_names)}
+        </li>
+        <li>
+          <strong>Late:</strong> {list(preview.late_names)}
+        </li>
+        {preview.changes?.length > 0 && (
+          <li>
+            <strong>Changes to marks already saved:</strong>{" "}
+            {preview.changes.map((c) => `${c.student} (${c.from} → ${c.to})`).join(", ")}
+          </li>
+        )}
+      </ul>
+    </>
+  );
+}
+
 /** An action the assistant prepared, with its exact preview; approve, reject or edit when allowed. */
 export default function ActionCard({ action: initial, onChange }) {
   const toast = useToast();
@@ -214,6 +244,8 @@ export default function ActionCard({ action: initial, onChange }) {
         </div>
       ) : action.type === "record_fee_payment" ? (
         <PaymentPreview preview={preview} />
+      ) : action.type === "mark_attendance" ? (
+        <AttendancePreview preview={preview} />
       ) : preview.recipients ? (
         <MessagePreview preview={preview} pending={action.status === "pending"} />
       ) : null}

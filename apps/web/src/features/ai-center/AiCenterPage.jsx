@@ -11,7 +11,7 @@ export default function AiCenterPage() {
         icon="sparkle"
         tone="blue"
         title="AI assistant"
-        subtitle="Ask about the school in plain words. Messages and payments it prepares wait for someone to approve them."
+        subtitle="Ask about the school in plain words. Messages, payments and attendance it prepares wait for someone to approve them."
       />
       <div className="grid-2 ai-center-grid">
         <div className="span-2">

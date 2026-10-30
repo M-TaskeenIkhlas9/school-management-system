@@ -13,8 +13,13 @@ import { enqueue, queueNow } from "../../jobs/queue.js";
 import { nextSendTime } from "../../messaging/quietHours.js";
 import { renderPreview, sendMessages } from "./sendMessages.js";
 import { feePayment } from "./feePayment.js";
+import { markAttendance } from "./markAttendance.js";
 
-const TYPES = { [sendMessages.type]: sendMessages, [feePayment.type]: feePayment };
+const TYPES = {
+  [sendMessages.type]: sendMessages,
+  [feePayment.type]: feePayment,
+  [markAttendance.type]: markAttendance,
+};
 const TTL_HOURS = Number(process.env.AGENT_ACTION_TTL_HOURS) || 72;
 const parse = (v) => (typeof v === "string" ? JSON.parse(v) : v);
 
@@ -31,6 +36,9 @@ export function publicAction(a) {
 
 function canApprove(user, action) {
   const needs = [action.approve_permission, ...(action.payload?.approver_needs ?? [])];
+  // Some actions belong to one class (a register): a teacher may only approve their own classes'.
+  const classId = action.payload?.approver_class_id;
+  if (classId && user.classIds !== null && !user.classIds?.includes(Number(classId))) return false;
   return needs.every((p) => user.permissions.has(p));
 }
 
@@ -57,14 +65,17 @@ export async function propose(type, spec, { req, conversationId = null, runId = 
     ]
   );
   await audit(req, "action.propose", { entityType: "agent_action", entityId: res.insertId, details: { type } });
-  // Approvers who use the assistant on WhatsApp are told there (only queued when someone has linked).
-  const [[linked]] = await pool.execute(
-    `SELECT COUNT(*) AS n FROM users WHERE whatsapp_phone IS NOT NULL AND is_active = 1
-       AND whatsapp_sv = session_version AND id <> ?`,
-    [req.user.id]
-  );
-  if (Number(linked.n) > 0) await enqueue("whatsapp_notify_approvers", { action_id: res.insertId });
-  return getForUser(req.user, res.insertId);
+  const action = await getForUser(req.user, res.insertId);
+  // When someone else must approve it, approvers who use the assistant on WhatsApp are told there.
+  if (!action.can_approve) {
+    const [[linked]] = await pool.execute(
+      `SELECT COUNT(*) AS n FROM users WHERE whatsapp_phone IS NOT NULL AND is_active = 1
+         AND whatsapp_sv = session_version AND id <> ?`,
+      [req.user.id]
+    );
+    if (Number(linked.n) > 0) await enqueue("whatsapp_notify_approvers", { action_id: action.id });
+  }
+  return action;
 }
 
 /** An action the user may see: their own, or one they could approve. Adds can_approve/can_edit. */
@@ -196,7 +207,7 @@ export async function approve(req, id) {
       ]);
     } else {
       await claim(conn, req.user, action, "executed");
-      const result = await TYPES[action.type].execute(action.payload, conn);
+      const result = await TYPES[action.type].execute(action.payload, conn, req.user);
       await conn.execute("UPDATE agent_actions SET result = ? WHERE id = ?", [JSON.stringify(result), action.id]);
     }
     await conn.commit();

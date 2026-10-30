@@ -90,6 +90,11 @@ live, and every answer has a **Show steps** view of what it did (tools used, tim
   card with the exact text for every parent; nothing happens until someone with permission approves
   (teachers draft, the principal or accountant approves). Pending items are also on **Approvals**,
   and every message sent is on **Outbox**.
+- **Attendance by message.** "Class 6 today: all present except Ahmed and Maryam, Hamza late" prepares
+  that day's register for the class. Names (or roll numbers) are matched to the class's students by the
+  app, not guessed by the AI: an unclear name ("Ahmed" when there are two) gets a question back. Everyone
+  not named is marked present, and marking a day again shows which marks change. Teachers confirm their
+  own classes' registers; nothing is saved until confirmed.
 - Model: any OpenAI-compatible service, set in `apps/api/.env` (`AI_PROVIDER=groq|openai|ollama`,
   optional `AI_MODEL`, `AI_FALLBACK_MODEL`). On Groq's free tier, expect roughly one question per
   minute (8,000 tokens/minute); rate-limit waits are retried automatically.
@@ -140,10 +145,10 @@ they already get fee reminders, absence alerts and challans on WhatsApp.
 - **Asking.** Messages from a linked number go to the same assistant, with the same tools and role
   limits as the web chat (a teacher still sees only their classes). Answers are written for a phone
   (no tables). The conversations also appear in the AI Center, marked _WhatsApp_.
-- **Approving.** A message to parents or a fee payment the assistant prepares comes back with
+- **Approving.** A message to parents, a fee payment or a class's attendance the assistant prepares comes back with
   **Approve** and **Cancel** buttons (or reply `APPROVE 12` / `CANCEL 12`); **PENDING** lists what is
-  waiting. When a teacher or the accountant prepares something, linked approvers are told on WhatsApp
-  with the same buttons. Nothing is done without a tap from someone allowed to approve it.
+  waiting. When someone prepares something they can't approve themselves (a teacher's message to
+  parents, for example), linked approvers are told on WhatsApp with the same buttons. Nothing is done without a tap from someone allowed to approve it.
 - **Commands:** HELP, NEW (fresh conversation), PENDING, APPROVE n, CANCEL n, UNLINK. Anything else is
   a question for the assistant, in English, Urdu or Roman Urdu.
 

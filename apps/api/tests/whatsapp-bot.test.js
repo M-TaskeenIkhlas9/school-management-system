@@ -265,24 +265,38 @@ describe("asking and approving on WhatsApp", () => {
     expect(model.calls).toHaveLength(0);
   });
 
-  it("tells a linked approver when someone else prepares something", async () => {
+  it("tells a linked approver when someone who can't approve it prepares something", async () => {
     await pool.execute(
       "INSERT INTO fee_ledgers (student_id, due_date, amount_due, amount_paid, status) VALUES (?, '2020-02-01', 100, 0, 'pending')",
       [ids.student]
     );
     await link("admin", ADMIN_PHONE);
     const actions = await import("../src/agent/actions/actions.service.js");
-    const me = (await request.get("/auth/me").set(as("accountant"))).body;
-    const accountant = { ...me.user, permissions: new Set(me.permissions), classIds: me.classIds };
+    const userFor = async (role) => {
+      const me = (await request.get("/auth/me").set(as(role))).body;
+      return { ...me.user, permissions: new Set(me.permissions), classIds: me.classIds };
+    };
+    // The accountant can approve their own payments, so nobody else is bothered.
+    const own = await actions.propose(
+      "record_fee_payment",
+      { student_id: ids.student, amount: 10 },
+      { req: { user: await userFor("accountant") } }
+    );
+    await drain();
+    expect(sent.some((s) => s.body.includes(`#${own.id}`))).toBe(false);
+    await pool.execute("UPDATE agent_actions SET status = 'rejected' WHERE id = ?", [own.id]);
+
+    // An admin has no fee permissions: the principal must approve.
+    const admin = await userFor("admin");
     const propose = (amount) =>
-      actions.propose("record_fee_payment", { student_id: ids.student, amount }, { req: { user: accountant } });
+      actions.propose("record_fee_payment", { student_id: ids.student, amount }, { req: { user: admin } });
 
     const action = await propose(100);
     await drain();
     const notice = lastTo(PRINCIPAL_PHONE);
-    expect(notice.body).toMatch(new RegExp(`Asma prepared this – #${action.id}`));
+    expect(notice.body).toMatch(new RegExp(`Adil prepared this – #${action.id}`));
     expect(notice.buttons[0]).toEqual({ id: `approve:${action.id}`, title: "Approve" });
-    // An admin can't approve fee payments, so isn't told.
+    // The admin who prepared it isn't told about it.
     expect(sentTo(ADMIN_PHONE).some((s) => s.body.includes(`#${action.id}`))).toBe(false);
 
     // Outside WhatsApp's 24-hour window only an approved template can be sent.
@@ -294,7 +308,7 @@ describe("asking and approving on WhatsApp", () => {
     await drain();
     expect(lastTo(PRINCIPAL_PHONE)).toMatchObject({
       templateName: "approval_request",
-      templateParams: ["Asma", again.summary, String(again.id)],
+      templateParams: ["Adil", again.summary, String(again.id)],
     });
     ids.pending = again.id;
   });
@@ -302,7 +316,7 @@ describe("asking and approving on WhatsApp", () => {
   it("won't let a role approve what it can't", async () => {
     await say(ADMIN_PHONE, `approve ${ids.pending}`);
     await drain();
-    expect(lastTo(ADMIN_PHONE).body).toBe(`There is no item #${ids.pending} for you.`);
+    expect(lastTo(ADMIN_PHONE).body).toBe("You don't have permission to approve this");
     await say(PRINCIPAL_PHONE, `cancel ${ids.pending}`);
     await drain();
     expect(lastTo(PRINCIPAL_PHONE).body).toMatch(new RegExp(`^Cancelled #${ids.pending}`));

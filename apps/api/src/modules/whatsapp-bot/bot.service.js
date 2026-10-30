@@ -31,8 +31,9 @@ Ask anything you would ask the assistant in the app, for example:
 - Who is absent today?
 - Which parents have overdue fees?
 - Send a fee reminder to class 5A's parents
+- 5A attendance: all present except Ali and Sara
 
-Messages to parents and fee payments are only *prepared*; they happen when you tap Approve.
+Messages, fee payments and attendance are only *prepared*; they happen when you tap Approve.
 
 *PENDING* – what is waiting for your approval
 *APPROVE 12* / *CANCEL 12* – decide on item 12
@@ -175,6 +176,10 @@ export function actionText(a, heading = `*Waiting for approval #${a.id}*`) {
     if (p.estimated_cost) lines.push(`Estimated cost: ${p.estimated_cost}`);
   } else if (a.type === "record_fee_payment" && p.outstanding_before) {
     lines.push(`Owed before: ${p.outstanding_before}`);
+  } else if (a.type === "mark_attendance") {
+    if (p.absent_names?.length) lines.push(`Absent: ${p.absent_names.join(", ")}`);
+    if (p.late_names?.length) lines.push(`Late: ${p.late_names.join(", ")}`);
+    if (p.changes?.length) lines.push(`Changes ${p.changes.length} mark(s) already saved for that day.`);
   }
   if (a.requested_by_name) lines.push(`Prepared by ${a.requested_by_name}`);
   return lines.join("\n");
@@ -203,6 +208,7 @@ function decidedText(a) {
     const queued = a.result?.queued ?? 0;
     return `Approved #${a.id}. ${queued} message${queued === 1 ? " is" : "s are"} on the way; the Outbox in the app shows each one.`;
   }
+  if (a.type === "mark_attendance") return `Saved #${a.id}: ${a.summary}.`;
   return `Approved #${a.id}: ${a.summary}. Done.`;
 }
 

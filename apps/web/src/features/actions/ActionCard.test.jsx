@@ -50,6 +50,33 @@ const renderCard = (action) =>
   );
 
 describe("ActionCard", () => {
+  it("shows a register's absent and late students and what changes", () => {
+    renderCard({
+      id: 9,
+      type: "mark_attendance",
+      status: "pending",
+      summary: "Attendance for 5A on 2026-10-31: 2 present, 1 absent, 1 late",
+      requested_by_name: "Tahira",
+      can_approve: true,
+      preview: {
+        class: "5A",
+        day: "2026-10-31",
+        present: 2,
+        absent: 1,
+        late: 1,
+        absent_names: ["Sara Khan"],
+        late_names: ["Bilal Ahmed"],
+        already_marked: 4,
+        changes: [{ student: "Ali Raza", from: "absent", to: "present" }],
+      },
+    });
+    expect(screen.getByText(/5A · 31 Oct 2026 · 2 present, 1 absent, 1 late/)).toBeInTheDocument();
+    expect(screen.getByText("Sara Khan")).toBeInTheDocument();
+    expect(screen.getByText("Bilal Ahmed")).toBeInTheDocument();
+    expect(screen.getByText("Ali Raza (absent → present)")).toBeInTheDocument();
+    expect(screen.getByText("Attendance")).toBeInTheDocument();
+  });
+
   it("shows each parent's exact message, who is skipped, and test-mode channels", () => {
     renderCard(pending);
     expect(screen.getByText(/Omar owes Rs 300/)).toBeInTheDocument();

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { AUDIENCES } from "../../messaging/audiences.js";
 import * as actions from "../actions/actions.service.js";
-import { ToolError } from "./helpers.js";
+import { ToolError, resolveClass } from "./helpers.js";
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD");
 
@@ -74,6 +74,26 @@ export default [
     }),
     label: () => "Drafting a message to parents",
     run: (input, ctx) => proposeFor("send_parent_messages", input, ctx),
+  },
+  {
+    name: "prepare_attendance",
+    description:
+      "Prepare a class's attendance for a day (default today) for confirmation. List who is absent and who is late " +
+      "by name or roll number, exactly as the user said them; everyone else in the class is marked present. " +
+      "Nothing is saved until the user approves. Marking a day again corrects it. If a name is unclear the " +
+      "error lists the class's students: ask the user which one they meant.",
+    permission: "attendance:write",
+    input: z.object({
+      class_name: z.string().min(1).max(100),
+      date: isoDate.optional().describe("YYYY-MM-DD, default today; never a future day"),
+      absent: z.array(z.string().min(1).max(100)).max(200).optional(),
+      late: z.array(z.string().min(1).max(100)).max(200).optional(),
+    }),
+    label: (i) => `Preparing attendance for ${i.class_name}`,
+    async run({ class_name, date, absent, late }, ctx) {
+      const room = await resolveClass(ctx, class_name);
+      return proposeFor("mark_attendance", { classroom_id: room.id, day: date, absent, late }, ctx);
+    },
   },
   {
     name: "prepare_fee_payment",
