@@ -4,7 +4,8 @@
  * assistant, tools and role checks as the web chat. What the assistant prepares comes back with
  * Approve / Cancel buttons, and approvers are told on WhatsApp when someone else prepares something.
  *
- * Commands (anything else goes to the assistant): HELP, NEW, PENDING, APPROVE <n>, CANCEL <n>, UNLINK.
+ * Commands (anything else goes to the assistant): HELP, TODAY, NEW, PENDING, APPROVE <n>, CANCEL <n>,
+ * UNLINK.
  */
 import pool from "../../db/pool.js";
 import logger from "../../lib/logger.js";
@@ -19,6 +20,7 @@ import { getModel } from "../../agent/llm/index.js";
 import { school } from "../settings/school.js";
 import { chunks, toWhatsApp } from "./format.js";
 import { linkByCode, linkedUser, parseLinkCode, tooManyAttempts, unlink } from "./link.js";
+import { buildBriefing } from "./briefing.js";
 
 // A WhatsApp conversation continues while the user keeps writing; after this gap a new one starts.
 const SESSION_HOURS = Number(process.env.WHATSAPP_BOT_SESSION_HOURS) || 6;
@@ -35,6 +37,7 @@ Ask anything you would ask the assistant in the app, for example:
 
 Messages, fee payments and attendance are only *prepared*; they happen when you tap Approve.
 
+*TODAY* – today's briefing: attendance, fees, approvals
 *PENDING* – what is waiting for your approval
 *APPROVE 12* / *CANCEL 12* – decide on item 12
 *NEW* – start a new conversation
@@ -153,6 +156,7 @@ export function parseCommand(text) {
   if (["help", "menu", "?"].includes(word)) return { name: "help" };
   if (["new", "reset", "new chat"].includes(word)) return { name: "new" };
   if (["pending", "approvals"].includes(word)) return { name: "pending" };
+  if (["today", "briefing", "summary", "report"].includes(word)) return { name: "today" };
   if (word === "unlink") return { name: "unlink" };
   return null;
 }
@@ -283,6 +287,8 @@ export async function answerMessage({ message_id }) {
       await sendToStaff(user.id, phone, "Started a new conversation. What would you like to know?");
     } else if (command?.name === "pending") {
       await pending(user, phone);
+    } else if (command?.name === "today") {
+      await sendToStaff(user.id, phone, (await buildBriefing(user)).text);
     } else if (command?.name === "unlink") {
       await unlink({ user });
       await sendToStaff(user.id, phone, "This number is no longer linked. Link it again from My account in the app.");
@@ -301,6 +307,10 @@ export async function answerMessage({ message_id }) {
 
 // ---------- Telling approvers ----------
 
+// WhatsApp allows free-form messages only within 24 hours of the person's last message (with margin).
+const IN_WINDOW = `(SELECT MAX(m.created_at) > NOW() - INTERVAL 23 HOUR FROM staff_whatsapp_messages m
+  WHERE m.user_id = u.id AND m.direction = 'in')`;
+
 /**
  * Job: tell approvers on WhatsApp about something waiting for them. Free-form messages (with
  * buttons) only reach someone who wrote to the bot in the last 24 hours; others get the approved
@@ -310,9 +320,7 @@ export async function notifyApprovers({ action_id }) {
   const [[action]] = await pool.execute("SELECT requested_by, status FROM agent_actions WHERE id = ?", [action_id]);
   if (!action || action.status !== "pending") return;
   const [rows] = await pool.execute(
-    `SELECT u.id, u.whatsapp_phone,
-            (SELECT MAX(m.created_at) > NOW() - INTERVAL 23 HOUR FROM staff_whatsapp_messages m
-             WHERE m.user_id = u.id AND m.direction = 'in') AS in_window
+    `SELECT u.id, u.whatsapp_phone, ${IN_WINDOW} AS in_window
      FROM users u WHERE u.whatsapp_phone IS NOT NULL AND u.is_active = 1
        AND u.whatsapp_sv = u.session_version AND u.id <> ?`,
     [action.requested_by]
@@ -334,4 +342,34 @@ export async function notifyApprovers({ action_id }) {
       });
     }
   }
+}
+
+// ---------- Morning briefing ----------
+
+/**
+ * Send someone their briefing on WhatsApp (a "daily_briefing" automation). Outside the 24-hour window
+ * it goes as the approved template `daily_briefing` (parameters: school and date, attendance, fees,
+ * approvals). Returns { sent, note }.
+ */
+export async function sendBriefing(user) {
+  const [[row]] = await pool.execute(
+    `SELECT u.whatsapp_phone, ${IN_WINDOW} AS in_window FROM users u
+     WHERE u.id = ? AND u.whatsapp_phone IS NOT NULL AND u.whatsapp_sv = u.session_version`,
+    [user.id]
+  );
+  if (!row) return { sent: false, note: "Link your WhatsApp on My account to get the briefing." };
+  const briefing = await buildBriefing(user);
+  await sendToStaff(
+    user.id,
+    row.whatsapp_phone,
+    briefing.text,
+    Number(row.in_window) ? {} : { template: { name: "daily_briefing", params: briefing.summary } }
+  );
+  const [[last]] = await pool.execute(
+    "SELECT status, error FROM staff_whatsapp_messages WHERE user_id = ? AND direction = 'out' ORDER BY id DESC LIMIT 1",
+    [user.id]
+  );
+  return last?.status === "failed"
+    ? { sent: false, note: `WhatsApp didn't accept it: ${last.error}` }
+    : { sent: true, note: `Sent to ${row.whatsapp_phone}` };
 }

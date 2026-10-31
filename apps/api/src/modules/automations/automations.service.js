@@ -1,5 +1,6 @@
 /**
- * Automations: rules that prepare a message to parents on a schedule. A run acts as the person who
+ * Automations: rules that prepare a message to parents on a schedule (or, for "daily_briefing", send
+ * the person who made it their morning briefing on WhatsApp). A run acts as the person who
  * made the rule, with their current permissions, so a rule can never reach further than they can.
  * "approve" rules leave the message waiting on Approvals; "auto" rules approve it at once, which
  * needs the creator to be allowed to send (and to see the data it is about).
@@ -11,6 +12,7 @@ import { loadUserContext } from "../../middleware/auth.js";
 import { schoolToday } from "../../config/env.js";
 import * as actions from "../../agent/actions/actions.service.js";
 import { describeSchedule, nextRun } from "./schedule.js";
+import { sendBriefing } from "../whatsapp-bot/bot.service.js";
 
 export const KINDS = {
   fee_reminder: {
@@ -27,6 +29,12 @@ export const KINDS = {
     label: "Absence streak alert",
     needs: "attendance:read",
     spec: (options) => ({ audience: "absence_streak", days: options?.days || 3, template: "absence_alert" }),
+  },
+  // Goes only to the rule's creator, so there is nothing to approve.
+  daily_briefing: {
+    label: "Morning briefing",
+    needs: "dashboard:read",
+    toCreator: true,
   },
 };
 
@@ -52,7 +60,7 @@ function assertAllowed(user, { kind, mode }) {
   if (needs && !user.permissions.has(needs)) {
     throw createError(403, `You can't automate ${KINDS[kind].label.toLowerCase()}s`, "FORBIDDEN");
   }
-  if (mode === "auto" && !user.permissions.has("messages:send")) {
+  if (mode === "auto" && !KINDS[kind]?.toCreator && !user.permissions.has("messages:send")) {
     throw createError(403, "Only someone who can approve messages can let a rule send by itself", "FORBIDDEN");
   }
 }
@@ -80,7 +88,8 @@ export async function get(user, id) {
   return hydrate(row);
 }
 
-export async function create(user, data) {
+export async function create(user, input) {
+  const data = KINDS[input.kind]?.toCreator ? { ...input, mode: "auto" } : input; // nothing to approve
   assertAllowed(user, data);
   const next = nextRun(data.schedule);
   const [res] = await pool.execute(
@@ -140,6 +149,16 @@ export async function runAutomation(automation, trigger = "schedule") {
   const user = await loadUserContext(automation.created_by);
   if (!user) return record("failed", { note: "The person who made this rule can no longer sign in." });
   const req = { user, ip: null };
+
+  if (KINDS[automation.kind].toCreator) {
+    try {
+      const { sent, note } = await sendBriefing(user);
+      return record(sent ? "sent" : "skipped", { recipients: sent ? 1 : 0, note });
+    } catch (err) {
+      logger.error({ err, automationId: automation.id }, "Briefing failed");
+      return record("failed", { note: err.message });
+    }
+  }
 
   let action;
   try {

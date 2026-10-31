@@ -45,6 +45,17 @@ const KINDS = [
     name: "Absence streak alerts",
     schedule: { frequency: "school_days", time: "12:00" },
   },
+  {
+    key: "daily_briefing",
+    label: "Morning briefing",
+    icon: "sparkle",
+    tone: "blue",
+    needs: "dashboard:read",
+    toCreator: true,
+    text: "Sends you a short summary on WhatsApp: attendance, fees, online payments to match and approvals waiting.",
+    name: "Morning briefing",
+    schedule: { frequency: "school_days", time: "08:00" },
+  },
 ];
 const KIND = Object.fromEntries(KINDS.map((k) => [k.key, k]));
 const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -68,6 +79,7 @@ function NewAutomation({ kinds, canAuto, onDone }) {
   const pick = (kind) => setForm((f) => ({ ...f, kind: kind.key, name: kind.name, schedule: kind.schedule }));
   const setSchedule = (changes) => setForm((f) => ({ ...f, schedule: { ...f.schedule, ...changes } }));
 
+  const toMe = KIND[form.kind]?.toCreator; // goes to you: no channel or approval to choose
   const submit = (e) => {
     e.preventDefault();
     const { frequency, time, weekday } = form.schedule;
@@ -75,10 +87,10 @@ function NewAutomation({ kinds, canAuto, onDone }) {
       {
         name: form.name,
         kind: form.kind,
-        mode: form.mode,
+        mode: toMe ? "auto" : form.mode,
         schedule: frequency === "weekly" ? { frequency, time, weekday: Number(weekday ?? 1) } : { frequency, time },
         options: {
-          ...(form.channel ? { channel: form.channel } : {}),
+          ...(form.channel && !toMe ? { channel: form.channel } : {}),
           ...(form.kind === "absence_streak" ? { days: Number(form.days) } : {}),
         },
       },
@@ -168,46 +180,55 @@ function NewAutomation({ kinds, canAuto, onDone }) {
             />
           </label>
         )}
-        <label>
-          Channel
-          <select value={form.channel} onChange={(e) => setForm((f) => ({ ...f, channel: e.target.value }))}>
-            <option value="">Each parent&apos;s preferred channel</option>
-            <option value="whatsapp">WhatsApp only</option>
-            <option value="sms">SMS only</option>
-            <option value="email">Email only</option>
-          </select>
-        </label>
+        {!toMe && (
+          <label>
+            Channel
+            <select value={form.channel} onChange={(e) => setForm((f) => ({ ...f, channel: e.target.value }))}>
+              <option value="">Each parent&apos;s preferred channel</option>
+              <option value="whatsapp">WhatsApp only</option>
+              <option value="sms">SMS only</option>
+              <option value="email">Email only</option>
+            </select>
+          </label>
+        )}
       </div>
 
-      <div className="mode-picker" role="radiogroup" aria-label="Approval">
-        <label className={`mode ${form.mode === "approve" ? "is-active" : ""}`}>
-          <input
-            type="radio"
-            name="mode"
-            checked={form.mode === "approve"}
-            onChange={() => setForm((f) => ({ ...f, mode: "approve" }))}
-          />
-          <span>
-            <strong>Wait for approval</strong>
-            Each run prepares the messages and puts them on Approvals. Nothing is sent until someone approves.
-          </span>
-        </label>
-        <label className={`mode ${form.mode === "auto" ? "is-active" : ""} ${canAuto ? "" : "is-disabled"}`}>
-          <input
-            type="radio"
-            name="mode"
-            disabled={!canAuto}
-            checked={form.mode === "auto"}
-            onChange={() => setForm((f) => ({ ...f, mode: "auto" }))}
-          />
-          <span>
-            <strong>Send automatically</strong>
-            {canAuto
-              ? "Trusted rule: each run is approved and sent straight away, within quiet hours and consent."
-              : "Only someone who can approve messages can let a rule send by itself."}
-          </span>
-        </label>
-      </div>
+      {toMe ? (
+        <p className="muted">
+          It goes to your own WhatsApp (link it on <Link to="/account">My account</Link>), so there is nothing to
+          approve. Reply TODAY on WhatsApp to get it at any time.
+        </p>
+      ) : (
+        <div className="mode-picker" role="radiogroup" aria-label="Approval">
+          <label className={`mode ${form.mode === "approve" ? "is-active" : ""}`}>
+            <input
+              type="radio"
+              name="mode"
+              checked={form.mode === "approve"}
+              onChange={() => setForm((f) => ({ ...f, mode: "approve" }))}
+            />
+            <span>
+              <strong>Wait for approval</strong>
+              Each run prepares the messages and puts them on Approvals. Nothing is sent until someone approves.
+            </span>
+          </label>
+          <label className={`mode ${form.mode === "auto" ? "is-active" : ""} ${canAuto ? "" : "is-disabled"}`}>
+            <input
+              type="radio"
+              name="mode"
+              disabled={!canAuto}
+              checked={form.mode === "auto"}
+              onChange={() => setForm((f) => ({ ...f, mode: "auto" }))}
+            />
+            <span>
+              <strong>Send automatically</strong>
+              {canAuto
+                ? "Trusted rule: each run is approved and sent straight away, within quiet hours and consent."
+                : "Only someone who can approve messages can let a rule send by itself."}
+            </span>
+          </label>
+        </div>
+      )}
 
       <div className="form-actions">
         <button type="submit" className="btn primary" disabled={create.isPending}>
@@ -294,7 +315,7 @@ function AutomationCard({ a }) {
           </p>
           <div className="tag-row">
             <span className={`badge ${a.mode === "auto" ? "info" : "neutral"}`}>
-              {a.mode === "auto" ? "Sends automatically" : "Waits for approval"}
+              {kind.toCreator ? "To you on WhatsApp" : a.mode === "auto" ? "Sends automatically" : "Waits for approval"}
             </span>
             {a.last_status && (
               <span className={`badge ${RUN_TONE[a.last_status]}`}>Last run: {RUN_LABEL[a.last_status]}</span>
@@ -354,7 +375,7 @@ export default function AutomationsPage() {
         icon="calendar"
         tone="violet"
         title="Automations"
-        subtitle="Rules that prepare messages to parents on a schedule, so routine reminders never depend on someone remembering."
+        subtitle="Rules that run on a schedule: reminders to parents, and your own morning briefing on WhatsApp, so nothing depends on someone remembering."
       >
         {!adding && kinds.length > 0 && (
           <button type="button" className="btn primary" onClick={() => setAdding(true)}>
@@ -368,7 +389,7 @@ export default function AutomationsPage() {
           <CountUp value={active.length} />
         </StatCard>
         <StatCard tone="blue" icon="sparkle" label="Send automatically" note="trusted rules">
-          <CountUp value={active.filter((a) => a.mode === "auto").length} />
+          <CountUp value={active.filter((a) => a.mode === "auto" && !KIND[a.kind]?.toCreator).length} />
         </StatCard>
         <StatCard tone="amber" icon="bell" label="Paused">
           <CountUp value={list.length - active.length} />

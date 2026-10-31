@@ -149,14 +149,21 @@ they already get fee reminders, absence alerts and challans on WhatsApp.
   **Approve** and **Cancel** buttons (or reply `APPROVE 12` / `CANCEL 12`); **PENDING** lists what is
   waiting. When someone prepares something they can't approve themselves (a teacher's message to
   parents, for example), linked approvers are told on WhatsApp with the same buttons. Nothing is done without a tap from someone allowed to approve it.
-- **Commands:** HELP, NEW (fresh conversation), PENDING, APPROVE n, CANCEL n, UNLINK. Anything else is
-  a question for the assistant, in English, Urdu or Roman Urdu.
+- **Commands:** HELP, TODAY, NEW (fresh conversation), PENDING, APPROVE n, CANCEL n, UNLINK. Anything
+  else is a question for the assistant, in English, Urdu or Roman Urdu.
+- **Morning briefing.** On **Automations**, add a _Morning briefing_ (by default school days at 08:00)
+  and every morning WhatsApp brings you: the last school day's attendance, which classes haven't marked
+  today, students absent 3+ days in a row, fees collected yesterday and this month, what is overdue,
+  online payments waiting to be matched, and what is waiting for your approval. Each part only appears
+  if your role can see it (a teacher gets their own classes' attendance, no fees). Reply **TODAY** for
+  it at any time.
 
 Setup: WhatsApp must be on (`WHATSAPP_PROVIDER=meta`) with the webhook configured
 (`WHATSAPP_APP_SECRET`, see above), plus `WHATSAPP_BOT_NUMBER`. WhatsApp only allows free-form
 messages within 24 hours of the person's last message; approvers outside that window are told with
-the template `approval_request` (parameters: who prepared it, what, its number), which you approve in
-WhatsApp Manager. Replies are answered in the background (a few seconds), and a message WhatsApp
+the template `approval_request` (parameters: who prepared it, what, its number), and the morning
+briefing as the template `daily_briefing` (parameters: school and date, attendance, fees, approvals,
+one line each); approve both in WhatsApp Manager. Replies are answered in the background (a few seconds), and a message WhatsApp
 delivers twice is answered once.
 
 ## Results, report cards and fee challans
